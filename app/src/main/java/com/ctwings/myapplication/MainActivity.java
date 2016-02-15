@@ -9,13 +9,10 @@ import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.animation.Animation;
-import android.widget.Button;
+
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.TextView;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -26,11 +23,9 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.Buffer;
 
 public class MainActivity extends AppCompatActivity {
 
-    private TextView tvData;
     private ImageView imageview;
     private EditText editTextRun;
     private EditText editTextFullName;
@@ -52,7 +47,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        tvData = (TextView)findViewById(R.id.tvJsonItem);
         editTextRun = (EditText)findViewById(R.id.editText_run);
         editTextFullName = (EditText)findViewById(R.id.editText_fullname);
         imageview = (ImageView)findViewById(R.id.imageView);
@@ -116,13 +110,6 @@ public class MainActivity extends AppCompatActivity {
 
                 String finalJson = buffer.toString();
                 JSONObject parentObject = new JSONObject(finalJson);
-//                JSONArray patentArray = parentObject.getJSONArray("movies");
-//                JSONObject finalObject = patentArray.getJSONObject(0);
-//
-//                String movieName = finalObject.getString("movie");
-//                int year = finalObject.getInt("year");
-//
-//                return movieName + "," + year;
 
                 return parentObject.getString("run") + "," + parentObject.getString("fullname") +
                         "," + parentObject.getBoolean("is_permitted");
