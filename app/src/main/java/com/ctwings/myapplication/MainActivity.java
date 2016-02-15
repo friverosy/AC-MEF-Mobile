@@ -60,7 +60,8 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                new JSONTask().execute("http://jsonparsing.parseapp.com/jsonData/moviesDemoItem.txt");
+                //new JSONTask().execute("http://jsonparsing.parseapp.com/jsonData/moviesDemoItem.txt");
+                new JSONTask().execute("http://192.168.2.149:3000/api/people/findOne?run=171793475");
             }
         });
 
@@ -115,13 +116,16 @@ public class MainActivity extends AppCompatActivity {
 
                 String finalJson = buffer.toString();
                 JSONObject parentObject = new JSONObject(finalJson);
-                JSONArray patentArray = parentObject.getJSONArray("movies");
-                JSONObject finalObject = patentArray.getJSONObject(0);
+//                JSONArray patentArray = parentObject.getJSONArray("movies");
+//                JSONObject finalObject = patentArray.getJSONObject(0);
+//
+//                String movieName = finalObject.getString("movie");
+//                int year = finalObject.getInt("year");
+//
+//                return movieName + "," + year;
 
-                String movieName = finalObject.getString("movie");
-                int year = finalObject.getInt("year");
-
-                return movieName + "," + year;
+                return parentObject.getString("run") + "," + parentObject.getString("fullname") +
+                        "," + parentObject.getBoolean("is_permitted");
 
             } catch (MalformedURLException e) {
                 e.printStackTrace();
@@ -150,9 +154,11 @@ public class MainActivity extends AppCompatActivity {
             String[] arr = s.split(",");
             editTextRun.setText(arr[0].toString());
             editTextFullName.setText(arr[1].toString());
-
-            imageview.setVisibility(View.VISIBLE);
-            imageview.setImageResource(R.drawable.img_true);
+            android.util.Log.i("debug", arr[2].toString());
+            if(arr[2].toString().equals("true"))
+                imageview.setImageResource(R.drawable.img_true);
+            else
+                imageview.setImageResource(R.drawable.img_false);
         }
     }
 }
