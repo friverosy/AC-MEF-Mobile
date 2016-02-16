@@ -271,7 +271,6 @@ public class MainActivity extends AppCompatActivity {
             else
                 result = "Did not work!";
 
-
         } catch (Exception e) {
             e.printStackTrace();
         }
