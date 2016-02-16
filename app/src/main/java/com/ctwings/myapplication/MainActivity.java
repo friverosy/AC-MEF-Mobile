@@ -27,13 +27,20 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.DefaultHttpClient;
 
 public class MainActivity extends AppCompatActivity {
 
     private ImageView imageview;
     private EditText editTextRun;
     private EditText editTextFullName;
+
+    private static final String TAG = "MainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,19 +65,15 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(isConnected()){
+                if (isConnected()) {
                     //new JSONTask().execute("http://jsonparsing.parseapp.com/jsonData/moviesDemoItem.txt");
                     new GetPeopleTask().execute("http://192.168.2.149:3000/api/people/findOne?run=171793475");
                     new RegisterTask().execute("http://192.168.2.149:3000/api/record/");
-                }else{
+                } else {
                     Toast.makeText(MainActivity.this, "Sin conección a internet!", Toast.LENGTH_LONG).show();
                 }
-
             }
         });
-
-
-
     }
 
     @Override
@@ -200,26 +203,92 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
             String[] arr = s.split(",");
-            editTextRun.setText(arr[0].toString());
-            editTextFullName.setText(arr[1].toString());
-            if(arr[2].toString().equals("true"))
+            editTextRun.setText(arr[0]);
+            editTextFullName.setText(arr[1]);
+            if(arr[2].equals("true"))
                 imageview.setImageResource(R.drawable.img_true);
             else
                 imageview.setImageResource(R.drawable.img_false);
         }
     }
 
-    public class RegisterTask extends AsyncTask<String, String, String>{
+    private static String convertInputStreamToString(InputStream inputStream) throws IOException{
+        BufferedReader bufferedReader = new BufferedReader( new InputStreamReader(inputStream));
+        String line;
+        String result = "";
+        while((line = bufferedReader.readLine()) != null)
+            result += line;
+
+        inputStream.close();
+        return result;
+
+    }
+
+    public String POST(String url){
+        InputStream inputStream;
+        String result = "";
+        try {
+
+            // 1. create HttpClient
+            HttpClient httpclient = new DefaultHttpClient();
+
+            // 2. make POST request to the given URL
+            HttpPost httpPost = new HttpPost(url);
+
+            String json;
+
+            // 3. build jsonObject
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.accumulate("run", editTextRun.getText().toString());
+            jsonObject.accumulate("fullname", editTextFullName.getText().toString());
+            if(imageview.getDrawable().toString().equals("img_true"))
+                jsonObject.accumulate("is_permitted", true);
+            else
+                jsonObject.accumulate("is_permitted", false);
+
+            // 4. convert JSONObject to JSON to String
+            json = jsonObject.toString();
+
+            // 5. set json to StringEntity
+            StringEntity se = new StringEntity(json);
+
+            // 6. set httpPost Entity
+            httpPost.setEntity(se);
+
+            // 7. Set some headers to inform server about the type of the content
+            httpPost.setHeader("Accept", "application/json");
+            httpPost.setHeader("Content-type", "application/json");
+
+            // 8. Execute POST request to the given URL
+            HttpResponse httpResponse = httpclient.execute(httpPost);
+
+            // 9. receive response as inputStream
+            inputStream = httpResponse.getEntity().getContent();
+
+            // 10. convert inputstream to string
+            if(inputStream != null)
+                result = convertInputStreamToString(inputStream);
+            else
+                result = "Did not work!";
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // 11. return result
+        return result;
+    }
+
+    public class RegisterTask extends AsyncTask<String, Void, String>{
 
         @Override
         protected String doInBackground(String... params) {
-            return null;
-
+            return POST(params[0]);
         }
 
         @Override
         protected void onPostExecute(String s) {
-            super.onPostExecute(s);
+            Toast.makeText(MainActivity.this, "Data Sent!", Toast.LENGTH_LONG).show();
         }
     }
 }
