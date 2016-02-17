@@ -40,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageView imageview;
     private EditText editTextRun;
     private EditText editTextFullName;
+    //editTextRun.setText(barcodeStr.substring(0,8));
 
     private static final Logger log = Logger.getLogger(MainActivity.class.getName());
     private boolean state;
