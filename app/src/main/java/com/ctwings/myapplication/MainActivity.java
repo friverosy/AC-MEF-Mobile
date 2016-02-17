@@ -40,6 +40,8 @@ public class MainActivity extends AppCompatActivity {
     private ImageView imageview;
     private EditText editTextRun;
     private EditText editTextFullName;
+    //editTextRun.setText(barcodeStr.substring(0,8));
+    private String runStr, fullNameStr;
 
     private static final Logger log = Logger.getLogger(MainActivity.class.getName());
     private boolean state;
@@ -68,8 +70,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (isConnected()) {
-                    new GetPeopleTask().execute("http://192.168.2.149:3000/api/people/findOne?run=171793475");
-                    new RegisterTask().execute("http://192.168.2.149:3000/api/record/");
+                    new GetPeopleTask().execute("http://192.168.2.149:3000/api/people/171793475");
                 } else {
                     Toast.makeText(MainActivity.this, "Sin conección a internet!", Toast.LENGTH_LONG).show();
                 }
@@ -172,6 +173,7 @@ public class MainActivity extends AppCompatActivity {
 
                 if(!finalJson.isEmpty()){
                     JSONObject parentObject = new JSONObject(finalJson);
+
                     return parentObject.getString("run") + "," + parentObject.getString("fullname") +
                             "," + parentObject.getBoolean("is_permitted");
                 }else{
@@ -182,7 +184,7 @@ public class MainActivity extends AppCompatActivity {
             } catch (MalformedURLException e) {
                 e.printStackTrace();
             } catch (IOException e) {
-                e.printStackTrace();
+                log.info("Persona no encontrada");
             } catch (JSONException e) {
                 e.printStackTrace();
             } finally {
@@ -202,17 +204,27 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(String s) {
-            super.onPostExecute(s);
-            String[] arr = s.split(",");
-            editTextRun.setText(arr[0]);
-            editTextFullName.setText(arr[1]);
-            if(arr[2].equals("true")) {
-                state = true;
-                imageview.setImageResource(R.drawable.img_true);
-            }else {
-                state = false;
-                imageview.setImageResource(R.drawable.img_false);
+            try {
+                super.onPostExecute(s);
+                String[] arr = s.split(",");
+                editTextRun.setText("Run: " + arr[0]);
+                editTextFullName.setText(arr[1]);
+
+                runStr = arr[0];
+                fullNameStr = arr[1];
+
+                if(arr[2].equals("true")) {
+                    state = true;
+                    imageview.setImageResource(R.drawable.img_true);
+                }else {
+                    state = false;
+                    imageview.setImageResource(R.drawable.img_false);
+                }
+                new RegisterTask().execute("http://192.168.2.149:3000/api/records/");
+            }catch (Exception e){
+                e.printStackTrace();
             }
+
         }
     }
 
@@ -243,18 +255,18 @@ public class MainActivity extends AppCompatActivity {
 
             // 3. build jsonObject
             JSONObject jsonObject = new JSONObject();
-            jsonObject.accumulate("run", editTextRun.getText().toString());
-            jsonObject.accumulate("fullname", editTextFullName.getText().toString());
+            jsonObject.accumulate("people_run", runStr);
+            jsonObject.accumulate("fullname", fullNameStr);
 
-            //log.info(Integer.toString(imageview.getId()));
-
-            if(imageview.getDrawable()==getResources().getDrawable(R.drawable.img_true)) {
+            if(state) {
                 jsonObject.accumulate("is_permitted", true);
                 log.info("true");
             }else {
                 jsonObject.accumulate("is_permitted", false);
                 log.info("false");
             }
+
+            log.info(jsonObject.toString());
 
             // 4. convert JSONObject to JSON to String
             json = jsonObject.toString();
@@ -298,7 +310,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(String s) {
-            Toast.makeText(MainActivity.this, "Data Sent!", Toast.LENGTH_LONG).show();
+            //Toast.makeText(MainActivity.this, "Data Sent!", Toast.LENGTH_LONG).show();
         }
     }
 }

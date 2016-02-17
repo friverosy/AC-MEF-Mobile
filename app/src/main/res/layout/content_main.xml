@@ -18,9 +18,10 @@
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/editText_run"
+        android:id="@+id/editText_fullname"
         android:textColor="#ffffff"
-        android:textSize="50dp" />
+        android:textSize="30dp"
+        android:text="" />
 
     <Space
         android:layout_width="match_parent"
@@ -29,10 +30,9 @@
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/editText_fullname"
-        android:textColor="#ffffff"
-        android:textSize="30dp"
-        android:text="" />
+        android:id="@+id/editText_run"
+        android:textColor="#6d8582"
+        android:textSize="20dp" />
 
     <TextView
         android:id="@+id/tvJsonItem"
