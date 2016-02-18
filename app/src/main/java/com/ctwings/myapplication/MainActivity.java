@@ -26,6 +26,8 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.KeyEvent;
 
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
@@ -75,6 +77,14 @@ public class MainActivity extends AppCompatActivity {
             editTextRun.setText("");
             editTextFullName.setText("");
             imageview.setImageDrawable(null);
+
+//            imageview.clearAnimation();
+//            editTextRun.clearAnimation();
+//            editTextFullName.clearAnimation();
+//            imageview.setAlpha((float) 1.0);
+//            editTextRun.setAlpha((float) 1.0);
+//            editTextFullName.setAlpha((float) 1.0);
+
             mVibrator.vibrate(100);
 
             byte[] barcode = intent.getByteArrayExtra("barocode");
@@ -333,6 +343,27 @@ public class MainActivity extends AppCompatActivity {
                     state = false;
                     imageview.setImageResource(R.drawable.img_false);
                 }
+
+                // effect to reduce alpha
+//                Animation AlphaAnimation;
+//                AlphaAnimation = AnimationUtils.loadAnimation(MainActivity.this, R.anim.transparentar);
+//                AlphaAnimation.reset();
+//                imageview.startAnimation(AlphaAnimation);
+//                editTextRun.startAnimation(AlphaAnimation);
+//                editTextFullName.startAnimation(AlphaAnimation);
+
+                // after start effect, let alpha down.
+
+//                try {
+//                    Thread.sleep(3000);
+//                    imageview.setAlpha((float) 0.3);
+//                    editTextRun.setAlpha((float) 0.3);
+//                    editTextFullName.setAlpha((float) 0.3);
+//                }catch(InterruptedException ex) {
+//                    Thread.currentThread().interrupt();
+//                }
+
+                //  new POST
                 new RegisterTask().execute(server + "/api/records/");
 
             } catch (NullPointerException e){
