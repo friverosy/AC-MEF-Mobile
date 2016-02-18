@@ -1,18 +1,30 @@
 package com.ctwings.myapplication;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.device.ScanManager;
+import android.media.AudioManager;
+import android.media.SoundPool;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Vibrator;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.logging.Logger;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.KeyEvent;
 
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -40,11 +52,56 @@ public class MainActivity extends AppCompatActivity {
     private ImageView imageview;
     private EditText editTextRun;
     private EditText editTextFullName;
-    //editTextRun.setText(barcodeStr.substring(0,8));
     private String runStr, fullNameStr;
 
     private static final Logger log = Logger.getLogger(MainActivity.class.getName());
+    private static String server = "http://192.168.2.149:3000" ;
     private boolean state;
+
+    private final static String SCAN_ACTION = "urovo.rcv.message";//扫描结束action
+    private Vibrator mVibrator;
+    private ScanManager mScanManager;
+    private SoundPool soundpool = null;
+    private int soundid;
+    private String barcodeStr;
+    private boolean isScaning = false;
+    private BroadcastReceiver mScanReceiver = new BroadcastReceiver() {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            // TODO Auto-generated method stub
+            isScaning = false;
+            soundpool.play(soundid, 1, 1, 0, 0, 1);
+            editTextRun.setText("");
+            editTextFullName.setText("");
+            imageview.setImageDrawable(null);
+            mVibrator.vibrate(100);
+
+            byte[] barcode = intent.getByteArrayExtra("barocode");
+            int barocodelen = intent.getIntExtra("length", 0);
+            //byte temp = intent.getByteExtra("barcodeType", (byte) 0);
+            //android.util.Log.i("debug", "----codetype--" + temp);
+            barcodeStr = new String(barcode, 0, barocodelen);
+
+            if(barcodeStr.startsWith("https")){
+                barcodeStr = barcodeStr.substring(52, 62);
+                barcodeStr = barcodeStr.replace("-", "");
+                barcodeStr = barcodeStr.replace("&","");
+            }else{
+                barcodeStr = barcodeStr.substring(0, 9);
+            }
+
+            editTextRun.setText("Run: " + barcodeStr);
+//            if (isConnected()) {
+//                new GetPeopleTask().execute("http://192.168.2.149:3000/api/people/" + barcodeStr);
+//            } else {
+//                Toast.makeText(MainActivity.this, "Sin coneccion a internet!",
+//                        Toast.LENGTH_LONG).show();
+//            }
+            new GetPeopleTask().execute(server + "/api/people/" + barcodeStr);
+        }
+
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,6 +119,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         editTextRun = (EditText)findViewById(R.id.editText_run);
         editTextFullName = (EditText)findViewById(R.id.editText_fullname);
         imageview = (ImageView)findViewById(R.id.imageView);
@@ -69,11 +127,14 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (isConnected()) {
-                    new GetPeopleTask().execute("http://192.168.2.149:3000/api/people/171793475");
-                } else {
-                    Toast.makeText(MainActivity.this, "Sin conección a internet!", Toast.LENGTH_LONG).show();
-                }
+//                if (isConnected()) {
+//                    new GetPeopleTask().execute("http://192.168.2.149:3000/api/people/" +
+//                            barcodeStr);
+//                } else {
+//                    Toast.makeText(MainActivity.this, "Sin conecciÃ³n a internet!",
+//                            Toast.LENGTH_LONG).show();
+//                }
+                new GetPeopleTask().execute(server + "/api/people/" + barcodeStr);
             }
         });
     }
@@ -98,6 +159,57 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private void initScan() {
+        // TODO Auto-generated method stub
+        mScanManager = new ScanManager();
+        mScanManager.openScanner();
+
+        mScanManager.switchOutputMode( 0);
+        soundpool = new SoundPool(1, AudioManager.STREAM_NOTIFICATION, 100); // MODE_RINGTONE
+        soundid = soundpool.load("/etc/Scan_new.ogg", 1);
+    }
+
+    @Override
+    protected void onDestroy() {
+        // TODO Auto-generated method stub
+        super.onDestroy();
+    }
+
+    @Override
+    protected void onPause() {
+        // TODO Auto-generated method stub
+        super.onPause();
+        if(mScanManager != null) {
+            mScanManager.stopDecode();
+            isScaning = false;
+        }
+        unregisterReceiver(mScanReceiver);
+    }
+
+    @Override
+    protected void onResume() {
+        // TODO Auto-generated method stub
+        super.onResume();
+        initScan();
+        editTextRun.setText("");
+        editTextFullName.setText("");
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(SCAN_ACTION);
+        registerReceiver(mScanReceiver, filter);
+    }
+
+    @Override
+    protected void onStart() {
+        // TODO Auto-generated method stub
+        super.onStart();
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        // TODO Auto-generated method stub
+        return super.onKeyDown(keyCode, event);
     }
 
     public boolean isConnected(){
@@ -177,7 +289,8 @@ public class MainActivity extends AppCompatActivity {
                     return parentObject.getString("run") + "," + parentObject.getString("fullname") +
                             "," + parentObject.getBoolean("is_permitted");
                 }else{
-                    Toast.makeText(MainActivity.this, "Error al obtener datos, intente nuevamente", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "Error al obtener datos, intente nuevamente",
+                            Toast.LENGTH_SHORT).show();
                     return null;
                 }
 
@@ -220,8 +333,13 @@ public class MainActivity extends AppCompatActivity {
                     state = false;
                     imageview.setImageResource(R.drawable.img_false);
                 }
-                new RegisterTask().execute("http://192.168.2.149:3000/api/records/");
-            }catch (Exception e){
+                new RegisterTask().execute(server + "/api/records/");
+
+            } catch (NullPointerException e){
+                // people don't exist in DB
+                state = false;
+                imageview.setImageResource(R.drawable.img_false);
+            } catch (Exception e){
                 e.printStackTrace();
             }
 
@@ -260,10 +378,10 @@ public class MainActivity extends AppCompatActivity {
 
             if(state) {
                 jsonObject.accumulate("is_permitted", true);
-                log.info("true");
+                //log.info("true");
             }else {
                 jsonObject.accumulate("is_permitted", false);
-                log.info("false");
+                //log.info("false");
             }
 
             log.info(jsonObject.toString());
