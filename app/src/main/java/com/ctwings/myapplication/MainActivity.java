@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.device.ScanManager;
 import android.media.AudioManager;
+import android.media.MediaPlayer;
 import android.media.SoundPool;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -60,6 +61,8 @@ public class MainActivity extends AppCompatActivity {
     private static String server = "http://192.168.2.149:3000" ;
     private boolean state;
 
+    MediaPlayer mp3Dennied;
+
     private final static String SCAN_ACTION = "urovo.rcv.message";//扫描结束action
     private Vibrator mVibrator;
     private ScanManager mScanManager;
@@ -67,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
     private int soundid;
     private String barcodeStr;
     private boolean isScaning = false;
+
     private BroadcastReceiver mScanReceiver = new BroadcastReceiver() {
 
         @Override
@@ -133,6 +137,7 @@ public class MainActivity extends AppCompatActivity {
         editTextRun = (EditText)findViewById(R.id.editText_run);
         editTextFullName = (EditText)findViewById(R.id.editText_fullname);
         imageview = (ImageView)findViewById(R.id.imageView);
+        mp3Dennied = MediaPlayer.create(MainActivity.this, R.raw.dennied);
 
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -178,7 +183,7 @@ public class MainActivity extends AppCompatActivity {
 
         mScanManager.switchOutputMode( 0);
         soundpool = new SoundPool(1, AudioManager.STREAM_NOTIFICATION, 100); // MODE_RINGTONE
-        soundid = soundpool.load("/etc/Scan_new.ogg", 1);
+        //soundid = soundpool.load("/etc/Scan_new.ogg", 1);
     }
 
     @Override
@@ -340,6 +345,7 @@ public class MainActivity extends AppCompatActivity {
                     state = true;
                     imageview.setImageResource(R.drawable.img_true);
                 }else {
+                    mp3Dennied.start();
                     state = false;
                     imageview.setImageResource(R.drawable.img_false);
                 }
