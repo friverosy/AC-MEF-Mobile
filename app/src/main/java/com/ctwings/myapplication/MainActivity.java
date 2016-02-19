@@ -61,8 +61,6 @@ public class MainActivity extends AppCompatActivity {
     private static String server = "http://192.168.2.149:3000" ;
     private boolean state;
 
-    MediaPlayer mp3Dennied;
-
     private final static String SCAN_ACTION = "urovo.rcv.message";//扫描结束action
     private Vibrator mVibrator;
     private ScanManager mScanManager;
@@ -71,13 +69,16 @@ public class MainActivity extends AppCompatActivity {
     private String barcodeStr;
     private boolean isScaning = false;
 
+    MediaPlayer mp3Dennied;
+    MediaPlayer mp3Permitted;
+
     private BroadcastReceiver mScanReceiver = new BroadcastReceiver() {
 
         @Override
         public void onReceive(Context context, Intent intent) {
             // TODO Auto-generated method stub
             isScaning = false;
-            soundpool.play(soundid, 1, 1, 0, 0, 1);
+            //soundpool.play(soundid, 1, 1, 0, 0, 1);
             editTextRun.setText("");
             editTextFullName.setText("");
             imageview.setImageDrawable(null);
@@ -138,6 +139,7 @@ public class MainActivity extends AppCompatActivity {
         editTextFullName = (EditText)findViewById(R.id.editText_fullname);
         imageview = (ImageView)findViewById(R.id.imageView);
         mp3Dennied = MediaPlayer.create(MainActivity.this, R.raw.dennied);
+        mp3Permitted = MediaPlayer.create(MainActivity.this, R.raw.permitted);
 
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -342,6 +344,7 @@ public class MainActivity extends AppCompatActivity {
                 fullNameStr = arr[1];
 
                 if(arr[2].equals("true")) {
+                    mp3Permitted.start();
                     state = true;
                     imageview.setImageResource(R.drawable.img_true);
                 }else {
