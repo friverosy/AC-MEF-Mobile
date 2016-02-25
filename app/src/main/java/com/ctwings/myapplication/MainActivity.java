@@ -5,6 +5,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.device.ScanManager;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -33,6 +35,8 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import com.ctwings.Setting;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -58,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
     private String runStr, fullNameStr;
 
     private static final Logger log = Logger.getLogger(MainActivity.class.getName());
-    private static String server = "http://192.168.2.149:3000" ;
+    private static String server = "";
     private boolean state;
 
     private final static String SCAN_ACTION = "urovo.rcv.message";//扫描结束action
@@ -124,6 +128,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        LoadSettings();
+
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         editTextRun = (EditText)findViewById(R.id.editText_run);
         editTextFullName = (EditText)findViewById(R.id.editText_fullname);
@@ -135,9 +141,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (isConnected()) {
-                    new GetPeopleTask().execute(server + "/api/people/" + editTextFullName.getText());
-                    //new GetPeopleTask().execute("http://192.168.2.149:3000/api/people/" +
-                    //        barcodeStr);
+                    if(editTextFullName.getText().length() >= 7 && editTextFullName.getText().length() <= 9){
+                        new GetPeopleTask().execute(server + "/api/people/" + editTextFullName.getText());
+                    }
                 } else {
                     Toast.makeText(MainActivity.this, "Sin coneccion a internet!",
                             Toast.LENGTH_LONG).show();
@@ -165,9 +171,33 @@ public class MainActivity extends AppCompatActivity {
         if (id == R.id.action_refresh) {
             onResume();
             return true;
+        }else if (id == R.id.action_setting) {
+            Intent i = new Intent(this, Setting.class);
+            startActivity(i);
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    public void LoadSettings(){
+        DBHelper databaseHelper = new DBHelper(this, "Sealand", null,1);
+        SQLiteDatabase db = databaseHelper.getReadableDatabase();
+        if(db!=null){
+            Cursor c = db.rawQuery("select url,port from Setting",null);
+            String url="";
+            Integer port=0;
+            if(c.moveToFirst()) {
+                do {
+                    url = c.getString(0);
+                    port = c.getInt(1);
+                } while (c.moveToNext());
+            }
+            if(url != null) {
+                server = "http://"+url+":"+port ;
+            }
+            log.info(server);
+        }
+        db.close();
     }
 
     private void initScan() {
