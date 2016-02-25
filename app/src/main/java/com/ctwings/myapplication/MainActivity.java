@@ -79,16 +79,6 @@ public class MainActivity extends AppCompatActivity {
             // TODO Auto-generated method stub
             isScaning = false;
             //soundpool.play(soundid, 1, 1, 0, 0, 1);
-            editTextRun.setText("");
-            editTextFullName.setText("");
-            imageview.setImageDrawable(null);
-
-//            imageview.clearAnimation();
-//            editTextRun.clearAnimation();
-//            editTextFullName.clearAnimation();
-//            imageview.setAlpha((float) 1.0);
-//            editTextRun.setAlpha((float) 1.0);
-//            editTextFullName.setAlpha((float) 1.0);
 
             mVibrator.vibrate(100);
 
@@ -144,14 +134,15 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                if (isConnected()) {
-//                    new GetPeopleTask().execute("http://192.168.2.149:3000/api/people/" +
-//                            barcodeStr);
-//                } else {
-//                    Toast.makeText(MainActivity.this, "Sin conecciÃ³n a internet!",
-//                            Toast.LENGTH_LONG).show();
-//                }
-                new GetPeopleTask().execute(server + "/api/people/" + barcodeStr);
+                if (isConnected()) {
+                    new GetPeopleTask().execute(server + "/api/people/" + editTextFullName.getText());
+                    //new GetPeopleTask().execute("http://192.168.2.149:3000/api/people/" +
+                    //        barcodeStr);
+                } else {
+                    Toast.makeText(MainActivity.this, "Sin coneccion a internet!",
+                            Toast.LENGTH_LONG).show();
+                }
+                //new GetPeopleTask().execute(server + "/api/people/" + barcodeStr);
             }
         });
     }
@@ -172,6 +163,7 @@ public class MainActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_refresh) {
+            onResume();
             return true;
         }
 
@@ -212,6 +204,7 @@ public class MainActivity extends AppCompatActivity {
         initScan();
         editTextRun.setText("");
         editTextFullName.setText("");
+        imageview.setImageDrawable(null);
         IntentFilter filter = new IntentFilter();
         filter.addAction(SCAN_ACTION);
         registerReceiver(mScanReceiver, filter);
@@ -379,6 +372,12 @@ public class MainActivity extends AppCompatActivity {
                 // people don't exist in DB
                 state = false;
                 imageview.setImageResource(R.drawable.img_false);
+                editTextFullName.setText("Unknown");
+                runStr = editTextRun.getText().toString();
+                runStr = runStr.substring(5,14);
+                fullNameStr = editTextFullName.getText().toString();
+                //  new POST
+                new RegisterTask().execute(server + "/api/records/");
             } catch (Exception e){
                 e.printStackTrace();
             }
@@ -423,8 +422,6 @@ public class MainActivity extends AppCompatActivity {
                 jsonObject.accumulate("is_permitted", false);
                 //log.info("false");
             }
-
-            log.info(jsonObject.toString());
 
             // 4. convert JSONObject to JSON to String
             json = jsonObject.toString();
