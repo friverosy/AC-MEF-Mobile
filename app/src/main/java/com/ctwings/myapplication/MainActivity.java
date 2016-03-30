@@ -5,8 +5,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
+//import android.database.Cursor;
+//import android.database.sqlite.SQLiteDatabase;
 import android.device.ScanManager;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -22,6 +22,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 
 import java.util.logging.Logger;
+
+//import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -30,8 +32,6 @@ import android.view.KeyEvent;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
-
-import com.ctwings.Setting;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -58,7 +58,8 @@ public class MainActivity extends AppCompatActivity {
     private String runStr, fullNameStr;
 
     private static final Logger log = Logger.getLogger(MainActivity.class.getName());
-    private static String server = "";
+    private static String server;
+    private static String server2;
     private boolean state;
 
     private final static String SCAN_ACTION = "urovo.rcv.message";//扫描结束action
@@ -73,43 +74,6 @@ public class MainActivity extends AppCompatActivity {
     MediaPlayer mp3Permitted;
     MediaPlayer mp3Error;
 
-    private BroadcastReceiver mScanReceiver = new BroadcastReceiver() {
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-
-            // TODO Auto-generated method stub
-            isScaning = false;
-            //soundpool.play(soundid, 1, 1, 0, 0, 1);
-
-            mVibrator.vibrate(100);
-
-            byte[] barcode = intent.getByteArrayExtra("barocode");
-            int barocodelen = intent.getIntExtra("length", 0);
-            //byte temp = intent.getByteExtra("barcodeType", (byte) 0);
-            //android.util.Log.i("debug", "----codetype--" + temp);
-            barcodeStr = new String(barcode, 0, barocodelen);
-
-            if(barcodeStr.startsWith("https")){
-                barcodeStr = barcodeStr.substring(52, 62);
-                barcodeStr = barcodeStr.replace("-", "");
-                barcodeStr = barcodeStr.replace("&","");
-            }else{
-                barcodeStr = barcodeStr.substring(0, 9);
-            }
-
-            editTextRun.setText("Run: " + barcodeStr);
-            if (isConnected()) {
-                new GetPeopleTask().execute(server + "/api/people/" + barcodeStr);
-            }else{
-                mp3Error.start();
-                Toast.makeText(MainActivity.this, "Sin coneccion a internet!",
-                        Toast.LENGTH_LONG).show();
-                onResume();
-            }
-        }
-    };
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -117,6 +81,7 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        //revome that
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -141,9 +106,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (isConnected()) {
-                    if(editTextFullName.getText().length() >= 7 && editTextFullName.getText().length() <= 9){
-                        new GetPeopleTask().execute(server + "/api/people/" + editTextFullName.getText());
-                    }
+                    //without validation
+                    new GetPeopleTask().execute(server + "/employee/" +
+                                editTextFullName.getText().toString());
                 } else {
                     Toast.makeText(MainActivity.this, "Sin coneccion a internet!",
                             Toast.LENGTH_LONG).show();
@@ -178,30 +143,55 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    private BroadcastReceiver mScanReceiver = new BroadcastReceiver() {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            // TODO Auto-generated method stub
+            isScaning = false;
+            //soundpool.play(soundid, 1, 1, 0, 0, 1);
+
+            mVibrator.vibrate(100);
+
+            byte[] barcode = intent.getByteArrayExtra("barocode");
+            int barocodelen = intent.getIntExtra("length", 0);
+            //byte temp = intent.getByteExtra("barcodeType", (byte) 0);
+            //android.util.Log.i("debug", "----codetype--" + temp);
+            barcodeStr = new String(barcode, 0, barocodelen);
+            log.info("------CRUDO----->" + barcodeStr);
+            int flag=0; // 0 for end without k, 1 with k
+
+            if(barcodeStr.startsWith("https")){ // new DNI
+                barcodeStr = barcodeStr.substring(52, 62);
+                barcodeStr = barcodeStr.substring(0, barcodeStr.indexOf("-"));
+            }else if(barcodeStr.length() > 5 && barcodeStr.contains("ABCDEFGHIJKLMNOPQRSTUVWXYZ")){ // old DNI
+                barcodeStr = barcodeStr.substring(0, 9);
+                barcodeStr = barcodeStr.replace(" ", "");
+                if(barcodeStr.endsWith("K")) {
+                    barcodeStr = barcodeStr.replace("K", "");
+                    flag = 1;
+                }
+                if(Integer.parseInt(barcodeStr) <= 999999999 && flag == 0)
+                    barcodeStr = barcodeStr.substring(0, barcodeStr.length()-1);
+            }
+
+            log.info("------COCINADO----->" + barcodeStr);
+
+            if (isConnected()) {
+                new GetPeopleTask().execute(server + "/employee/" + barcodeStr);
+            }else{
+                mp3Error.start();
+                Toast.makeText(MainActivity.this, "Sin coneccion a internet!",
+                        Toast.LENGTH_LONG).show();
+                onResume();
+            }
+        }
+    };
+
     public void LoadSettings(){
-        DBHelper databaseHelper = new DBHelper(this, "Sealand", null,1);
-        SQLiteDatabase db = databaseHelper.getReadableDatabase();
-        if(db!=null){
-            Cursor c = db.rawQuery("select url,port from Setting",null);
-            String url="";
-            Integer port=0;
-            if(c.moveToFirst()) {
-                do {
-                    url = c.getString(0);
-                    port = c.getInt(1);
-                } while (c.moveToNext());
-            }
-            if(url != null) {
-                server = "http://"+url+":"+port ;
-            }
-            log.info(server);
-        }
-        try {
-            //Method invocation 'db.close()' may produce 'java.lang.NullPointerException'
-            db.close();
-        }catch (NullPointerException n){
-            n.printStackTrace();
-        }
+        server = "http://10.0.0.125:6000";
+        server2 = "http://10.0.0.125:3000";
     }
 
     private void initScan() {
@@ -290,12 +280,13 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 String finalJson = buffer.toString();
+                finalJson = finalJson.replace("MARCASMEF.FN_SP_ES_EMPLEADO(:RUT)", "people");
+                finalJson = finalJson.replace("[","");
+                finalJson = finalJson.replace("]","");
 
                 if(!finalJson.isEmpty()){
                     JSONObject parentObject = new JSONObject(finalJson);
-
-                    return parentObject.getString("run") + "," + parentObject.getString("fullname") +
-                            "," + parentObject.getBoolean("is_permitted");
+                    return parentObject.getString("people");
                 }else{
                     onResume();
                     mp3Error.start();
@@ -305,13 +296,20 @@ public class MainActivity extends AppCompatActivity {
                 }
 
             } catch (MalformedURLException e) {
-                log.info("MalformedURLException");
+                mp3Error.start();
+                log.info("MalformedURLException linea 295: ");
+                e.printStackTrace();
+                onResume();
                 e.printStackTrace();
             } catch (IOException e) {
-                log.info("Persona no encontrada");
+                log.info("Persona no encontrada linea 299");
+                e.printStackTrace();
                 mp3Dennied.start();
             } catch (JSONException e) {
-                log.info("JSONException");
+                e.printStackTrace();
+                mp3Error.start();
+                onResume();
+                log.info("JSONException linea 304");
                 e.printStackTrace();
             } finally {
                 if (connection != null) {
@@ -322,7 +320,7 @@ public class MainActivity extends AppCompatActivity {
                         reader.close();
                     }
                 } catch (IOException e) {
-                    log.info("IOException linea 317");
+                    log.info("IOException linea 315");
                     e.printStackTrace();
                 }
             }
@@ -333,8 +331,11 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(String s) {
             try {
                 super.onPostExecute(s);
-                String[] arr = s.split(",");
-                editTextRun.setText("Run: " + arr[0]);
+                String[] arr = s.split(";");
+                if(arr[0].length() < 6 || arr[0].startsWith("000"))
+                    editTextRun.setText("Tarjeta: " + arr[0]);
+                else
+                    editTextRun.setText("Run: " + arr[0]);
                 editTextFullName.setText(arr[1]);
 
                 runStr = arr[0];
@@ -351,21 +352,23 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 //  new POST
-                new RegisterTask().execute(server + "/api/records/");
+                new RegisterTask().execute(server2 + "/api/records/");
 
             } catch (NullPointerException e){
                 // people don't exist in DB
-                state = false;
-                imageview.setImageResource(R.drawable.img_false);
-                editTextFullName.setText("Unknown");
-                runStr = editTextRun.getText().toString();
-                runStr = runStr.substring(5,14);
-                fullNameStr = editTextFullName.getText().toString();
+//                state = false;
+//                imageview.setImageResource(R.drawable.img_false);
+//                editTextFullName.setText("Unknown");
+//                runStr = editTextRun.getText().toString();
+//                runStr = runStr.substring(5,13);
+//                fullNameStr = editTextFullName.getText().toString();
                 //  new POST
-                new RegisterTask().execute(server + "/api/records/");
-            } catch (Exception e){
+                log.info("Persona no existe en la base de datos linea 361");
                 e.printStackTrace();
+                new RegisterTask().execute(server2 + "/api/records/");
+            } catch (Exception e){
                 log.info("IOException linea 360");
+                e.printStackTrace();
             }
 
         }
@@ -435,9 +438,11 @@ public class MainActivity extends AppCompatActivity {
                     result = "Did not work!";
             }else{
                 mp3Error.start();
-                Toast.makeText(MainActivity.this, "Configure datos del servidor primero", Toast.LENGTH_LONG).show();
+                //Toast.makeText(MainActivity.this, "Configure datos del servidor primero", Toast.LENGTH_LONG).show();
+                makeToast("Configure datos del servidor primero");
             }
         } catch (Exception e) {
+            log.info("Linea 440");
             e.printStackTrace();
         }
         // 11. return result
@@ -456,5 +461,10 @@ public class MainActivity extends AppCompatActivity {
             //log.info(s);
             //Toast.makeText(MainActivity.this, "Persona registrada!", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    public void makeToast(String msg)
+    {
+        Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG).show();
     }
 }

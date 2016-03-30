@@ -1,4 +1,4 @@
-package com.ctwings;
+package com.ctwings.myapplication;
 
 import android.support.v4.app.Fragment;
 import android.os.Bundle;

@@ -31,7 +31,7 @@
             android:value="@integer/google_play_services_version" />
 
         <activity
-            android:name="com.ctwings.Setting"
+            android:name=".Setting"
             android:label="@string/title_activity_setting"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>

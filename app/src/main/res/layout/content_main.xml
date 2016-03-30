@@ -13,13 +13,13 @@
     tools:context="com.ctwings.myapplication.MainActivity"
     tools:showIn="@layout/activity_main"
     android:weightSum="1"
-    android:background="#283444">
+    android:background="#FFF">
 
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/editText_fullname"
-        android:textColor="#ffffff"
+        android:textColor="#000"
         android:textSize="30dp"
         android:text="" />
 
@@ -31,8 +31,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/editText_run"
-        android:textColor="#6d8582"
-        android:textSize="20dp" />
+        android:textColor="#8E8E8E"
+        android:textSize="30dp" />
 
     <TextView
         android:id="@+id/tvJsonItem"
