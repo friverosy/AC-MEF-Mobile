@@ -159,24 +159,41 @@ public class MainActivity extends AppCompatActivity {
             //byte temp = intent.getByteExtra("barcodeType", (byte) 0);
             //android.util.Log.i("debug", "----codetype--" + temp);
             barcodeStr = new String(barcode, 0, barocodelen);
-            log.info("------CRUDO----->" + barcodeStr);
+            log.info("------CRUDO-----> " + barcodeStr);
             int flag=0; // 0 for end without k, 1 with k
 
             if(barcodeStr.startsWith("https")){ // new DNI
                 barcodeStr = barcodeStr.substring(52, 62);
                 barcodeStr = barcodeStr.substring(0, barcodeStr.indexOf("-"));
-            }else if(barcodeStr.length() > 5 && barcodeStr.contains("ABCDEFGHIJKLMNOPQRSTUVWXYZ")){ // old DNI
+                log.info("------Cedula nueva---->");
+            }else if(barcodeStr.startsWith("00")) {
+                log.info("------Tarjeta---->");
+            }else if(barcodeStr.contains("ABCDEFGHIJKLMNOPQRSTUVWXYZ")){ // old DNI
+                log.info("------Cedula vieja---->");
                 barcodeStr = barcodeStr.substring(0, 9);
+                log.info("------Cortado------> "+barcodeStr);
                 barcodeStr = barcodeStr.replace(" ", "");
                 if(barcodeStr.endsWith("K")) {
                     barcodeStr = barcodeStr.replace("K", "");
                     flag = 1;
                 }
-                if(Integer.parseInt(barcodeStr) <= 999999999 && flag == 0)
-                    barcodeStr = barcodeStr.substring(0, barcodeStr.length()-1);
+                if(Integer.parseInt(barcodeStr) > 400000000 && flag == 0){
+                    barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 2);
+                    log.info("adulto mayor");
+                }else if(flag == 0){
+                    log.info("adulto");
+                    barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 1);
+                }
+                log.info("-------"+barcodeStr.length()+" digitos----->");
+            }else{
+                log.info("------Tarjeta---->");
             }
 
-            log.info("------COCINADO----->" + barcodeStr);
+            barcodeStr = barcodeStr.replace("k", "");
+            barcodeStr = barcodeStr.replace("K", "");
+
+
+            log.info("------COCINADO-----> " + barcodeStr);
 
             if (isConnected()) {
                 new GetPeopleTask().execute(server + "/employee/" + barcodeStr);
