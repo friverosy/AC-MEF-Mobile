@@ -21,6 +21,7 @@ import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 
+import java.net.URLConnection;
 import java.util.logging.Logger;
 
 //import android.util.Log;
@@ -29,9 +30,14 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.KeyEvent;
 
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.Switch;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -56,6 +62,10 @@ public class MainActivity extends AppCompatActivity {
     private EditText editTextRun;
     private EditText editTextFullName;
     private String runStr, fullNameStr;
+    //private Switch profile;
+    private RadioGroup rdgProfile;
+    private RadioButton rdbEmployee;
+    private String profile;
 
     private static final Logger log = Logger.getLogger(MainActivity.class.getName());
     private static String server;
@@ -81,7 +91,7 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        //revome that
+        //revome it
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -101,17 +111,53 @@ public class MainActivity extends AppCompatActivity {
         mp3Dennied = MediaPlayer.create(MainActivity.this, R.raw.dennied);
         mp3Permitted = MediaPlayer.create(MainActivity.this, R.raw.permitted);
         mp3Error = MediaPlayer.create(MainActivity.this, R.raw.error);
+        rdgProfile = (RadioGroup)findViewById(R.id.rdgProfile);
+        rdbEmployee = (RadioButton)findViewById(R.id.rdbEmployee);
+
+        rdbEmployee.setChecked(true);
+
+        //profile = (Switch) findViewById(R.id.switch1);
+
+//        profile.setChecked(true);
+//        profile.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+//            @Override
+//            public void onCheckedChanged(CompoundButton compoundButton, boolean bChecked) {
+//                if (bChecked) {
+//                    //input.setText("Entrada");
+//                } else {
+//                    //input.setText("Salida");
+//                }
+//            }
+//        });
+
+        rdgProfile.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener(){
+
+            @Override
+            public void onCheckedChanged(RadioGroup group, int checkedId) {
+                // TODO Auto-generated method stub
+                if (checkedId == R.id.rdbEmployee){
+                    profile = "E";
+                }else if (checkedId == R.id.rdbVisit){
+                    profile = "V";
+                }
+
+            }
+
+        });
 
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (isConnected()) {
-                    //without validation
+                if(profile.equals("E")) {
                     new GetPeopleTask().execute(server + "/employee/" +
-                                editTextFullName.getText().toString());
-                } else {
-                    Toast.makeText(MainActivity.this, "Sin coneccion a internet!",
-                            Toast.LENGTH_LONG).show();
+                            editTextFullName.getText().toString());
+                }else if(profile.equals("V") && !editTextRun.getText().toString().isEmpty() &&
+                        !editTextFullName.getText().toString().isEmpty()){
+                    //Send to AccessControl API
+                    new RegisterTask().execute(server2 + "/api/records/");
+                    Toast.makeText(MainActivity.this, "Visita Registrada",
+                            Toast.LENGTH_SHORT).show();
+                    onResume();
                 }
             }
         });
@@ -143,6 +189,39 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    private static String getUrlContents(String theUrl)
+    {
+        StringBuilder content = new StringBuilder();
+
+        // many of these calls can throw exceptions, so i've just
+        // wrapped them all in one try/catch statement.
+        try
+        {
+            // create a url object
+            URL url = new URL(theUrl);
+
+            // create a urlconnection object
+            URLConnection urlConnection = url.openConnection();
+
+            // wrap the urlconnection in a bufferedreader
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+
+            String line;
+
+            // read from the urlconnection via the bufferedreader
+            while ((line = bufferedReader.readLine()) != null)
+            {
+                content.append(line + "\n");
+            }
+            bufferedReader.close();
+        }
+        catch(Exception e)
+        {
+            e.printStackTrace();
+        }
+        return content.toString();
+    }
+
     private BroadcastReceiver mScanReceiver = new BroadcastReceiver() {
 
         @Override
@@ -159,12 +238,17 @@ public class MainActivity extends AppCompatActivity {
             //byte temp = intent.getByteExtra("barcodeType", (byte) 0);
             //android.util.Log.i("debug", "----codetype--" + temp);
             barcodeStr = new String(barcode, 0, barocodelen);
-            log.info("------CRUDO-----> " + barcodeStr);
+            String rawCode = barcodeStr;
+            log.warning("------CRUDO-----> " + barcodeStr);
             int flag=0; // 0 for end without k, 1 with k
 
             if(barcodeStr.startsWith("https")){ // new DNI
                 barcodeStr = barcodeStr.substring(52, 62);
                 barcodeStr = barcodeStr.substring(0, barcodeStr.indexOf("-"));
+                if(profile == "V"){
+                    //get name from DNI
+                    editTextFullName.setText("");
+                }
                 log.info("------Cedula nueva---->");
             }else if(barcodeStr.startsWith("00")) {
                 log.info("------Tarjeta---->");
@@ -185,6 +269,12 @@ public class MainActivity extends AppCompatActivity {
                     barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 1);
                 }
                 log.info("-------"+barcodeStr.length()+" digitos----->");
+
+                if(profile == "V"){
+                    //get name from DNI
+                    String[] palabrasSeparadas = rawCode.split(" ");
+                    editTextFullName.setText(palabrasSeparadas[1].substring(0, palabrasSeparadas[1].indexOf("CHL")));
+                }
             }else{
                 log.info("------Tarjeta---->");
             }
@@ -192,16 +282,24 @@ public class MainActivity extends AppCompatActivity {
             barcodeStr = barcodeStr.replace("k", "");
             barcodeStr = barcodeStr.replace("K", "");
 
-
             log.info("------COCINADO-----> " + barcodeStr);
 
-            if (isConnected()) {
+
+            if(profile.equals("E"))
                 new GetPeopleTask().execute(server + "/employee/" + barcodeStr);
-            }else{
-                mp3Error.start();
-                Toast.makeText(MainActivity.this, "Sin coneccion a internet!",
-                        Toast.LENGTH_LONG).show();
-                onResume();
+            else if(profile.equals("V")){
+                editTextRun.setText(barcodeStr);
+                runStr = barcodeStr;
+
+                String output  = getUrlContents("https://zeus.sii.cl/cvc_cgi/stc/getstc?RUT=17179347&DV=5&txt_captcha=bUc1Rm5JaHpZYW%20syMDE0MTAxNjE1MzMyMjlBcERZY0hpd2h3MjQyNFZ5b1ZrSktn%20VDhjMDBoSWlsdHhrZ1FqLlFVSk5PR1ZPY1ZGWVl5NUlXUT09em%20RNOVdXWmNVY1E%3D&txt_code=2424&PRG=STC&OPC=NOR");
+                log.info(output);
+
+                fullNameStr = editTextFullName.getText().toString();
+
+                //Send to AccessControl API
+                new RegisterTask().execute(server2 + "/api/records/");
+                Toast.makeText(MainActivity.this, "Visita Registrada",
+                        Toast.LENGTH_SHORT).show();
             }
         }
     };
@@ -216,7 +314,7 @@ public class MainActivity extends AppCompatActivity {
         mScanManager = new ScanManager();
         mScanManager.openScanner();
 
-        mScanManager.switchOutputMode( 0);
+        mScanManager.switchOutputMode(0);
         soundpool = new SoundPool(1, AudioManager.STREAM_NOTIFICATION, 100); // MODE_RINGTONE
         //soundid = soundpool.load("/etc/Scan_new.ogg", 1);
     }
@@ -421,13 +519,12 @@ public class MainActivity extends AppCompatActivity {
             jsonObject.accumulate("people_run", runStr);
             jsonObject.accumulate("fullname", fullNameStr);
 
-            if(state) {
-                jsonObject.accumulate("is_permitted", true);
-                //log.info("true");
-            }else {
-                jsonObject.accumulate("is_permitted", false);
-                //log.info("false");
-            }
+            if(state) jsonObject.accumulate("is_permitted", true);
+            else jsonObject.accumulate("is_permitted", false);
+            jsonObject.accumulate("profile", profile);
+
+//            if(input.isChecked()) jsonObject.accumulate("is_input", true);
+//            else jsonObject.accumulate("is_input", false);
 
             // 4. convert JSONObject to JSON to String
             json = jsonObject.toString();

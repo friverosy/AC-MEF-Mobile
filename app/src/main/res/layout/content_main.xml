@@ -15,6 +15,42 @@
     android:weightSum="1"
     android:background="#FFF">
 
+    <!--<Switch-->
+        <!--android:layout_width="wrap_content"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--android:id="@+id/switch1"-->
+        <!--android:textOn="Empleado"-->
+        <!--android:textOff="Visita"-->
+        <!--android:textSize="26dp"-->
+        <!--android:showText="false"-->
+        <!--android:singleLine="false"-->
+        <!--android:splitTrack="false" />-->
+
+    <RadioGroup
+        android:id="@+id/rdgProfile"
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:checkedButton="@+id/rdbOne"
+        android:layout_column="0"
+        android:layout_span="3">
+        <RadioButton
+            android:id="@+id/rdbEmployee"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Empleado"/>
+        <RadioButton
+            android:id="@+id/rdbVisit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Visita"/>
+        <!--<RadioButton-->
+            <!--android:id="@+id/rdbContracts"-->
+            <!--android:layout_width="wrap_content"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:text="Contratistas"/>-->
+    </RadioGroup>
+
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
