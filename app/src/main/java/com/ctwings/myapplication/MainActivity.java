@@ -13,6 +13,7 @@ import android.media.MediaPlayer;
 import android.media.SoundPool;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.nfc.NfcAdapter;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Vibrator;
@@ -139,11 +140,20 @@ public class MainActivity extends AppCompatActivity {
                     profile = "E";
                 }else if (checkedId == R.id.rdbVisit){
                     profile = "V";
+                    imageview.setImageDrawable(null);
                 }
 
             }
 
         });
+
+//        NfcAdapter nfcAdapter = NfcAdapter.getDefaultAdapter(this);
+//
+//        if(nfcAdapter != null && nfcAdapter.isEnabled()){
+//            //get text from chip
+//        }else{
+//            Toast.makeText(this, "NFC desactivado, porfavor activar!", Toast.LENGTH_LONG).show();
+//        }
 
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -161,6 +171,11 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    public void LoadSettings(){
+        server = "http://10.0.0.125:6000";
+        server2 = "http://10.0.0.125:3000";
     }
 
     @Override
@@ -247,7 +262,7 @@ public class MainActivity extends AppCompatActivity {
                 barcodeStr = barcodeStr.substring(0, barcodeStr.indexOf("-"));
                 if(profile == "V"){
                     //get name from DNI
-                    editTextFullName.setText("");
+                    editTextFullName.setText(" ");
                 }
                 log.info("------Cedula nueva---->");
             }else if(barcodeStr.startsWith("00")) {
@@ -285,29 +300,27 @@ public class MainActivity extends AppCompatActivity {
             log.info("------COCINADO-----> " + barcodeStr);
 
 
-            if(profile.equals("E"))
+            try{
+                if(profile.equals("E"))
+                    new GetPeopleTask().execute(server + "/employee/" + barcodeStr);
+                else if(profile.equals("V")){
+                    editTextRun.setText(barcodeStr);
+                    runStr = barcodeStr;
+
+//                String output  = getUrlContents("https://zeus.sii.cl/cvc_cgi/stc/getstc?RUT=17179347&DV=5&txt_captcha=bUc1Rm5JaHpZYW%20syMDE0MTAxNjE1MzMyMjlBcERZY0hpd2h3MjQyNFZ5b1ZrSktn%20VDhjMDBoSWlsdHhrZ1FqLlFVSk5PR1ZPY1ZGWVl5NUlXUT09em%20RNOVdXWmNVY1E%3D&txt_code=2424&PRG=STC&OPC=NOR");
+//                log.info(output);
+
+                    fullNameStr = editTextFullName.getText().toString();
+
+                    //Send to AccessControl API
+                    new RegisterTask().execute(server2 + "/api/records/");
+                    mp3Permitted.start();
+                }
+            }catch(NullPointerException e){
                 new GetPeopleTask().execute(server + "/employee/" + barcodeStr);
-            else if(profile.equals("V")){
-                editTextRun.setText(barcodeStr);
-                runStr = barcodeStr;
-
-                String output  = getUrlContents("https://zeus.sii.cl/cvc_cgi/stc/getstc?RUT=17179347&DV=5&txt_captcha=bUc1Rm5JaHpZYW%20syMDE0MTAxNjE1MzMyMjlBcERZY0hpd2h3MjQyNFZ5b1ZrSktn%20VDhjMDBoSWlsdHhrZ1FqLlFVSk5PR1ZPY1ZGWVl5NUlXUT09em%20RNOVdXWmNVY1E%3D&txt_code=2424&PRG=STC&OPC=NOR");
-                log.info(output);
-
-                fullNameStr = editTextFullName.getText().toString();
-
-                //Send to AccessControl API
-                new RegisterTask().execute(server2 + "/api/records/");
-                Toast.makeText(MainActivity.this, "Visita Registrada",
-                        Toast.LENGTH_SHORT).show();
             }
         }
     };
-
-    public void LoadSettings(){
-        server = "http://10.0.0.125:6000";
-        server2 = "http://10.0.0.125:3000";
-    }
 
     private void initScan() {
         // TODO Auto-generated method stub
@@ -523,9 +536,6 @@ public class MainActivity extends AppCompatActivity {
             else jsonObject.accumulate("is_permitted", false);
             jsonObject.accumulate("profile", profile);
 
-//            if(input.isChecked()) jsonObject.accumulate("is_input", true);
-//            else jsonObject.accumulate("is_input", false);
-
             // 4. convert JSONObject to JSON to String
             json = jsonObject.toString();
 
@@ -572,7 +582,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(String s) {
-            //log.info(s);
+            log.info(s);
             //Toast.makeText(MainActivity.this, "Persona registrada!", Toast.LENGTH_SHORT).show();
         }
     }
