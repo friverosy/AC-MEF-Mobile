@@ -256,6 +256,7 @@ public class MainActivity extends AppCompatActivity {
             String rawCode = barcodeStr;
             log.warning("------CRUDO-----> " + barcodeStr);
             int flag=0; // 0 for end without k, 1 with k
+            int lenght=0;
 
             if(barcodeStr.startsWith("https")){ // new DNI
                 barcodeStr = barcodeStr.substring(52, 62);
@@ -279,7 +280,9 @@ public class MainActivity extends AppCompatActivity {
                 if(Integer.parseInt(barcodeStr) > 400000000 && flag == 0){
                     barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 2);
                     log.info("adulto mayor");
+                    lenght=9;
                 }else if(flag == 0){
+                    lenght=10;
                     log.info("adulto");
                     barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 1);
                 }
@@ -288,7 +291,11 @@ public class MainActivity extends AppCompatActivity {
                 if(profile == "V"){
                     //get name from DNI
                     String[] palabrasSeparadas = rawCode.split(" ");
-                    editTextFullName.setText(palabrasSeparadas[1].substring(0, palabrasSeparadas[1].indexOf("CHL")));
+                    try{
+                        editTextFullName.setText(palabrasSeparadas[1].substring(0, palabrasSeparadas[1].indexOf("CHL")));
+                    }catch (Exception e){
+                        editTextFullName.setText(palabrasSeparadas[2].substring(0, palabrasSeparadas[2].indexOf("CHL")));
+                    }
                 }
             }else{
                 log.info("------Tarjeta---->");
