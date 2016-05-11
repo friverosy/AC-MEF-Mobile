@@ -13,7 +13,7 @@ import android.media.MediaPlayer;
 import android.media.SoundPool;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.nfc.NfcAdapter;
+//import android.nfc.NfcAdapter;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Vibrator;
@@ -31,16 +31,15 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.KeyEvent;
 
-import android.widget.CompoundButton;
+//import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.Switch;
 import android.widget.Toast;
-import android.widget.ToggleButton;
+//import android.widget.ToggleButton;
 
-import org.apache.http.HttpRequest;
+//import org.apache.http.HttpRequest;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -65,7 +64,6 @@ public class MainActivity extends AppCompatActivity {
     private EditText editTextFullName;
     private EditText editTextCompany;
     private String runStr, fullNameStr, companyStr;
-    //private Switch profile;
     private RadioGroup rdgProfile;
     private RadioButton rdbEmployee;
     private String profile;
@@ -94,7 +92,7 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        //revome it
+        //remove it
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -117,23 +115,8 @@ public class MainActivity extends AppCompatActivity {
         mp3Error = MediaPlayer.create(MainActivity.this, R.raw.error);
         rdgProfile = (RadioGroup)findViewById(R.id.rdgProfile);
         rdbEmployee = (RadioButton)findViewById(R.id.rdbEmployee);
-
         rdbEmployee.setChecked(true);
         editTextCompany.setVisibility(View.GONE);
-
-        //profile = (Switch) findViewById(R.id.switch1);
-
-//        profile.setChecked(true);
-//        profile.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-//            @Override
-//            public void onCheckedChanged(CompoundButton compoundButton, boolean bChecked) {
-//                if (bChecked) {
-//                    //input.setText("Entrada");
-//                } else {
-//                    //input.setText("Salida");
-//                }
-//            }
-//        });
 
         rdgProfile.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener(){
 
@@ -210,8 +193,7 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private static String getUrlContents(String theUrl)
-    {
+    private static String getUrlContents(String theUrl) {
         StringBuilder content = new StringBuilder();
 
         // many of these calls can throw exceptions, so i've just
@@ -343,7 +325,6 @@ public class MainActivity extends AppCompatActivity {
 
         mScanManager.switchOutputMode(0);
         soundpool = new SoundPool(1, AudioManager.STREAM_NOTIFICATION, 100); // MODE_RINGTONE
-        //soundid = soundpool.load("/etc/Scan_new.ogg", 1);
     }
 
     @Override
@@ -433,8 +414,7 @@ public class MainActivity extends AppCompatActivity {
                 }else{
                     onResume();
                     mp3Error.start();
-                    Toast.makeText(MainActivity.this, "Error al obtener datos, intente nuevamente",
-                            Toast.LENGTH_SHORT).show();
+                    makeToast("Error al obtener datos, intente nuevamente");
                     return null;
                 }
 
@@ -463,7 +443,6 @@ public class MainActivity extends AppCompatActivity {
                         reader.close();
                     }
                 } catch (IOException e) {
-                    log.info("IOException linea 315");
                     e.printStackTrace();
                 }
             }
@@ -494,24 +473,11 @@ public class MainActivity extends AppCompatActivity {
                     imageview.setImageResource(R.drawable.img_false);
                 }
 
-                //  new POST
-                //new RegisterTask().execute(server2 + "/api/records/");
-                //new GetCompanyTask().execute(server2 + "/api/records/findOne?filter[where][people_run]=" + barcodeStr);
-
             } catch (NullPointerException e){
-                // people don't exist in DB
-//                state = false;
-//                imageview.setImageResource(R.drawable.img_false);
-//                editTextFullName.setText("Unknown");
-//                runStr = editTextRun.getText().toString();
-//                runStr = runStr.substring(5,13);
-//                fullNameStr = editTextFullName.getText().toString();
-                //  new POST
                 log.info("Persona no existe en la base de datos linea 361");
                 e.printStackTrace();
                 new RegisterTask().execute(server2 + "/api/records/");
             } catch (Exception e){
-                log.info("IOException linea 360");
                 e.printStackTrace();
             }
 
