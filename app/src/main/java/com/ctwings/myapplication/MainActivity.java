@@ -40,6 +40,7 @@ import android.widget.Switch;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import org.apache.http.HttpRequest;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -62,7 +63,8 @@ public class MainActivity extends AppCompatActivity {
     private ImageView imageview;
     private EditText editTextRun;
     private EditText editTextFullName;
-    private String runStr, fullNameStr;
+    private EditText editTextCompany;
+    private String runStr, fullNameStr, companyStr;
     //private Switch profile;
     private RadioGroup rdgProfile;
     private RadioButton rdbEmployee;
@@ -108,6 +110,7 @@ public class MainActivity extends AppCompatActivity {
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         editTextRun = (EditText) findViewById(R.id.editText_run);
         editTextFullName = (EditText) findViewById(R.id.editText_fullname);
+        editTextCompany = (EditText) findViewById(R.id.editText_company);
         imageview = (ImageView) findViewById(R.id.imageView);
         mp3Dennied = MediaPlayer.create(MainActivity.this, R.raw.dennied);
         mp3Permitted = MediaPlayer.create(MainActivity.this, R.raw.permitted);
@@ -116,6 +119,7 @@ public class MainActivity extends AppCompatActivity {
         rdbEmployee = (RadioButton)findViewById(R.id.rdbEmployee);
 
         rdbEmployee.setChecked(true);
+        editTextCompany.setVisibility(View.GONE);
 
         //profile = (Switch) findViewById(R.id.switch1);
 
@@ -138,9 +142,11 @@ public class MainActivity extends AppCompatActivity {
                 // TODO Auto-generated method stub
                 if (checkedId == R.id.rdbEmployee){
                     profile = "E";
-                }else if (checkedId == R.id.rdbVisit){
+                    editTextCompany.setVisibility(View.GONE);
+                }else if (checkedId == R.id.rdbVisit) {
                     profile = "V";
                     imageview.setImageDrawable(null);
+                    editTextCompany.setVisibility(View.VISIBLE);
                 }
 
             }
@@ -175,7 +181,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void LoadSettings(){
         server = "http://10.0.0.125:6000";
-        server2 = "http://10.0.0.125:3000";
+        server2 = "http://192.168.123.11:3000";
     }
 
     @Override
@@ -321,6 +327,7 @@ public class MainActivity extends AppCompatActivity {
 
                     //Send to AccessControl API
                     new RegisterTask().execute(server2 + "/api/records/");
+                    new GetCompanyTask().execute(server2 + "/api/records/findOne?filter[where][people_run]=" + barcodeStr);
                     mp3Permitted.start();
                 }
             }catch(NullPointerException e){
@@ -363,6 +370,7 @@ public class MainActivity extends AppCompatActivity {
         initScan();
         editTextRun.setText("");
         editTextFullName.setText("");
+        editTextCompany.setText("");
         imageview.setImageDrawable(null);
         IntentFilter filter = new IntentFilter();
         filter.addAction(SCAN_ACTION);
@@ -487,7 +495,8 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 //  new POST
-                new RegisterTask().execute(server2 + "/api/records/");
+                //new RegisterTask().execute(server2 + "/api/records/");
+                //new GetCompanyTask().execute(server2 + "/api/records/findOne?filter[where][people_run]=" + barcodeStr);
 
             } catch (NullPointerException e){
                 // people don't exist in DB
@@ -590,12 +599,100 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(String s) {
             log.info(s);
-            //Toast.makeText(MainActivity.this, "Persona registrada!", Toast.LENGTH_SHORT).show();
+            //makeToast("Persona registrada!");
         }
     }
 
-    public void makeToast(String msg)
-    {
+    public void makeToast(String msg){
         Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG).show();
+    }
+
+    public class GetCompanyTask extends AsyncTask<String, String, String>{
+
+        @Override
+        protected String doInBackground(String... params) {
+
+            HttpURLConnection connection = null;
+            BufferedReader reader = null;
+
+            try {
+                URL url = new URL(params[0]);
+                connection = (HttpURLConnection) url.openConnection();
+                connection.connect();
+
+                if(connection == null) mp3Error.start();
+
+                InputStream stream = connection.getInputStream();
+                reader = new BufferedReader(new InputStreamReader(stream));
+                StringBuffer buffer = new StringBuffer();
+
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    buffer.append(line);
+                }
+
+                String finalJson = buffer.toString();
+
+                if(!finalJson.isEmpty()){
+                    JSONObject parentObject = new JSONObject(finalJson);
+                    try {
+                        return parentObject.getString("company");
+                    }
+                    catch(JSONException e){
+                        return "";
+                    }
+                }else{
+                    onResume();
+                    mp3Error.start();
+                    makeToast("Error al obtener datos, intente nuevamente");
+                    return null;
+                }
+
+            } catch (MalformedURLException e) {
+                mp3Error.start();
+                log.warning("MalformedURLException: ");
+                e.printStackTrace();
+                onResume();
+                e.printStackTrace();
+            } catch (IOException e) {
+                log.warning("Persona no encontrada");
+                e.printStackTrace();
+                mp3Dennied.start();
+            } catch (JSONException e) {
+                e.printStackTrace();
+                mp3Error.start();
+                onResume();
+                log.warning("JSONException");
+                e.printStackTrace();
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+                try {
+                    if (reader != null) {
+                        reader.close();
+                    }
+                } catch (IOException e) {
+                    log.warning("IOException");
+                    e.printStackTrace();
+                }
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            try {
+                super.onPostExecute(s);
+                editTextCompany.setText(s);
+            } catch (NullPointerException e){
+                log.warning("Persona no existe en la base de datos");
+                e.printStackTrace();
+            } catch (Exception e){
+                log.warning("IOException linea 360");
+                e.printStackTrace();
+            }
+
+        }
     }
 }
