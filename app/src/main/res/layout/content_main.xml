@@ -15,17 +15,6 @@
     android:weightSum="1"
     android:background="#FFF">
 
-    <!--<Switch-->
-        <!--android:layout_width="wrap_content"-->
-        <!--android:layout_height="wrap_content"-->
-        <!--android:id="@+id/switch1"-->
-        <!--android:textOn="Empleado"-->
-        <!--android:textOff="Visita"-->
-        <!--android:textSize="26dp"-->
-        <!--android:showText="false"-->
-        <!--android:singleLine="false"-->
-        <!--android:splitTrack="false" />-->
-
     <RadioGroup
         android:id="@+id/rdgProfile"
         android:orientation="horizontal"
@@ -70,11 +59,16 @@
         android:textColor="#8E8E8E"
         android:textSize="30dp" />
 
-    <TextView
-        android:id="@+id/tvJsonItem"
-        android:layout_width="wrap_content"
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="8dp" />
+
+    <EditText
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="" />
+        android:id="@+id/editText_company"
+        android:textColor="#8E8E8E"
+        android:textSize="30dp" />
 
     <ImageView
         android:layout_width="match_parent"
