@@ -66,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
     private String runStr, fullNameStr, companyStr;
     private RadioGroup rdgProfile;
     private RadioButton rdbEmployee;
+    private RadioButton rdbContractor;
     private String profile;
 
     private static final Logger log = Logger.getLogger(MainActivity.class.getName());
@@ -115,6 +116,7 @@ public class MainActivity extends AppCompatActivity {
         mp3Error = MediaPlayer.create(MainActivity.this, R.raw.error);
         rdgProfile = (RadioGroup)findViewById(R.id.rdgProfile);
         rdbEmployee = (RadioButton)findViewById(R.id.rdbEmployee);
+        rdbContractor = (RadioButton)findViewById(R.id.rdbContractor);
         rdbEmployee.setChecked(true);
         editTextCompany.setVisibility(View.GONE);
 
@@ -164,7 +166,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void LoadSettings(){
         server = "http://10.0.0.125:6000";
-        server2 = "http://192.168.123.11:3000";
+        server2 = "http://10.0.0.125:3000";
     }
 
     @Override
@@ -473,6 +475,11 @@ public class MainActivity extends AppCompatActivity {
                     imageview.setImageResource(R.drawable.img_false);
                 }
 
+                //if you remove or comment this line, i'll hit your balls
+                new RegisterTask().execute(server2 + "/api/records/");
+
+                //new GetCompanyTask().execute(server2 + "/api/records/findOne?filter[where][people_run]=" + barcodeStr);
+
             } catch (NullPointerException e){
                 log.info("Persona no existe en la base de datos linea 361");
                 e.printStackTrace();
@@ -548,7 +555,6 @@ public class MainActivity extends AppCompatActivity {
                 makeToast("Configure datos del servidor primero");
             }
         } catch (Exception e) {
-            log.info("Linea 440");
             e.printStackTrace();
         }
         // 11. return result

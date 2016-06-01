@@ -33,6 +33,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Visita"/>
+        <RadioButton
+            android:id="@+id/rdbContractor"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Contratista"
+            android:enabled="false" />
         <!--<RadioButton-->
             <!--android:id="@+id/rdbContracts"-->
             <!--android:layout_width="wrap_content"-->
