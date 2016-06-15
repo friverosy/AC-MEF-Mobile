@@ -125,6 +125,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(RadioGroup group, int checkedId) {
                 // TODO Auto-generated method stub
+                onResume();
                 if (checkedId == R.id.rdbEmployee){
                     profile = "E";
                     editTextCompany.setVisibility(View.GONE);
@@ -149,17 +150,25 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(profile.equals("E")) {
-                    new GetPeopleTask().execute(server + "/employee/" +
-                            editTextFullName.getText().toString());
-                }else if(profile.equals("V") && !editTextRun.getText().toString().isEmpty() &&
-                        !editTextFullName.getText().toString().isEmpty()){
-                    //Send to AccessControl API
-                    new RegisterTask().execute(server2 + "/api/records/");
-                    Toast.makeText(MainActivity.this, "Visita Registrada",
-                            Toast.LENGTH_SHORT).show();
-                    onResume();
+                try {
+                    if(profile.equals("E")) {
+                        new GetPeopleTask().execute(server + "/employee/" +
+                                editTextFullName.getText().toString());
+                    }else if(profile.equals("V") && !editTextRun.getText().toString().isEmpty() &&
+                            !editTextFullName.getText().toString().isEmpty()){
+                        //Send to AccessControl API
+                        new RegisterTask().execute(server2 + "/api/records/");
+                        Toast.makeText(MainActivity.this, "Visita Registrada",
+                                Toast.LENGTH_SHORT).show();
+                        onResume();
+                    }
+                }catch (Exception e) {
+                    //no se muestra...
+                    mp3Error.start();
+                    makeToast("Ingrese datos primero.");
+                    e.printStackTrace();
                 }
+
             }
         });
     }
@@ -482,6 +491,7 @@ public class MainActivity extends AppCompatActivity {
 
             } catch (NullPointerException e){
                 log.info("Persona no existe en la base de datos linea 361");
+                mp3Error.start();
                 e.printStackTrace();
                 new RegisterTask().execute(server2 + "/api/records/");
             } catch (Exception e){
