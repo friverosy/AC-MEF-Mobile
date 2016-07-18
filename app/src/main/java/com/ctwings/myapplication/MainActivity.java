@@ -32,11 +32,15 @@ import android.view.MenuItem;
 import android.view.KeyEvent;
 
 //import android.widget.CompoundButton;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.Switch;
+import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 //import android.widget.ToggleButton;
 
 //import org.apache.http.HttpRequest;
@@ -73,6 +77,7 @@ public class MainActivity extends AppCompatActivity {
     private static String server;
     private static String server2;
     private boolean state;
+    private boolean is_input;
 
     private final static String SCAN_ACTION = "urovo.rcv.message";//扫描结束action
     private Vibrator mVibrator;
@@ -81,6 +86,8 @@ public class MainActivity extends AppCompatActivity {
     private int soundid;
     private String barcodeStr;
     private boolean isScaning = false;
+
+    private Switch mySwitch;
 
     MediaPlayer mp3Dennied;
     MediaPlayer mp3Permitted;
@@ -120,6 +127,9 @@ public class MainActivity extends AppCompatActivity {
         rdbEmployee.setChecked(true);
         editTextCompany.setVisibility(View.GONE);
 
+        mySwitch = (Switch) findViewById(R.id.mySwitch);
+        mySwitch.setChecked(true);
+
         rdgProfile.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener(){
 
             @Override
@@ -134,9 +144,21 @@ public class MainActivity extends AppCompatActivity {
                     imageview.setImageDrawable(null);
                     editTextCompany.setVisibility(View.VISIBLE);
                 }
-
             }
+        });
 
+        mySwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if(isChecked){
+                    is_input = true;
+                    //mySwitch.setText("ENTRADA");
+                }else{
+                    is_input = false;
+                    //mySwitch.setText("SALIDA");
+                }
+            }
         });
 
 //        NfcAdapter nfcAdapter = NfcAdapter.getDefaultAdapter(this);
@@ -534,6 +556,8 @@ public class MainActivity extends AppCompatActivity {
             if(state) jsonObject.accumulate("is_permitted", true);
             else jsonObject.accumulate("is_permitted", false);
             jsonObject.accumulate("profile", profile);
+            jsonObject.accumulate("is_input", is_input);
+
 
             // 4. convert JSONObject to JSON to String
             json = jsonObject.toString();

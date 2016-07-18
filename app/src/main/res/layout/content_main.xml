@@ -15,6 +15,16 @@
     android:weightSum="1"
     android:background="#FFF">
 
+    <Switch
+        android:id="@+id/mySwitch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="20dp"
+        android:textOn="Entrada"
+        android:textOff="Salida" />
+
     <RadioGroup
         android:id="@+id/rdgProfile"
         android:orientation="horizontal"
