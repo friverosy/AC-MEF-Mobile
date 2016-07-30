@@ -19,9 +19,7 @@
         android:id="@+id/mySwitch"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentTop="true"
-        android:layout_marginTop="20dp"
+        android:layout_marginBottom="10dp"
         android:textOn="Entrada"
         android:textOff="Salida" />
 
@@ -37,7 +35,7 @@
             android:id="@+id/rdbEmployee"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Empleado"/>
+            android:text="Empl"/>
         <RadioButton
             android:id="@+id/rdbVisit"
             android:layout_width="wrap_content"
@@ -47,13 +45,15 @@
             android:id="@+id/rdbContractor"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Contratista"
-            android:enabled="false" />
-        <!--<RadioButton-->
-            <!--android:id="@+id/rdbContracts"-->
-            <!--android:layout_width="wrap_content"-->
-            <!--android:layout_height="wrap_content"-->
-            <!--android:text="Contratistas"/>-->
+            android:text="Contr"
+            android:enabled="true" />
+
+        <RadioButton
+            android:id="@+id/rdbBus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Bus"
+            android:enabled="true" />
     </RadioGroup>
 
     <EditText

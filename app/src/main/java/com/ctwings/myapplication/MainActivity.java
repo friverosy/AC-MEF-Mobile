@@ -78,6 +78,7 @@ public class MainActivity extends AppCompatActivity {
     private static String server2;
     private boolean state;
     private boolean is_input;
+    private boolean bus;
 
     private final static String SCAN_ACTION = "urovo.rcv.message";//扫描结束action
     private Vibrator mVibrator;
@@ -130,6 +131,12 @@ public class MainActivity extends AppCompatActivity {
         mySwitch = (Switch) findViewById(R.id.mySwitch);
         mySwitch.setChecked(true);
 
+        // set by default
+        is_input = true;
+        profile = "E";
+        bus = false;
+        // end set by default
+
         rdgProfile.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener(){
 
             @Override
@@ -138,26 +145,32 @@ public class MainActivity extends AppCompatActivity {
                 onResume();
                 if (checkedId == R.id.rdbEmployee){
                     profile = "E";
+                    bus = false;
                     editTextCompany.setVisibility(View.GONE);
                 }else if (checkedId == R.id.rdbVisit) {
                     profile = "V";
+                    bus = false;
                     imageview.setImageDrawable(null);
                     editTextCompany.setVisibility(View.VISIBLE);
+                }else if (checkedId == R.id.rdbContractor) {
+                    profile = "C";
+                    bus = false;
+                    imageview.setImageDrawable(null);
+                    editTextCompany.setVisibility(View.VISIBLE);
+                }else if (checkedId == R.id.rdbBus) {
+                    profile = "E";
+                    bus = true;
+                    imageview.setImageDrawable(null);
+                    editTextCompany.setVisibility(View.GONE);
                 }
             }
         });
 
         mySwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if(isChecked){
-                    is_input = true;
-                    //mySwitch.setText("ENTRADA");
-                }else{
-                    is_input = false;
-                    //mySwitch.setText("SALIDA");
-                }
+                if(isChecked){ is_input = true; }
+                else{ is_input = false; }
             }
         });
 
@@ -183,6 +196,9 @@ public class MainActivity extends AppCompatActivity {
                         Toast.makeText(MainActivity.this, "Visita Registrada",
                                 Toast.LENGTH_SHORT).show();
                         onResume();
+                    }else if(profile.equals("C")) {
+                        new GetPeopleTask().execute(server + "/employee/" +
+                                editTextFullName.getText().toString());
                     }
                 }catch (Exception e) {
                     //no se muestra...
@@ -190,7 +206,6 @@ public class MainActivity extends AppCompatActivity {
                     makeToast("Ingrese datos primero.");
                     e.printStackTrace();
                 }
-
             }
         });
     }
@@ -552,12 +567,15 @@ public class MainActivity extends AppCompatActivity {
             JSONObject jsonObject = new JSONObject();
             jsonObject.accumulate("people_run", runStr);
             jsonObject.accumulate("fullname", fullNameStr);
-
-            if(state) jsonObject.accumulate("is_permitted", true);
-            else jsonObject.accumulate("is_permitted", false);
+            jsonObject.accumulate("is_permitted", state);
             jsonObject.accumulate("profile", profile);
             jsonObject.accumulate("is_input", is_input);
-
+            jsonObject.accumulate("bus", bus);
+            if(bus) {
+                log.info("bus true");
+            }else{
+                log.info("bus false");
+            }
 
             // 4. convert JSONObject to JSON to String
             json = jsonObject.toString();
@@ -604,7 +622,6 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(String s) {
-            log.info(s);
             //makeToast("Persona registrada!");
         }
     }
