@@ -1,6 +1,7 @@
 package com.ctwings.myapplication;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -22,10 +23,12 @@ import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 
+import java.net.InetAddress;
 import java.net.URLConnection;
 import java.util.logging.Logger;
 
 //import android.util.Log;
+import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -44,6 +47,7 @@ import android.widget.ToggleButton;
 //import android.widget.ToggleButton;
 
 //import org.apache.http.HttpRequest;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -67,15 +71,18 @@ public class MainActivity extends AppCompatActivity {
     private EditText editTextRun;
     private EditText editTextFullName;
     private EditText editTextCompany;
-    private String runStr, fullNameStr, companyStr;
+    private String runStr, fullNameStr, companyStr, location, companyCode;
     private RadioGroup rdgProfile;
     private RadioButton rdbEmployee;
     private RadioButton rdbContractor;
     private String profile;
 
+    ProgressDialog pd;
+
     private static final Logger log = Logger.getLogger(MainActivity.class.getName());
     private static String server;
     private static String server2;
+    private static String server3;
     private boolean state;
     private boolean is_input;
     private boolean bus;
@@ -94,12 +101,16 @@ public class MainActivity extends AppCompatActivity {
     MediaPlayer mp3Permitted;
     MediaPlayer mp3Error;
 
+    DatabaseHelper db = new DatabaseHelper(this);
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        pd = new ProgressDialog(MainActivity.this);
 
         //remove it
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
@@ -142,7 +153,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(RadioGroup group, int checkedId) {
                 // TODO Auto-generated method stub
-                onResume();
+                //onResume();
+                reset();
                 if (checkedId == R.id.rdbEmployee){
                     profile = "E";
                     bus = false;
@@ -195,7 +207,8 @@ public class MainActivity extends AppCompatActivity {
                         new RegisterTask().execute(server2 + "/api/records/");
                         Toast.makeText(MainActivity.this, "Visita Registrada",
                                 Toast.LENGTH_SHORT).show();
-                        onResume();
+                        //onResume();
+                        reset();
                     }else if(profile.equals("C")) {
                         new GetPeopleTask().execute(server + "/employee/" +
                                 editTextFullName.getText().toString());
@@ -203,7 +216,14 @@ public class MainActivity extends AppCompatActivity {
                 }catch (Exception e) {
                     //no se muestra...
                     mp3Error.start();
-                    makeToast("Ingrese datos primero.");
+                    runOnUiThread(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            makeToast("Ingrese datos primero.");
+                        }
+                    });
+
                     e.printStackTrace();
                 }
             }
@@ -213,6 +233,7 @@ public class MainActivity extends AppCompatActivity {
     public void LoadSettings(){
         server = "http://10.0.0.125:6000";
         server2 = "http://10.0.0.125:3000";
+        server3 = "http://192.168.2.109:8001/dataout"; //Database data address
     }
 
     @Override
@@ -231,7 +252,8 @@ public class MainActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_refresh) {
-            onResume();
+            //onResume();
+            reset();
             return true;
         }else if (id == R.id.action_setting) {
             Intent i = new Intent(this, Setting.class);
@@ -326,10 +348,12 @@ public class MainActivity extends AppCompatActivity {
 
                 if(profile == "V"){
                     //get name from DNI
-                    String[] palabrasSeparadas = rawCode.split(" ");
+                    String[] palabrasSeparadas = rawCode.split("\\s+");
+                    //Log.d("palabrasSeparadas1",palabrasSeparadas[1].substring(0, palabrasSeparadas[1].indexOf("CHL")));
                     try{
                         editTextFullName.setText(palabrasSeparadas[1].substring(0, palabrasSeparadas[1].indexOf("CHL")));
                     }catch (Exception e){
+                        Log.d("palabrasSeparadas",palabrasSeparadas[2].substring(0, palabrasSeparadas[2].indexOf("CHL")));
                         editTextFullName.setText(palabrasSeparadas[2].substring(0, palabrasSeparadas[2].indexOf("CHL")));
                     }
                 }
@@ -344,8 +368,9 @@ public class MainActivity extends AppCompatActivity {
 
 
             try{
-                if(profile.equals("E"))
-                    new GetPeopleTask().execute(server + "/employee/" + barcodeStr);
+                if(profile.equals("E")) {
+                    new GetPeopleTask().execute();
+                }
                 else if(profile.equals("V")){
                     editTextRun.setText(barcodeStr);
                     runStr = barcodeStr;
@@ -357,11 +382,11 @@ public class MainActivity extends AppCompatActivity {
 
                     //Send to AccessControl API
                     new RegisterTask().execute(server2 + "/api/records/");
-                    new GetCompanyTask().execute(server2 + "/api/records/findOne?filter[where][people_run]=" + barcodeStr);
+                    //new GetCompanyTask().execute(server2 + "/api/records/findOne?filter[where][people_run]=" + barcodeStr);
                     mp3Permitted.start();
                 }
             }catch(NullPointerException e){
-                new GetPeopleTask().execute(server + "/employee/" + barcodeStr);
+                //new GetPeopleTask().execute(server + "/employee/" + barcodeStr);
             }
         }
     };
@@ -397,6 +422,41 @@ public class MainActivity extends AppCompatActivity {
         // TODO Auto-generated method stub
         super.onResume();
         initScan();
+        //getApplicationContext().deleteDatabase("mbd");
+        UpdateDb();
+        editTextRun.setText("");
+        editTextFullName.setText("");
+        editTextCompany.setText("");
+        imageview.setImageDrawable(null);
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(SCAN_ACTION);
+        registerReceiver(mScanReceiver, filter);
+    }
+
+    public void UpdateDb(){
+
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                while(true) {
+                    new LoadDbTask().execute();
+                    Log.d("Update!", "Updating DB");
+                    try {
+                        // thread to sleep for 60000 milliseconds
+                        Thread.sleep(60000);
+                    } catch (Exception e) {
+                        Log.d("Update!","error sleep");
+                    }
+                }
+            }
+        };
+        new Thread(runnable).start();
+
+    }
+
+    public void reset(){
+
+        initScan();
         editTextRun.setText("");
         editTextFullName.setText("");
         editTextCompany.setText("");
@@ -427,74 +487,113 @@ public class MainActivity extends AppCompatActivity {
             return false;
     }
 
+
+    public class LoadDbTask extends AsyncTask<String, String, String>{
+
+        @Override
+        protected void onPreExecute() {
+
+                    /*pd.setTitle("Processing...");
+                    pd.setMessage("Please wait.");
+                    pd.setCancelable(false);
+                    pd.setIndeterminate(true);
+                    pd.show();*/
+
+        }
+
+        @Override
+        protected String doInBackground(String... params) {
+
+            String data = DbCall();
+            if(data!="error") {
+                db.add_persons(data);
+            }else{
+                Log.d("noinet","noinet");
+            }
+
+            return "Done";
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+
+                //Log.d("COUNT", db.person_count()+"");
+                //Log.d("Person by id", db.get_person(4000)+"");
+
+                //pd.dismiss();
+        }
+
+
+    }
+
+    public String DbCall(){
+
+        String dataUrl = server3;
+        String contentAsString="";
+
+        URL url;
+        HttpURLConnection connection = null;
+
+        try {
+            // Create connection
+            url = new URL(dataUrl);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(5000);
+            connection.connect();
+
+            int responsecode = connection.getResponseCode();
+
+            // Get Response
+            InputStream is = connection.getInputStream();
+            contentAsString = convertInputStreamToString(is);
+
+            Log.d("TAG-contentAsString","Server response: "+contentAsString);
+        } catch (Exception e) {
+
+            e.printStackTrace();
+            contentAsString="error";
+
+        }
+        if (connection != null) {
+            connection.disconnect();
+        }
+
+        return contentAsString;
+
+    }
+
+    //BD query instead of webservice
     public class GetPeopleTask extends AsyncTask<String, String, String>{
 
         @Override
         protected String doInBackground(String... params) {
 
-            HttpURLConnection connection = null;
-            BufferedReader reader = null;
+            String finalJson = db.get_person_by_run(barcodeStr);
+            //String finalJson = "";
+            Log.d("barcoderun",barcodeStr);
 
-            try {
-                URL url = new URL(params[0]);
-                connection = (HttpURLConnection) url.openConnection();
-                connection.connect();
+            if(!finalJson.isEmpty()){
+                //JSONObject parentObject = new JSONObject(finalJson);
+                //return parentObject.getString("people");
+                    return finalJson;
 
-                if(connection == null) mp3Error.start();
-
-                InputStream stream = connection.getInputStream();
-                reader = new BufferedReader(new InputStreamReader(stream));
-                StringBuffer buffer = new StringBuffer();
-
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    buffer.append(line);
-                }
-
-                String finalJson = buffer.toString();
-                finalJson = finalJson.replace("MARCASMEF.FN_SP_ES_EMPLEADO(:RUT)", "people");
-                finalJson = finalJson.replace("[","");
-                finalJson = finalJson.replace("]","");
-
-                if(!finalJson.isEmpty()){
-                    JSONObject parentObject = new JSONObject(finalJson);
-                    return parentObject.getString("people");
                 }else{
-                    onResume();
+                    //onResume();
+                    reset();
                     mp3Error.start();
-                    makeToast("Error al obtener datos, intente nuevamente");
+                    runOnUiThread(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            makeToast("Error al obtener datos, intente nuevamente");
+                        }
+                    });
+
+
                     return null;
                 }
 
-            } catch (MalformedURLException e) {
-                mp3Error.start();
-                log.info("MalformedURLException linea 295: ");
-                e.printStackTrace();
-                onResume();
-                e.printStackTrace();
-            } catch (IOException e) {
-                log.info("Persona no encontrada linea 299");
-                e.printStackTrace();
-                mp3Dennied.start();
-            } catch (JSONException e) {
-                e.printStackTrace();
-                mp3Error.start();
-                onResume();
-                log.info("JSONException linea 304");
-                e.printStackTrace();
-            } finally {
-                if (connection != null) {
-                    connection.disconnect();
-                }
-                try {
-                    if (reader != null) {
-                        reader.close();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            return null;
         }
 
         @Override
@@ -502,16 +601,20 @@ public class MainActivity extends AppCompatActivity {
             try {
                 super.onPostExecute(s);
                 String[] arr = s.split(";");
-                if(arr[0].length() < 6 || arr[0].startsWith("000"))
+                if(arr[0].length() < 6 || arr[0].startsWith("000")) {
                     editTextRun.setText("Tarjeta: " + arr[0]);
-                else
+                }else {
                     editTextRun.setText("Run: " + arr[0]);
-                editTextFullName.setText(arr[1]);
-
+                    editTextFullName.setText(arr[1]);
+                }
                 runStr = arr[0];
                 fullNameStr = arr[1];
+                companyStr = arr[3];
+                location = arr[4];
+                companyCode = arr[5];
 
-                if(arr[2].equals("true")) {
+                if(arr[2].equals("1")) {
+                    //******changed true to 1********
                     mp3Permitted.start();
                     state = true;
                     imageview.setImageResource(R.drawable.img_true);
@@ -524,13 +627,21 @@ public class MainActivity extends AppCompatActivity {
                 //if you remove or comment this line, i'll hit your balls
                 new RegisterTask().execute(server2 + "/api/records/");
 
+                /*runOnUiThread(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        makeToast("REGISTERTASK "+runStr+" - "+fullNameStr);
+                    }
+                });*/
+
                 //new GetCompanyTask().execute(server2 + "/api/records/findOne?filter[where][people_run]=" + barcodeStr);
 
             } catch (NullPointerException e){
                 log.info("Persona no existe en la base de datos linea 361");
                 mp3Error.start();
                 e.printStackTrace();
-                new RegisterTask().execute(server2 + "/api/records/");
+                //new RegisterTask().execute(server2 + "/api/records/");
             } catch (Exception e){
                 e.printStackTrace();
             }
@@ -571,6 +682,9 @@ public class MainActivity extends AppCompatActivity {
             jsonObject.accumulate("profile", profile);
             jsonObject.accumulate("is_input", is_input);
             jsonObject.accumulate("bus", bus);
+            jsonObject.accumulate("company", companyStr);
+            jsonObject.accumulate("location", location);
+            jsonObject.accumulate("company_code", companyCode);
             if(bus) {
                 log.info("bus true");
             }else{
@@ -579,6 +693,8 @@ public class MainActivity extends AppCompatActivity {
 
             // 4. convert JSONObject to JSON to String
             json = jsonObject.toString();
+
+            Log.d("json", json);
 
             // 5. set json to StringEntity
             StringEntity se = new StringEntity(json);
@@ -604,7 +720,14 @@ public class MainActivity extends AppCompatActivity {
             }else{
                 mp3Error.start();
                 //Toast.makeText(MainActivity.this, "Configure datos del servidor primero", Toast.LENGTH_LONG).show();
-                makeToast("Configure datos del servidor primero");
+                runOnUiThread(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        makeToast("Configure datos del servidor primero");
+                    }
+                });
+
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -665,9 +788,17 @@ public class MainActivity extends AppCompatActivity {
                         return "";
                     }
                 }else{
-                    onResume();
+                    //onResume();
+                    reset();
                     mp3Error.start();
-                    makeToast("Error al obtener datos, intente nuevamente");
+                    runOnUiThread(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            makeToast("Error al obtener datos, intente nuevamente");
+                        }
+                    });
+
                     return null;
                 }
 
@@ -675,7 +806,8 @@ public class MainActivity extends AppCompatActivity {
                 mp3Error.start();
                 log.warning("MalformedURLException: ");
                 e.printStackTrace();
-                onResume();
+                //onResume();
+                reset();
                 e.printStackTrace();
             } catch (IOException e) {
                 log.warning("Persona no encontrada");
@@ -684,7 +816,8 @@ public class MainActivity extends AppCompatActivity {
             } catch (JSONException e) {
                 e.printStackTrace();
                 mp3Error.start();
-                onResume();
+                //onResume();
+                reset();
                 log.warning("JSONException");
                 e.printStackTrace();
             } finally {
