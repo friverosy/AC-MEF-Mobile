@@ -118,26 +118,25 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 for(int i = 0; i<json_db_array.length();i++){
 
 
-                        Person person = new Person(json_db_array.getJSONObject(i).getString("fullname"),
-                                json_db_array.getJSONObject(i).getString("run"),
-                                json_db_array.getJSONObject(i).getString("is_permitted"),
-                                json_db_array.getJSONObject(i).getString("company"),
-                                json_db_array.getJSONObject(i).getString("location"),
-                                json_db_array.getJSONObject(i).getString("company_code")
-                        );
+                    Person person = new Person(json_db_array.getJSONObject(i).getString("fullname"),
+                            json_db_array.getJSONObject(i).getString("run"),
+                            json_db_array.getJSONObject(i).getString("is_permitted"),
+                            json_db_array.getJSONObject(i).getString("company"),
+                            json_db_array.getJSONObject(i).getString("location"),
+                            json_db_array.getJSONObject(i).getString("company_code")
+                    );
 
-                        ContentValues values = new ContentValues();
-                        values.put(PERSON_FULLNAME, person.get_person_fullname());
-                        values.put(PERSON_RUN, person.get_person_run());
-                        values.put(PERSON_IS_PERMITTED, person.get_person_is_permitted());
-                        values.put(PERSON_COMPANY, person.get_person_company());
-                        values.put(PERSON_LOCATION, person.get_person_location());
-                        values.put(PERSON_COMPANY_CODE, person.get_person_company_code());
+                    ContentValues values = new ContentValues();
+                    values.put(PERSON_FULLNAME, person.get_person_fullname());
+                    values.put(PERSON_RUN, person.get_person_run());
+                    values.put(PERSON_IS_PERMITTED, person.get_person_is_permitted());
+                    values.put(PERSON_COMPANY, person.get_person_company());
+                    values.put(PERSON_LOCATION, person.get_person_location());
+                    values.put(PERSON_COMPANY_CODE, person.get_person_company_code());
 
-                        db.insert(TABLE_PERSON, // table
-                                null, //nullColumnHack
-                                values); // key/value -> keys = column names/ values = column values
-
+                    db.insert(TABLE_PERSON, // table
+                            null, //nullColumnHack
+                            values); // key/value -> keys = column names/ values = column values
 
                 }
                 db.setTransactionSuccessful();
@@ -185,11 +184,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         person.set_person_location(cursor.getString(5));
         person.set_person_company_code(cursor.getString(6));
 
-
-
-
-        Log.d("get_person(" + id + ")", person.toString());
-
         db.close();
 
         // 5. return
@@ -222,15 +216,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 cursor.moveToFirst();
 
                 // 4. build String
-
                 out = cursor.getString(2) + ";" + cursor.getString(1) + ";" + cursor.getString(3) + ";" + cursor.getString(4) + ";" + cursor.getString(5) + ";" + cursor.getString(6);
-
             }
         }
-
-
-
-        Log.d("get_person_by_run(" + run + ")", out);
 
         db.close();
 
@@ -264,13 +252,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         // 1. get reference to writable DB
         SQLiteDatabase db = this.getWritableDatabase();
 
-
         // 2. create ContentValues to add key "column"/value
         ContentValues values = new ContentValues();
         values.put("person_fulname", property.get_person_fullname());
         values.put("person_run", property.get_person_run());
         values.put("person_is_permitted", property.get_person_is_permitted());
-
 
         // 3. updating row
         int i = db.update(TABLE_PERSON, //table
@@ -301,7 +287,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.close();
 
         Log.d("delete Person", id+"");
-
     }
 
     public int person_count(){
