@@ -3,15 +3,8 @@ package com.ctwings.myapplication;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.util.Log;
-import android.widget.EditText;
 
 import android.content.ContentValues;
-import android.database.DatabaseUtils;
-import android.database.Cursor;
-import android.widget.Toast;
-
-import java.util.HashMap;
 
 /**
  * Created by cristtopher on 25-02-16.
@@ -40,7 +33,7 @@ public class DBHelper extends SQLiteOpenHelper{
     public void onCreate(SQLiteDatabase db) {
         String CREATE_SETTING_TABLE = "CREATE TABLE " + TABLE_SETTING +
                 "(" + ID + " INTEGER PRIMARY KEY, " + URL + " TEXT, " +
-                      PORT + " INTEGET" + ")";
+                      PORT + " INTEGER" + ")";
         db.execSQL(CREATE_SETTING_TABLE);
     }
 
