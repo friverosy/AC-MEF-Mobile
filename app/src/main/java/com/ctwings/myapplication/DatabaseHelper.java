@@ -3,6 +3,7 @@ package com.ctwings.myapplication;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
@@ -10,13 +11,17 @@ import android.util.Log;
 import org.json.JSONArray;
 import org.json.JSONException;
 
+import java.sql.Array;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Created by nicolasmartin on 03-08-16.
  */
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     // Database Version
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
     // Database Name
     private static final String DATABASE_NAME = "mbd";
 
@@ -29,16 +34,23 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         // SQL statement to create User table
         String CREATE_PERSON_TABLE = "CREATE TABLE PERSON ( " +
                 "person_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                "person_fullname TEXT, "+"person_run TEXT, " +
+                "person_fullname TEXT, " + "person_run TEXT, " +
                 "person_is_permitted TEXT, " + "person_company TEXT, " +
                 "person_location TEXT, " + "person_company_code TEXT" + ")";
 
-
-
         db.execSQL(CREATE_PERSON_TABLE);
+
+        String CREATE_RECORD_TABLE = "CREATE TABLE IF NOT EXISTS RECORD ( " +
+                "record_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "person_fullname TEXT, " + "person_run TEXT, " +
+                "record_is_input INTEGER, " + "record_bus INTEGER, " +
+                "person_is_permitted INTEGER, " + "person_company TEXT, " +
+                "person_location TEXT, " + "person_company_code TEXT," +
+                "record_input_datetime TEXT, " + "record_output_datetime TEXT, " +
+                "record_sync INTEGER"+ ")";
+
+        db.execSQL(CREATE_RECORD_TABLE);
         //db.execSQL("PRAGMA foreign_keys=ON;");
-
-
     }
 
     @Override
@@ -56,18 +68,26 @@ public class DatabaseHelper extends SQLiteOpenHelper {
      */
 
     //Table names
-    private static final String TABLE_PERSON = "person";
+    private static final String TABLE_PERSON = "PERSON";
+    private static final String TABLE_RECORD = "RECORD";
 
-    //Person table columns names
+    //Person & Record table columns names
     private static final String PERSON_ID = "person_id";
+    private static final String RECORD_ID = "record_id";
     private static final String PERSON_FULLNAME = "person_fullname";
     private static final String PERSON_RUN = "person_run";
+    private static final String RECORD_IS_INPUT = "record_is_input";
+    private static final String RECORD_BUS = "record_bus";
     private static final String PERSON_IS_PERMITTED = "person_is_permitted";
     private static final String PERSON_COMPANY = "person_company";
     private static final String PERSON_LOCATION = "person_location";
     private static final String PERSON_COMPANY_CODE = "person_company_code";
+    private static final String RECORD_INPUT_DATETIME = "record_input_datetime";
+    private static final String RECORD_OUTPUT_DATETIME = "record_output_Datetime";
+    private static final String RECORD_SYNC = "record_sync";
 
-    private static final String[] PERSON_COLUMNS = {PERSON_ID,PERSON_FULLNAME, PERSON_RUN, PERSON_IS_PERMITTED, PERSON_COMPANY, PERSON_LOCATION, PERSON_COMPANY_CODE};
+    private static final String[] PERSON_COLUMNS = {PERSON_ID, PERSON_FULLNAME, PERSON_RUN, PERSON_IS_PERMITTED, PERSON_COMPANY, PERSON_LOCATION, PERSON_COMPANY_CODE};
+    private static final String[] RECORD_COLUMNS = {RECORD_ID, PERSON_FULLNAME, PERSON_RUN, RECORD_IS_INPUT, RECORD_BUS, PERSON_IS_PERMITTED, PERSON_COMPANY, PERSON_LOCATION, PERSON_COMPANY_CODE, RECORD_INPUT_DATETIME, RECORD_OUTPUT_DATETIME, RECORD_SYNC};
 
 
     //Person
@@ -117,7 +137,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
                 for(int i = 0; i<json_db_array.length();i++){
 
-
                     Person person = new Person(json_db_array.getJSONObject(i).getString("fullname"),
                             json_db_array.getJSONObject(i).getString("run"),
                             json_db_array.getJSONObject(i).getString("is_permitted"),
@@ -137,11 +156,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     db.insert(TABLE_PERSON, // table
                             null, //nullColumnHack
                             values); // key/value -> keys = column names/ values = column values
-
                 }
                 db.setTransactionSuccessful();
             }catch(Exception e) {
-
                 e.printStackTrace();
             }finally {
                 db.endTransaction();
@@ -184,6 +201,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         person.set_person_location(cursor.getString(5));
         person.set_person_company_code(cursor.getString(6));
 
+        cursor.close();
         db.close();
 
         // 5. return
@@ -195,6 +213,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         // 1. get reference to readable DB
         SQLiteDatabase db = this.getReadableDatabase();
         String out="null;null;null;null;null";
+
+        Log.d("cantidad de personas",String.valueOf(person_count()));
 
         // 2. build query
         Cursor cursor =
@@ -219,7 +239,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 out = cursor.getString(2) + ";" + cursor.getString(1) + ";" + cursor.getString(3) + ";" + cursor.getString(4) + ";" + cursor.getString(5) + ";" + cursor.getString(6);
             }
         }
-
         db.close();
 
         // 5. return
@@ -242,6 +261,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             //EMPTY
             Exists = true;
         }
+        cursor.close();
 
         return Exists;
     }
@@ -296,5 +316,86 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return cursor.getCount();
     }
 
+    //Records
+    public void add_record(Record record){
+
+        // 1. get reference to writable DB
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        // 2. create ContentValues to add key "column"/value
+        ContentValues values = new ContentValues();
+        values.put(PERSON_FULLNAME, record.get_person_fullname());
+        values.put(PERSON_RUN, record.get_person_run());
+        values.put(RECORD_IS_INPUT, record.get_record_is_input());
+        values.put(RECORD_BUS, record.get_record_bus());
+        values.put(PERSON_IS_PERMITTED, record.get_person_is_permitted());
+        values.put(PERSON_COMPANY, record.get_person_company());
+        values.put(PERSON_LOCATION, record.get_person_location());
+        values.put(PERSON_COMPANY_CODE, record.get_person_company_code());
+        values.put(RECORD_INPUT_DATETIME, record.get_record_input_datetime());
+        values.put(RECORD_OUTPUT_DATETIME, record.get_record_output_datetime());
+        values.put(RECORD_SYNC, 0);
+
+        // 3. insert
+        try{
+            db.insert(TABLE_RECORD, null, values);
+        }catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        // 4. close
+        db.close();
+    }
+
+    public List get_records(){
+
+        // 1. get reference to readable DB
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        // 2. build query
+        Cursor cursor = //db.rawQuery("SELECT * FROM " + TABLE_RECORD, null);
+                db.query(TABLE_RECORD, // a. table
+                        RECORD_COLUMNS, // b. column names
+                        null, // c. selections
+                        null, // d. selections args
+                        null, // e. group by
+                        null, // f. having
+                        null, // g. order by
+                        null); // h. limit
+
+        // 3. get all
+        cursor.moveToFirst();
+        List<String> records = new ArrayList<>();
+
+        while (cursor.isAfterLast() == false) {
+            records.add(cursor.getString(0)+";"+cursor.getString(1)+";"+
+                    cursor.getString(2)+";"+cursor.getString(3)+";"+
+                    cursor.getString(4)+";"+cursor.getString(5)+";"+
+                    cursor.getString(6)+";"+cursor.getString(7)+";"+
+                    cursor.getString(8)+";"+cursor.getString(9)+";"+
+                    cursor.getString(10)+";"
+                    //getInt to boolean type 0 (false), 1 (true)
+            );
+            cursor.moveToNext();
+        }
+
+        cursor.close();
+        db.close();
+
+        // 5. return
+        return records;
+    }
+
+    public int record_count(){
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery("SELECT * FROM RECORD;", null);
+        return cursor.getCount();
+    }
+
+    public int record_desysync_count(){
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery("SELECT * FROM RECORD WHERE sync=0;", null);
+        return cursor.getCount();
+    }
 
 }
