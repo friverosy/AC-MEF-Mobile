@@ -32,7 +32,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
 
         // SQL statement to create User table
-        String CREATE_PERSON_TABLE = "CREATE TABLE PERSON ( " +
+        String CREATE_PERSON_TABLE = "CREATE TABLE " + TABLE_PERSON + " ( " +
                 "person_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "person_fullname TEXT, " + "person_run TEXT, " +
                 "person_is_permitted TEXT, " + "person_company TEXT, " +
@@ -40,7 +40,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         db.execSQL(CREATE_PERSON_TABLE);
 
-        String CREATE_RECORD_TABLE = "CREATE TABLE IF NOT EXISTS RECORD ( " +
+        String CREATE_RECORD_TABLE = "CREATE TABLE IF NOT EXISTS " + TABLE_RECORD + " ( " +
                 "record_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "person_fullname TEXT, " + "person_run TEXT, " +
                 "record_is_input INTEGER, " + "record_bus INTEGER, " +
@@ -51,6 +51,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         db.execSQL(CREATE_RECORD_TABLE);
         //db.execSQL("PRAGMA foreign_keys=ON;");
+
+        String CREATE_SETTING_TABLE = "CREATE TABLE IF NOT EXISTS" + TABLE_SETTING + " (" +
+                "id INTEGER PRIMARY KEY, url TEXT, port INTEGET)";
+
+        db.execSQL(CREATE_SETTING_TABLE);
     }
 
     @Override
@@ -70,6 +75,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     //Table names
     private static final String TABLE_PERSON = "PERSON";
     private static final String TABLE_RECORD = "RECORD";
+    private static final String TABLE_SETTING = "SETTING";
 
     //Person & Record table columns names
     private static final String PERSON_ID = "person_id";
@@ -85,6 +91,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String RECORD_INPUT_DATETIME = "record_input_datetime";
     private static final String RECORD_OUTPUT_DATETIME = "record_output_Datetime";
     private static final String RECORD_SYNC = "record_sync";
+
+    // Setting Table Columns names
+    private static final String SETTING_ID = "id";
+    private static final String SETTING_URL = "url";
+    private static final String SETTING_PORT = "port";
 
     private static final String[] PERSON_COLUMNS = {PERSON_ID, PERSON_FULLNAME, PERSON_RUN, PERSON_IS_PERMITTED, PERSON_COMPANY, PERSON_LOCATION, PERSON_COMPANY_CODE};
     private static final String[] RECORD_COLUMNS = {RECORD_ID, PERSON_FULLNAME, PERSON_RUN, RECORD_IS_INPUT, RECORD_BUS, PERSON_IS_PERMITTED, PERSON_COMPANY, PERSON_LOCATION, PERSON_COMPANY_CODE, RECORD_INPUT_DATETIME, RECORD_OUTPUT_DATETIME, RECORD_SYNC};
@@ -324,16 +335,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         // 2. create ContentValues to add key "column"/value
         ContentValues values = new ContentValues();
-        values.put(PERSON_FULLNAME, record.get_person_fullname());
-        values.put(PERSON_RUN, record.get_person_run());
-        values.put(RECORD_IS_INPUT, record.get_record_is_input());
-        values.put(RECORD_BUS, record.get_record_bus());
-        values.put(PERSON_IS_PERMITTED, record.get_person_is_permitted());
-        values.put(PERSON_COMPANY, record.get_person_company());
-        values.put(PERSON_LOCATION, record.get_person_location());
-        values.put(PERSON_COMPANY_CODE, record.get_person_company_code());
-        values.put(RECORD_INPUT_DATETIME, record.get_record_input_datetime());
-        values.put(RECORD_OUTPUT_DATETIME, record.get_record_output_datetime());
+        values.put(PERSON_FULLNAME, record.getPerson_fullname());
+        values.put(PERSON_RUN, record.getPerson_run());
+        values.put(RECORD_IS_INPUT, record.getRecord_is_input());
+        values.put(RECORD_BUS, record.getRecord_bus());
+        values.put(PERSON_IS_PERMITTED, record.getPerson_is_permitted());
+        values.put(PERSON_COMPANY, record.getPerson_company());
+        values.put(PERSON_LOCATION, record.getPerson_location());
+        values.put(PERSON_COMPANY_CODE, record.getPerson_company_code());
+        values.put(RECORD_INPUT_DATETIME, record.getRecord_input_datetime());
+        values.put(RECORD_OUTPUT_DATETIME, record.getRecord_output_datetime());
         values.put(RECORD_SYNC, 0);
 
         // 3. insert
@@ -396,6 +407,38 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = db.rawQuery("SELECT * FROM RECORD WHERE sync=0;", null);
         return cursor.getCount();
+    }
+
+    //Setting
+    public void add_server(Server server){
+
+        // 1. get reference to writable DB
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        // 2. create ContentValues to add key "column"/value
+        ContentValues values = new ContentValues();
+        values.put(SETTING_PORT, server.get_port());
+        values.put(SETTING_URL, server.get_url());
+
+        // 3. insert
+        db.insert(TABLE_SETTING, // table
+                null, //nullColumnHack
+                values); // key/value -> keys = column names/ values = column values
+
+        // 4. close
+        db.close();
+    }
+
+    // Updating single contact
+    public int update_server(String url, Integer port) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        ContentValues values = new ContentValues();
+        values.put(SETTING_URL, url);
+        values.put(SETTING_PORT, port);
+
+        // updating row
+        return db.update(TABLE_SETTING,values,null,null);
     }
 
 }
