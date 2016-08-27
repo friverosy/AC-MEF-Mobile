@@ -9,6 +9,11 @@ public class Server {
     String _url;
     Integer _port;
 
+    //Constructors
+    public Server(){
+
+    }
+
     public int get_id() {
         return _id;
     }
@@ -31,5 +36,10 @@ public class Server {
 
     public void set_port(Integer _port) {
         this._port = _port;
+    }
+
+    @Override
+    public String toString() {
+        return "Server [id="+_id+", url="+_url+", port="+_port+"]";
     }
 }
