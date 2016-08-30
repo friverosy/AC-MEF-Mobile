@@ -314,6 +314,8 @@ public class MainActivity extends AppCompatActivity {
                 if(profile == "V"){
                     //get name from DNI
                     editTextFullName.setText(" ");
+                    //http://datos.24x7.cl/rut/17179347-5/
+                    // use webscrapping here
                 }
                 Log.i("Debugger","NEW DNI");
             }else if(barcodeStr.startsWith("00")) {
@@ -410,6 +412,7 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         initScan();
         //getApplicationContext().deleteDatabase("mbd");
+        // Synch Records also, pending
         UpdateDb();
         IntentFilter filter = new IntentFilter();
         filter.addAction(SCAN_ACTION);
@@ -512,7 +515,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public String DbCall(){
-
         String dataUrl = server + "/api/people?filter[where][profile]=E";
         String contentAsString="";
 
@@ -545,7 +547,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return contentAsString;
-
     }
 
     //BD query instead of webservice
@@ -576,16 +577,14 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(String s) {
-
             try {
                 super.onPostExecute(s);
                 String[] arr = s.split(";");
 
                 if(arr[0].length() < 6 || arr[0].startsWith("000")) {
-                    editTextRun.setText("Tarjeta: " + arr[0]);
+                    editTextRun.setText("Tarjeta: " + arr[0].replace("0",""));
                 }else {
-                    editTextRun.setText("Run: " + arr[0]);
-                    editTextFullName.setText(arr[1]);
+                    editTextRun.setText("Rut: " + arr[0]);
                 }
 
                 runStr = arr[0];
@@ -594,7 +593,9 @@ public class MainActivity extends AppCompatActivity {
                 location = arr[4];
                 companyCode = arr[5];
 
-                if(arr[2].equals("1")) {
+                editTextFullName.setText(fullNameStr);
+
+                if(arr[2].equals("true")) {
                     //******changed true to 1********
                     mp3Permitted.start();
                     is_permitted = true;
@@ -619,7 +620,6 @@ public class MainActivity extends AppCompatActivity {
                 clean();
 
             } catch (NullPointerException e){
-                log.info("Persona no existe en la base de datos linea 361");
                 mp3Error.start();
                 e.printStackTrace();
                 //new RegisterTask().execute(server + "/api/records/");
@@ -719,7 +719,7 @@ public class MainActivity extends AppCompatActivity {
                     });
                 }
             }else{
-                Log.d("json length", "json para POST le faltan elementos");
+                Log.d("Json length", "Missing elements in the json");
             }
 
         } catch (Exception e) {
