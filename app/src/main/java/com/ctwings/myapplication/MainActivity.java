@@ -6,8 +6,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-//import android.database.Cursor;
-//import android.database.sqlite.SQLiteDatabase;
 import android.device.ScanManager;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -23,32 +21,26 @@ import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 
-import java.net.InetAddress;
 import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Vector;
 import java.util.logging.Logger;
 
-//import android.util.Log;
 import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.KeyEvent;
 
-//import android.widget.CompoundButton;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Switch;
-import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ToggleButton;
-//import android.widget.ToggleButton;
 
-//import org.apache.http.HttpRequest;
-import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -56,7 +48,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 
 import org.apache.http.HttpResponse;
@@ -71,7 +62,11 @@ public class MainActivity extends AppCompatActivity {
     private EditText editTextRun;
     private EditText editTextFullName;
     private EditText editTextCompany;
-    private String runStr, fullNameStr, companyStr, location, companyCode;
+    private String runStr;
+    private String fullNameStr;
+    private String companyStr;
+    private String location;
+    private String companyCode;
     private RadioGroup rdgProfile;
     private RadioButton rdbEmployee;
     private RadioButton rdbContractor;
@@ -81,9 +76,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final Logger log = Logger.getLogger(MainActivity.class.getName());
     private static String server;
-    private static String server2;
-    private static String server3;
-    private boolean state;
+    private boolean is_permitted;
     private boolean is_input;
     private boolean bus;
 
@@ -138,7 +131,6 @@ public class MainActivity extends AppCompatActivity {
         rdbContractor = (RadioButton)findViewById(R.id.rdbContractor);
         rdbEmployee.setChecked(true);
         editTextCompany.setVisibility(View.GONE);
-
         mySwitch = (Switch) findViewById(R.id.mySwitch);
         mySwitch.setChecked(true);
 
@@ -149,31 +141,33 @@ public class MainActivity extends AppCompatActivity {
         // end set by default
 
         rdgProfile.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener(){
-
             @Override
             public void onCheckedChanged(RadioGroup group, int checkedId) {
                 // TODO Auto-generated method stub
-                //onResume();
                 reset();
                 if (checkedId == R.id.rdbEmployee){
                     profile = "E";
                     bus = false;
                     editTextCompany.setVisibility(View.GONE);
+                    mySwitch.setVisibility(View.VISIBLE);
                 }else if (checkedId == R.id.rdbVisit) {
                     profile = "V";
                     bus = false;
                     imageview.setImageDrawable(null);
                     editTextCompany.setVisibility(View.VISIBLE);
+                    mySwitch.setVisibility(View.VISIBLE);
                 }else if (checkedId == R.id.rdbContractor) {
                     profile = "C";
                     bus = false;
                     imageview.setImageDrawable(null);
                     editTextCompany.setVisibility(View.VISIBLE);
+                    mySwitch.setVisibility(View.VISIBLE);
                 }else if (checkedId == R.id.rdbBus) {
                     profile = "E";
                     bus = true;
                     imageview.setImageDrawable(null);
                     editTextCompany.setVisibility(View.GONE);
+                    mySwitch.setVisibility(View.GONE);
                 }
             }
         });
@@ -204,7 +198,7 @@ public class MainActivity extends AppCompatActivity {
                     }else if(profile.equals("V") && !editTextRun.getText().toString().isEmpty() &&
                             !editTextFullName.getText().toString().isEmpty()){
                         //Send to AccessControl API
-                        new RegisterTask().execute(server2 + "/api/records/");
+                        new RegisterTask().execute(server + "/api/records/");
                         Toast.makeText(MainActivity.this, "Visita Registrada",
                                 Toast.LENGTH_SHORT).show();
                         //onResume();
@@ -223,7 +217,6 @@ public class MainActivity extends AppCompatActivity {
                             makeToast("Ingrese datos primero.");
                         }
                     });
-
                     e.printStackTrace();
                 }
             }
@@ -231,9 +224,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void LoadSettings(){
-        server = "http://10.0.0.125:6000";
-        server2 = "http://10.0.0.125:3000";
-        server3 = "http://192.168.2.109:8001/dataout"; //Database data address
+        server = "http://192.168.123.24:3000";
     }
 
     @Override
@@ -305,6 +296,7 @@ public class MainActivity extends AppCompatActivity {
             //soundpool.play(soundid, 1, 1, 0, 0, 1);
 
             mVibrator.vibrate(100);
+            reset();
 
             byte[] barcode = intent.getByteArrayExtra("barocode");
             int barocodelen = intent.getIntExtra("length", 0);
@@ -312,7 +304,7 @@ public class MainActivity extends AppCompatActivity {
             //android.util.Log.i("debug", "----codetype--" + temp);
             barcodeStr = new String(barcode, 0, barocodelen);
             String rawCode = barcodeStr;
-            log.warning("------CRUDO-----> " + barcodeStr);
+            Log.w("Barcode RAW", barcodeStr);
             int flag=0; // 0 for end without k, 1 with k
             int lenght=0;
 
@@ -323,13 +315,13 @@ public class MainActivity extends AppCompatActivity {
                     //get name from DNI
                     editTextFullName.setText(" ");
                 }
-                log.info("------Cedula nueva---->");
+                Log.i("Debugger","NEW DNI");
             }else if(barcodeStr.startsWith("00")) {
-                log.info("------Tarjeta---->");
+                Log.i("Debugger","CARD");
             }else if(barcodeStr.contains("ABCDEFGHIJKLMNOPQRSTUVWXYZ")){ // old DNI
-                log.info("------Cedula vieja---->");
+                Log.i("Debugger","OLD DNI");
                 barcodeStr = barcodeStr.substring(0, 9);
-                log.info("------Cortado------> "+barcodeStr);
+                Log.i("Old DNI Cutted",barcodeStr);
                 barcodeStr = barcodeStr.replace(" ", "");
                 if(barcodeStr.endsWith("K")) {
                     barcodeStr = barcodeStr.replace("K", "");
@@ -337,34 +329,31 @@ public class MainActivity extends AppCompatActivity {
                 }
                 if(Integer.parseInt(barcodeStr) > 400000000 && flag == 0){
                     barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 2);
-                    log.info("adulto mayor");
+                    Log.i("Debugger","Oldman");
                     lenght=9;
                 }else if(flag == 0){
                     lenght=10;
-                    log.info("adulto");
+                    Log.i("Debugger","Elderly person");
                     barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 1);
                 }
-                log.info("-------"+barcodeStr.length()+" digitos----->");
 
                 if(profile == "V"){
                     //get name from DNI
-                    String[] palabrasSeparadas = rawCode.split("\\s+");
-                    //Log.d("palabrasSeparadas1",palabrasSeparadas[1].substring(0, palabrasSeparadas[1].indexOf("CHL")));
+                    String[] array = rawCode.split("\\s+");
                     try{
-                        editTextFullName.setText(palabrasSeparadas[1].substring(0, palabrasSeparadas[1].indexOf("CHL")));
+                        editTextFullName.setText(array[1].substring(0, array[1].indexOf("CHL")));
                     }catch (Exception e){
-                        Log.d("palabrasSeparadas",palabrasSeparadas[2].substring(0, palabrasSeparadas[2].indexOf("CHL")));
-                        editTextFullName.setText(palabrasSeparadas[2].substring(0, palabrasSeparadas[2].indexOf("CHL")));
+                        editTextFullName.setText(array[2].substring(0, array[2].indexOf("CHL")));
                     }
                 }
             }else{
-                log.info("------Tarjeta---->");
+                Log.i("Debugger","CARD");
             }
 
             barcodeStr = barcodeStr.replace("k", "");
             barcodeStr = barcodeStr.replace("K", "");
 
-            log.info("------COCINADO-----> " + barcodeStr);
+            Log.i("Cooked Barcode", barcodeStr);
 
 
             try{
@@ -374,14 +363,12 @@ public class MainActivity extends AppCompatActivity {
                 else if(profile.equals("V")){
                     editTextRun.setText(barcodeStr);
                     runStr = barcodeStr;
-
-//                String output  = getUrlContents("https://zeus.sii.cl/cvc_cgi/stc/getstc?RUT=17179347&DV=5&txt_captcha=bUc1Rm5JaHpZYW%20syMDE0MTAxNjE1MzMyMjlBcERZY0hpd2h3MjQyNFZ5b1ZrSktn%20VDhjMDBoSWlsdHhrZ1FqLlFVSk5PR1ZPY1ZGWVl5NUlXUT09em%20RNOVdXWmNVY1E%3D&txt_code=2424&PRG=STC&OPC=NOR");
-//                log.info(output);
+                    //Use WebScrapping on 24x7 to get Fullname
 
                     fullNameStr = editTextFullName.getText().toString();
 
                     //Send to AccessControl API
-                    new RegisterTask().execute(server2 + "/api/records/");
+                    new RegisterTask().execute(server + "/api/records/", runStr, fullNameStr, companyStr, location, companyCode, String.valueOf(is_input), String.valueOf(is_permitted), profile, String.valueOf(bus));
                     //new GetCompanyTask().execute(server2 + "/api/records/findOne?filter[where][people_run]=" + barcodeStr);
                     mp3Permitted.start();
                 }
@@ -424,17 +411,12 @@ public class MainActivity extends AppCompatActivity {
         initScan();
         //getApplicationContext().deleteDatabase("mbd");
         UpdateDb();
-        editTextRun.setText("");
-        editTextFullName.setText("");
-        editTextCompany.setText("");
-        imageview.setImageDrawable(null);
         IntentFilter filter = new IntentFilter();
         filter.addAction(SCAN_ACTION);
         registerReceiver(mScanReceiver, filter);
     }
 
     public void UpdateDb(){
-
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
@@ -451,7 +433,6 @@ public class MainActivity extends AppCompatActivity {
             }
         };
         new Thread(runnable).start();
-
     }
 
     public void reset(){
@@ -464,6 +445,15 @@ public class MainActivity extends AppCompatActivity {
         IntentFilter filter = new IntentFilter();
         filter.addAction(SCAN_ACTION);
         registerReceiver(mScanReceiver, filter);
+    }
+
+    public void clean(){
+        barcodeStr="";
+        runStr="";
+        fullNameStr="";
+        companyStr="";
+        location="";
+        companyCode="";
     }
 
     @Override
@@ -492,13 +482,11 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPreExecute() {
-
                     /*pd.setTitle("Processing...");
                     pd.setMessage("Please wait.");
                     pd.setCancelable(false);
                     pd.setIndeterminate(true);
                     pd.show();*/
-
         }
 
         @Override
@@ -516,19 +504,16 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(String result) {
+            //Log.d("COUNT", db.person_count()+"");
+            //Log.d("Person by id", db.get_person(4000)+"");
 
-                //Log.d("COUNT", db.person_count()+"");
-                //Log.d("Person by id", db.get_person(4000)+"");
-
-                //pd.dismiss();
+            //pd.dismiss();
         }
-
-
     }
 
     public String DbCall(){
 
-        String dataUrl = server3;
+        String dataUrl = server + "/api/people?filter[where][profile]=E";
         String contentAsString="";
 
         URL url;
@@ -565,48 +550,44 @@ public class MainActivity extends AppCompatActivity {
 
     //BD query instead of webservice
     public class GetPeopleTask extends AsyncTask<String, String, String>{
-
         @Override
         protected String doInBackground(String... params) {
 
             String finalJson = db.get_person_by_run(barcodeStr);
             //String finalJson = "";
-            Log.d("barcoderun",barcodeStr);
 
             if(!finalJson.isEmpty()){
                 //JSONObject parentObject = new JSONObject(finalJson);
                 //return parentObject.getString("people");
-                    return finalJson;
+                return finalJson;
 
-                }else{
-                    //onResume();
-                    reset();
-                    mp3Error.start();
-                    runOnUiThread(new Runnable() {
+            }else{
+                mp3Error.start();
+                runOnUiThread(new Runnable() {
 
-                        @Override
-                        public void run() {
-                            makeToast("Error al obtener datos, intente nuevamente");
-                        }
-                    });
-
-
-                    return null;
-                }
-
+                    @Override
+                    public void run() {
+                        makeToast("Error al obtener datos, intente nuevamente");
+                    }
+                });
+                return null;
+            }
         }
 
         @Override
         protected void onPostExecute(String s) {
+
             try {
                 super.onPostExecute(s);
                 String[] arr = s.split(";");
+
                 if(arr[0].length() < 6 || arr[0].startsWith("000")) {
                     editTextRun.setText("Tarjeta: " + arr[0]);
                 }else {
                     editTextRun.setText("Run: " + arr[0]);
                     editTextFullName.setText(arr[1]);
                 }
+
                 runStr = arr[0];
                 fullNameStr = arr[1];
                 companyStr = arr[3];
@@ -616,16 +597,16 @@ public class MainActivity extends AppCompatActivity {
                 if(arr[2].equals("1")) {
                     //******changed true to 1********
                     mp3Permitted.start();
-                    state = true;
+                    is_permitted = true;
                     imageview.setImageResource(R.drawable.img_true);
                 }else {
                     mp3Dennied.start();
-                    state = false;
+                    is_permitted = false;
                     imageview.setImageResource(R.drawable.img_false);
                 }
 
                 //if you remove or comment this line, i'll hit your balls
-                new RegisterTask().execute(server2 + "/api/records/");
+                new RegisterTask().execute(server + "/api/records/", runStr, fullNameStr, companyStr, location, companyCode, String.valueOf(is_input), String.valueOf(is_permitted), profile, String.valueOf(bus));
 
                 /*runOnUiThread(new Runnable() {
 
@@ -635,17 +616,16 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });*/
 
-                //new GetCompanyTask().execute(server2 + "/api/records/findOne?filter[where][people_run]=" + barcodeStr);
+                clean();
 
             } catch (NullPointerException e){
                 log.info("Persona no existe en la base de datos linea 361");
                 mp3Error.start();
                 e.printStackTrace();
-                //new RegisterTask().execute(server2 + "/api/records/");
+                //new RegisterTask().execute(server + "/api/records/");
             } catch (Exception e){
                 e.printStackTrace();
             }
-
         }
     }
 
@@ -661,7 +641,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public String POST(String url){
+    public String POST(List jsonList){
         InputStream inputStream;
         String result = "";
         try {
@@ -670,65 +650,78 @@ public class MainActivity extends AppCompatActivity {
             HttpClient httpclient = new DefaultHttpClient();
 
             // 2. make POST request to the given URL
-            HttpPost httpPost = new HttpPost(url);
+            HttpPost httpPost = new HttpPost(jsonList.get(0).toString());
 
             String json;
 
-            // 3. build jsonObject
+            // 3. build jsonObject from jsonList
             JSONObject jsonObject = new JSONObject();
-            jsonObject.accumulate("people_run", runStr);
-            jsonObject.accumulate("fullname", fullNameStr);
-            jsonObject.accumulate("is_permitted", state);
-            jsonObject.accumulate("profile", profile);
-            jsonObject.accumulate("is_input", is_input);
-            jsonObject.accumulate("bus", bus);
-            jsonObject.accumulate("company", companyStr);
-            jsonObject.accumulate("location", location);
-            jsonObject.accumulate("company_code", companyCode);
-            if(bus) {
-                log.info("bus true");
-            }else{
-                log.info("bus false");
-            }
+            jsonObject.accumulate("people_run", jsonList.get(1).toString());
+            jsonObject.accumulate("fullname", jsonList.get(2).toString());
+
+            if(jsonList.get(7).equals("true"))
+                jsonObject.accumulate("is_permitted", true);
+            else
+                jsonObject.accumulate("is_permitted", false);
+
+            jsonObject.accumulate("profile", jsonList.get(8));
+
+            if(jsonList.get(6).equals("true"))
+                jsonObject.accumulate("is_input", true);
+            else
+                jsonObject.accumulate("is_input", false);
+
+            if(jsonList.get(9).equals("true"))
+                jsonObject.accumulate("bus", true);
+            else
+                jsonObject.accumulate("bus", false);
+
+            jsonObject.accumulate("company", jsonList.get(3).toString());
+            jsonObject.accumulate("location", jsonList.get(4).toString());
+            jsonObject.accumulate("company_code", jsonList.get(5).toString());
 
             // 4. convert JSONObject to JSON to String
-            json = jsonObject.toString();
+            if(jsonObject.length() >= 9){ // 9 element on json
+                json = jsonObject.toString();
 
-            Log.d("json", json);
+                // 5. set json to StringEntity
+                StringEntity se = new StringEntity(json);
 
-            // 5. set json to StringEntity
-            StringEntity se = new StringEntity(json);
+                // 6. set httpPost Entity
+                httpPost.setEntity(se);
 
-            // 6. set httpPost Entity
-            httpPost.setEntity(se);
+                // 7. Set some headers to inform server about the type of the content
+                httpPost.setHeader("Accept", "application/json");
+                httpPost.setHeader("Content-type", "application/json");
 
-            // 7. Set some headers to inform server about the type of the content
-            httpPost.setHeader("Accept", "application/json");
-            httpPost.setHeader("Content-type", "application/json");
+                // 8. Execute POST request to the given URL
+                if(!server.equals("http://:0")) {
+                    HttpResponse httpResponse = httpclient.execute(httpPost);
+                    // 9. receive response as inputStream
+                    inputStream = httpResponse.getEntity().getContent();
 
-            // 8. Execute POST request to the given URL
-            if(!server.equals("http://:0")) {
-                HttpResponse httpResponse = httpclient.execute(httpPost);
-                // 9. receive response as inputStream
-                inputStream = httpResponse.getEntity().getContent();
+                    // 10. convert inputstream to string
+                    if(inputStream != null)
+                        result = convertInputStreamToString(inputStream);
+                    else
+                        result = "Did not work!";
+                    //result its the json to sent
+                    Log.d("json to POST", result);
+                }else{
+                    mp3Error.start();
+                    //Toast.makeText(MainActivity.this, "Configure datos del servidor primero", Toast.LENGTH_LONG).show();
+                    runOnUiThread(new Runnable() {
 
-                // 10. convert inputstream to string
-                if(inputStream != null)
-                    result = convertInputStreamToString(inputStream);
-                else
-                    result = "Did not work!";
+                        @Override
+                        public void run() {
+                            makeToast("Configure datos del servidor primero");
+                        }
+                    });
+                }
             }else{
-                mp3Error.start();
-                //Toast.makeText(MainActivity.this, "Configure datos del servidor primero", Toast.LENGTH_LONG).show();
-                runOnUiThread(new Runnable() {
-
-                    @Override
-                    public void run() {
-                        makeToast("Configure datos del servidor primero");
-                    }
-                });
-
+                Log.d("json length", "json para POST le faltan elementos");
             }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -740,115 +733,22 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected String doInBackground(String... params) {
-            return POST(params[0]);
+            // params[0] its server url to POST
+            List json = new Vector();
+            for (int i=0;i<=params.length-1;i++){
+                json.add(params[i]);
+            }
+            return POST(json);
         }
 
         @Override
         protected void onPostExecute(String s) {
             //makeToast("Persona registrada!");
+            clean();
         }
     }
 
     public void makeToast(String msg){
         Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG).show();
-    }
-
-    public class GetCompanyTask extends AsyncTask<String, String, String>{
-
-        @Override
-        protected String doInBackground(String... params) {
-
-            HttpURLConnection connection = null;
-            BufferedReader reader = null;
-
-            try {
-                URL url = new URL(params[0]);
-                connection = (HttpURLConnection) url.openConnection();
-                connection.connect();
-
-                if(connection == null) mp3Error.start();
-
-                InputStream stream = connection.getInputStream();
-                reader = new BufferedReader(new InputStreamReader(stream));
-                StringBuffer buffer = new StringBuffer();
-
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    buffer.append(line);
-                }
-
-                String finalJson = buffer.toString();
-
-                if(!finalJson.isEmpty()){
-                    JSONObject parentObject = new JSONObject(finalJson);
-                    try {
-                        return parentObject.getString("company");
-                    }
-                    catch(JSONException e){
-                        return "";
-                    }
-                }else{
-                    //onResume();
-                    reset();
-                    mp3Error.start();
-                    runOnUiThread(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            makeToast("Error al obtener datos, intente nuevamente");
-                        }
-                    });
-
-                    return null;
-                }
-
-            } catch (MalformedURLException e) {
-                mp3Error.start();
-                log.warning("MalformedURLException: ");
-                e.printStackTrace();
-                //onResume();
-                reset();
-                e.printStackTrace();
-            } catch (IOException e) {
-                log.warning("Persona no encontrada");
-                e.printStackTrace();
-                mp3Dennied.start();
-            } catch (JSONException e) {
-                e.printStackTrace();
-                mp3Error.start();
-                //onResume();
-                reset();
-                log.warning("JSONException");
-                e.printStackTrace();
-            } finally {
-                if (connection != null) {
-                    connection.disconnect();
-                }
-                try {
-                    if (reader != null) {
-                        reader.close();
-                    }
-                } catch (IOException e) {
-                    log.warning("IOException");
-                    e.printStackTrace();
-                }
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(String s) {
-            try {
-                super.onPostExecute(s);
-                editTextCompany.setText(s);
-            } catch (NullPointerException e){
-                log.warning("Persona no existe en la base de datos");
-                e.printStackTrace();
-            } catch (Exception e){
-                log.warning("IOException linea 360");
-                e.printStackTrace();
-            }
-
-        }
     }
 }
