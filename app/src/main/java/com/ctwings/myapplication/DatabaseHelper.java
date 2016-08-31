@@ -241,7 +241,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         if (cursor != null) {
             if (!(cursor.moveToFirst()) || cursor.getCount() == 0) {
                 //cursor is empty
-                out = "No encontrado;No encontrado;No encontrado;No encontrado;No encontrado;No encontrado"; //Change to whatever error message.....
+                out = run.replace("0","")+";No encontrado;No encontrado;No encontrado;No encontrado;No encontrado"; //Change to whatever error message.....
             } else {
                 // 3. if we got results get the first one
                 cursor.moveToFirst();
