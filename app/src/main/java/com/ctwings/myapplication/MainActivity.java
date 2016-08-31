@@ -359,7 +359,7 @@ public class MainActivity extends AppCompatActivity {
 
 
             try{
-                if(profile.equals("E")) {
+                if(profile.equals("E") || profile.equals("C")) {
                     new GetPeopleTask().execute();
                 }
                 else if(profile.equals("V")){
@@ -474,10 +474,7 @@ public class MainActivity extends AppCompatActivity {
     public boolean isConnected(){
         ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Activity.CONNECTIVITY_SERVICE);
         NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-        if (networkInfo != null && networkInfo.isConnected())
-            return true;
-        else
-            return false;
+        return networkInfo != null && networkInfo.isConnected();
     }
 
 
@@ -485,11 +482,11 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPreExecute() {
-                    /*pd.setTitle("Processing...");
-                    pd.setMessage("Please wait.");
-                    pd.setCancelable(false);
-                    pd.setIndeterminate(true);
-                    pd.show();*/
+            /*pd.setTitle("Processing...");
+              pd.setMessage("Please wait.");
+              pd.setCancelable(false);
+              pd.setIndeterminate(true);
+              pd.show();*/
         }
 
         @Override
@@ -499,7 +496,7 @@ public class MainActivity extends AppCompatActivity {
             if(data!="error") {
                 db.add_persons(data);
             }else{
-                Log.d("noinet","noinet");
+                Log.d("Network","Offline");
             }
 
             return "Done";
@@ -515,7 +512,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public String DbCall(){
-        String dataUrl = server + "/api/people?filter[where][profile]=E";
+        String dataUrl = server + "/api/people?filter[where][or][0][profile]=E&filter[where][or][1][profile]=C";
         String contentAsString="";
 
         URL url;
@@ -594,6 +591,7 @@ public class MainActivity extends AppCompatActivity {
                 companyCode = arr[5];
 
                 editTextFullName.setText(fullNameStr);
+                if(profile.equals("C")) editTextCompany.setText(companyStr);
 
                 if(arr[2].equals("true")) {
                     //******changed true to 1********
