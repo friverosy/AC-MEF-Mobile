@@ -8,6 +8,16 @@ public class Record {
     int record_id;
     String person_fullname;
     String person_run;
+
+    public String getPerson_profile() {
+        return person_profile;
+    }
+
+    public void setPerson_profile(String person_profile) {
+        this.person_profile = person_profile;
+    }
+
+    String person_profile;
     int record_is_input;
     int record_bus;
     int person_is_permitted;
@@ -23,11 +33,12 @@ public class Record {
 
     }
 
-    public Record(Integer record_id, String person_fullname, String person_run, Integer record_is_input, Integer record_bus, Integer person_is_permitted, String person_company, String person_location, String person_company_code, String record_input_datetime, String record_output_datetime, Integer record_sync){
+    public Record(Integer record_id, String person_fullname, String person_run, String person_profile, Integer record_is_input, Integer record_bus, Integer person_is_permitted, String person_company, String person_location, String person_company_code, String record_input_datetime, String record_output_datetime, Integer record_sync){
 
         this.record_id = record_id;
         this.person_fullname = person_fullname;
         this.person_run = person_run;
+        this.person_profile = person_profile;
         this.record_is_input = record_is_input;
         this.record_bus = record_bus;
         this.person_is_permitted = person_is_permitted;
