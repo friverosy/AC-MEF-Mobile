@@ -22,8 +22,12 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 
 import java.net.URLConnection;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 import java.util.Vector;
 import java.util.logging.Logger;
 
@@ -41,6 +45,7 @@ import android.widget.RadioGroup;
 import android.widget.Switch;
 import android.widget.Toast;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -356,7 +361,7 @@ public class MainActivity extends AppCompatActivity {
             barcodeStr = barcodeStr.replace("K", "");
 
             Log.i("Cooked Barcode", barcodeStr);
-
+            Log.i("records", String.valueOf(db.get_records()));
 
             try{
                 if(profile.equals("E") || profile.equals("C")) {
@@ -471,11 +476,11 @@ public class MainActivity extends AppCompatActivity {
         return super.onKeyDown(keyCode, event);
     }
 
-    public boolean isConnected(){
+    /*public boolean isConnected(){
         ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Activity.CONNECTIVITY_SERVICE);
         NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
         return networkInfo != null && networkInfo.isConnected();
-    }
+    }*/
 
 
     public class LoadDbTask extends AsyncTask<String, String, String>{
@@ -492,13 +497,13 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected String doInBackground(String... params) {
 
+            OfflineRecordsSynchronizer();
             String data = DbCall();
             if(data!="error") {
                 db.add_persons(data);
             }else{
                 Log.d("Network","Offline");
             }
-
             return "Done";
         }
 
@@ -526,27 +531,35 @@ public class MainActivity extends AppCompatActivity {
             connection.setConnectTimeout(5000);
             connection.connect();
 
-            int responsecode = connection.getResponseCode();
+            //int responsecode = connection.getResponseCode();
 
             // Get Response
             InputStream is = connection.getInputStream();
             contentAsString = convertInputStreamToString(is);
-
-            Log.d("TAG-contentAsString","Server response: "+contentAsString);
         } catch (Exception e) {
-
             e.printStackTrace();
             contentAsString="error";
-
         }
         if (connection != null) {
             connection.disconnect();
         }
+        Log.d("TAG-contentAsString","Server response: "+contentAsString);
 
         return contentAsString;
     }
 
-    //BD query instead of webservice
+    public void OfflineRecordsSynchronizer(){
+        int count = db.record_desysync_count();
+        if (count > 0) {
+            List records = db.get_desynchronized_records();
+            for (int i = 0; i <= records.size()-1; i++){
+                Log.d("falta sincronizar", records.get(i).toString());
+                //get each row to be synchronized
+            }
+        }
+    }
+
+    //BD query instead of api rest
     public class GetPeopleTask extends AsyncTask<String, String, String>{
         @Override
         protected String doInBackground(String... params) {
@@ -558,7 +571,6 @@ public class MainActivity extends AppCompatActivity {
                 //JSONObject parentObject = new JSONObject(finalJson);
                 //return parentObject.getString("people");
                 return finalJson;
-
             }else{
                 mp3Error.start();
                 runOnUiThread(new Runnable() {
@@ -640,8 +652,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public String POST(List jsonList){
+        Log.d("POST", "si paso por aca");
         InputStream inputStream;
         String result = "";
+        String json="";
         try {
 
             // 1. create HttpClient
@@ -649,8 +663,6 @@ public class MainActivity extends AppCompatActivity {
 
             // 2. make POST request to the given URL
             HttpPost httpPost = new HttpPost(jsonList.get(0).toString());
-
-            String json;
 
             // 3. build jsonObject from jsonList
             JSONObject jsonObject = new JSONObject();
@@ -679,7 +691,7 @@ public class MainActivity extends AppCompatActivity {
             jsonObject.accumulate("company_code", jsonList.get(5).toString());
 
             // 4. convert JSONObject to JSON to String
-            if(jsonObject.length() >= 9){ // 9 element on json
+            if(jsonObject.length() <= 10){ // 10 element on json
                 json = jsonObject.toString();
 
                 // 5. set json to StringEntity
@@ -722,8 +734,45 @@ public class MainActivity extends AppCompatActivity {
 
         } catch (Exception e) {
             e.printStackTrace();
+            // Insert records to object, then get from DataBaseHelper to save
+            Record record = new Record();
+
+            try {
+                JSONObject jsonObject = new JSONObject(json);
+                record.setPerson_run(jsonObject.getString("people_run"));
+                record.setPerson_fullname(jsonObject.getString("fullname"));
+                record.setPerson_company(jsonObject.getString("company"));
+                record.setPerson_company_code(jsonObject.getString("company_code"));
+                record.setPerson_location(jsonObject.getString("location"));
+
+                if (jsonObject.getString("is_input").equals("true")) record.setRecord_is_input(1);
+                else record.setRecord_is_input(0);
+
+                if (jsonObject.getString("bus").equals("true")) record.setRecord_bus(1);
+                else record.setRecord_bus(0);
+
+                if (jsonObject.getString("is_permitted").equals("true")) record.setPerson_is_permitted(1);
+                else record.setPerson_is_permitted(0);
+
+                TimeZone tz = TimeZone.getTimeZone("UTC");
+                DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'"); // Quoted "Z" to indicate UTC, no timezone offset
+                df.setTimeZone(tz);
+
+                if(is_input) record.setRecord_input_datetime(df.format(new Date()));
+                else record.setRecord_output_datetime(df.format(new Date()));
+
+                record.setPerson_profile(jsonObject.getString("profile"));
+                db.add_record(record);
+
+                // then must be synchronized.
+
+            } catch (JSONException e1) {
+                e1.printStackTrace();
+            }
+
         }
         // 11. return result
+        Log.i("result post", result);
         return result;
     }
 
@@ -733,6 +782,9 @@ public class MainActivity extends AppCompatActivity {
         protected String doInBackground(String... params) {
             // params[0] its server url to POST
             List json = new Vector();
+
+            //recibir objeto.
+
             for (int i=0;i<=params.length-1;i++){
                 json.add(params[i]);
             }
