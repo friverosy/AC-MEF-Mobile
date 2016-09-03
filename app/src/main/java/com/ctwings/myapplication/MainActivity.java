@@ -1,6 +1,5 @@
 package com.ctwings.myapplication;
 
-import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -10,8 +9,6 @@ import android.device.ScanManager;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.SoundPool;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 //import android.nfc.NfcAdapter;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -24,11 +21,9 @@ import android.support.v7.widget.Toolbar;
 import java.net.URLConnection;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
-import java.util.Vector;
 import java.util.logging.Logger;
 
 import android.util.Log;
@@ -203,7 +198,16 @@ public class MainActivity extends AppCompatActivity {
                     }else if(profile.equals("V") && !editTextRun.getText().toString().isEmpty() &&
                             !editTextFullName.getText().toString().isEmpty()){
                         //Send to AccessControl API
-                        new RegisterTask().execute(server + "/api/records/");
+                        Record record = new Record();
+
+                        record.setPerson_run(editTextRun.getText().toString());
+                        record.setPerson_fullname(editTextFullName.getText().toString());
+                        record.setPerson_profile(profile);
+                        if(is_input) record.setRecord_is_input(1);
+                        else record.setRecord_is_input(0);
+
+                        // check first if have net...
+                        new RegisterTask(record).execute();
                         Toast.makeText(MainActivity.this, "Visita Registrada",
                                 Toast.LENGTH_SHORT).show();
                         //onResume();
@@ -213,13 +217,11 @@ public class MainActivity extends AppCompatActivity {
                                 editTextFullName.getText().toString());
                     }
                 }catch (Exception e) {
-                    //no se muestra...
                     mp3Error.start();
                     runOnUiThread(new Runnable() {
 
                         @Override
-                        public void run() {
-                            makeToast("Ingrese datos primero.");
+                        public void run() { makeToast("Ingrese datos primero.");
                         }
                     });
                     e.printStackTrace();
@@ -259,7 +261,8 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private static String getUrlContents(String theUrl) {
+    //get visitFullname on 24x7
+    private static String getUrlContents(String theUrl, String people_run) {
         StringBuilder content = new StringBuilder();
 
         // many of these calls can throw exceptions, so i've just
@@ -321,6 +324,8 @@ public class MainActivity extends AppCompatActivity {
                     editTextFullName.setText(" ");
                     //http://datos.24x7.cl/rut/17179347-5/
                     // use webscrapping here
+                    //getUrlContents("http://datos.24x7.cl/rut/", barcodeStr)
+                    //the from getUrlContents set other params
                 }
                 Log.i("Debugger","NEW DNI");
             }else if(barcodeStr.startsWith("00")) {
@@ -375,7 +380,14 @@ public class MainActivity extends AppCompatActivity {
                     fullNameStr = editTextFullName.getText().toString();
 
                     //Send to AccessControl API
-                    new RegisterTask().execute(server + "/api/records/", runStr, fullNameStr, companyStr, location, companyCode, String.valueOf(is_input), String.valueOf(is_permitted), profile, String.valueOf(bus));
+                    Record record = new Record();
+                    record.setPerson_fullname(fullNameStr);
+                    record.setPerson_run(runStr);
+                    record.setPerson_profile(profile);
+                    if(is_input) record.setRecord_is_input(1);
+                    else record.setRecord_is_input(0);
+
+                    new RegisterTask(record).execute();
                     //new GetCompanyTask().execute(server2 + "/api/records/findOne?filter[where][people_run]=" + barcodeStr);
                     mp3Permitted.start();
                 }
@@ -596,28 +608,40 @@ public class MainActivity extends AppCompatActivity {
                     editTextRun.setText("Rut: " + arr[0]);
                 }
 
-                runStr = arr[0];
+                //build object with that values, then send to registerTarsk()
+                Record record = new Record();
+                record.setPerson_company(arr[3]);
+                record.setPerson_run(arr[0]);
+                record.setPerson_fullname(arr[1]);
+                record.setPerson_location(arr[4]);
+                record.setPerson_company_code(arr[5]);
+
+                /*runStr = arr[0];
                 fullNameStr = arr[1];
                 companyStr = arr[3];
                 location = arr[4];
-                companyCode = arr[5];
+                companyCode = arr[5];*/
 
-                editTextFullName.setText(fullNameStr);
-                if(profile.equals("C")) editTextCompany.setText(companyStr);
+                editTextFullName.setText(record.getPerson_fullname());
+                if(profile.equals("C")) editTextCompany.setText(record.getPerson_company());
 
                 if(arr[2].equals("true")) {
                     //******changed true to 1********
                     mp3Permitted.start();
-                    is_permitted = true;
+                    //is_permitted = true;
+                    record.setPerson_is_permitted(1);
                     imageview.setImageResource(R.drawable.img_true);
                 }else {
                     mp3Dennied.start();
-                    is_permitted = false;
+                    //is_permitted = false;
+                    record.setPerson_is_permitted(0);
                     imageview.setImageResource(R.drawable.img_false);
                 }
 
+
+
                 //if you remove or comment this line, i'll hit your balls
-                new RegisterTask().execute(server + "/api/records/", runStr, fullNameStr, companyStr, location, companyCode, String.valueOf(is_input), String.valueOf(is_permitted), profile, String.valueOf(bus));
+                new RegisterTask(record).execute();
 
                 /*runOnUiThread(new Runnable() {
 
@@ -651,8 +675,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public String POST(List jsonList){
-        Log.d("POST", "si paso por aca");
+    public String POST(Record record, String url){
         InputStream inputStream;
         String result = "";
         String json="";
@@ -662,33 +685,35 @@ public class MainActivity extends AppCompatActivity {
             HttpClient httpclient = new DefaultHttpClient();
 
             // 2. make POST request to the given URL
-            HttpPost httpPost = new HttpPost(jsonList.get(0).toString());
+            HttpPost httpPost = new HttpPost(url);
 
             // 3. build jsonObject from jsonList
             JSONObject jsonObject = new JSONObject();
-            jsonObject.accumulate("people_run", jsonList.get(1).toString());
-            jsonObject.accumulate("fullname", jsonList.get(2).toString());
+            jsonObject.accumulate("people_run", record.getPerson_run());
+            jsonObject.accumulate("fullname", record.getPerson_fullname());
 
-            if(jsonList.get(7).equals("true"))
+            Log.d("is_permitted", String.valueOf(record.getPerson_is_permitted()));
+
+            if(record.getPerson_is_permitted() == 0 ) //jsonList.get(7).equals("true")
                 jsonObject.accumulate("is_permitted", true);
             else
                 jsonObject.accumulate("is_permitted", false);
 
-            jsonObject.accumulate("profile", jsonList.get(8));
+            jsonObject.accumulate("profile", record.getPerson_profile());
 
-            if(jsonList.get(6).equals("true"))
+            if(record.getRecord_is_input()==0)
                 jsonObject.accumulate("is_input", true);
             else
                 jsonObject.accumulate("is_input", false);
 
-            if(jsonList.get(9).equals("true"))
+            if(record.getRecord_bus()==0)
                 jsonObject.accumulate("bus", true);
             else
                 jsonObject.accumulate("bus", false);
 
-            jsonObject.accumulate("company", jsonList.get(3).toString());
-            jsonObject.accumulate("location", jsonList.get(4).toString());
-            jsonObject.accumulate("company_code", jsonList.get(5).toString());
+            jsonObject.accumulate("company", record.getPerson_company());
+            jsonObject.accumulate("location", record.getPerson_location());
+            jsonObject.accumulate("company_code", record.getPerson_company_code());
 
             // 4. convert JSONObject to JSON to String
             if(jsonObject.length() <= 10){ // 10 element on json
@@ -735,60 +760,56 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             e.printStackTrace();
             // Insert records to object, then get from DataBaseHelper to save
-            Record record = new Record();
+            Record offlineRecord = new Record();
 
             try {
                 JSONObject jsonObject = new JSONObject(json);
-                record.setPerson_run(jsonObject.getString("people_run"));
-                record.setPerson_fullname(jsonObject.getString("fullname"));
-                record.setPerson_company(jsonObject.getString("company"));
-                record.setPerson_company_code(jsonObject.getString("company_code"));
-                record.setPerson_location(jsonObject.getString("location"));
+                offlineRecord.setPerson_run(jsonObject.getString("people_run"));
+                offlineRecord.setPerson_fullname(jsonObject.getString("fullname"));
+                offlineRecord.setPerson_company(jsonObject.getString("company"));
+                offlineRecord.setPerson_company_code(jsonObject.getString("company_code"));
+                offlineRecord.setPerson_location(jsonObject.getString("location"));
 
-                if (jsonObject.getString("is_input").equals("true")) record.setRecord_is_input(1);
-                else record.setRecord_is_input(0);
+                if (jsonObject.getString("is_input").equals("true")) offlineRecord.setRecord_is_input(1);
+                else offlineRecord.setRecord_is_input(0);
 
-                if (jsonObject.getString("bus").equals("true")) record.setRecord_bus(1);
-                else record.setRecord_bus(0);
+                if (jsonObject.getString("bus").equals("true")) offlineRecord.setRecord_bus(1);
+                else offlineRecord.setRecord_bus(0);
 
-                if (jsonObject.getString("is_permitted").equals("true")) record.setPerson_is_permitted(1);
-                else record.setPerson_is_permitted(0);
+                if (jsonObject.getString("is_permitted").equals("true")) offlineRecord.setPerson_is_permitted(1);
+                else offlineRecord.setPerson_is_permitted(0);
 
                 TimeZone tz = TimeZone.getTimeZone("UTC");
                 DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'"); // Quoted "Z" to indicate UTC, no timezone offset
                 df.setTimeZone(tz);
 
-                if(is_input) record.setRecord_input_datetime(df.format(new Date()));
-                else record.setRecord_output_datetime(df.format(new Date()));
+                if(is_input) offlineRecord.setRecord_input_datetime(df.format(new Date()));
+                else offlineRecord.setRecord_output_datetime(df.format(new Date()));
 
-                record.setPerson_profile(jsonObject.getString("profile"));
-                db.add_record(record);
+                offlineRecord.setPerson_profile(jsonObject.getString("profile"));
+                db.add_record(offlineRecord);
 
                 // then must be synchronized.
-
             } catch (JSONException e1) {
                 e1.printStackTrace();
             }
-
         }
         // 11. return result
         Log.i("result post", result);
         return result;
     }
 
-    public class RegisterTask extends AsyncTask<String, Void, String>{
+    public class RegisterTask extends AsyncTask<Void, Void, String>{
+
+        private Record newRecord;
+
+        RegisterTask(Record newRecord){
+            this.newRecord = newRecord;
+        }
 
         @Override
-        protected String doInBackground(String... params) {
-            // params[0] its server url to POST
-            List json = new Vector();
-
-            //recibir objeto.
-
-            for (int i=0;i<=params.length-1;i++){
-                json.add(params[i]);
-            }
-            return POST(json);
+        protected String doInBackground(Void... params) {
+            return POST(newRecord, server + "/api/records/");
         }
 
         @Override
