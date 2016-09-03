@@ -192,7 +192,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 try {
-                    if(profile.equals("E")) {
+                    if(profile.equals("E") || profile.equals("C")) {
                         new GetPeopleTask().execute(server + "/employee/" +
                                 editTextFullName.getText().toString());
                     }else if(profile.equals("V") && !editTextRun.getText().toString().isEmpty() &&
