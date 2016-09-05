@@ -26,6 +26,7 @@ public class Record {
     String person_company_code;
     String record_input_datetime;
     String record_output_datetime;
+
     int record_sync;
 
     //Constructors
@@ -142,10 +143,24 @@ public class Record {
         return record_sync;
     }
 
+    public void setRecord_sync(int record_sync) {
+        this.record_sync = record_sync;
+    }
+
     @Override
     public String toString() {
-        return "Record [record_id=" + record_id + ", person_fullname=" + person_fullname + ", person_run=" +
-                person_run + ", person_is_permitted=" + person_is_permitted +
-                ", person_company=" + person_company + ", person_location=" + person_location + ", person_company_code="+ person_company_code + "]";
+        return "Record [record_id=" + record_id +
+                ", person_fullname=" + person_fullname +
+                ", person_run=" + person_run +
+                ", record_is_input=" + record_is_input +
+                ", record_bus=" + record_bus +
+                ", person_is_permitted=" + person_is_permitted +
+                ", person_company=" + person_company +
+                ", person_location=" + person_location +
+                ", person_company_code="+ person_company_code +
+                ", record_input_datetime=" + record_input_datetime +
+                ", record_output_datetime=" + record_output_datetime +
+                ", record_sync=" + record_sync +
+                ", person_profile=" + person_profile + "]";
     }
 }
