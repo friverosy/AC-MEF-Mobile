@@ -63,11 +63,6 @@ public class MainActivity extends AppCompatActivity {
     private EditText editTextRun;
     private EditText editTextFullName;
     private EditText editTextCompany;
-    private String runStr;
-    private String fullNameStr;
-    private String companyStr;
-    private String location;
-    private String companyCode;
     private RadioGroup rdgProfile;
     private RadioButton rdbEmployee;
     private RadioButton rdbContractor;
@@ -77,7 +72,6 @@ public class MainActivity extends AppCompatActivity {
 
     private static final Logger log = Logger.getLogger(MainActivity.class.getName());
     private static String server;
-    private boolean is_permitted;
     private boolean is_input;
     private boolean bus;
 
@@ -464,11 +458,6 @@ public class MainActivity extends AppCompatActivity {
 
     public void clean(){
         barcodeStr="";
-        runStr="";
-        fullNameStr="";
-        companyStr="";
-        location="";
-        companyCode="";
     }
 
     @Override
