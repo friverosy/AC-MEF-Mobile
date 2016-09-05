@@ -53,7 +53,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Bus"
-            android:enabled="false" />
+            android:enabled="true" />
     </RadioGroup>
 
     <EditText
@@ -61,30 +61,28 @@
         android:layout_height="wrap_content"
         android:id="@+id/editText_fullname"
         android:textColor="#000"
-        android:textSize="30dp"
+        android:textSize="25dp"
         android:text="" />
 
     <Space
         android:layout_width="match_parent"
-        android:layout_height="8dp" />
+        android:layout_height="6dp" />
 
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/editText_run"
-        android:textColor="#8E8E8E"
-        android:textSize="30dp" />
+        android:textSize="20dp" />
 
     <Space
         android:layout_width="match_parent"
-        android:layout_height="8dp" />
+        android:layout_height="6dp" />
 
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/editText_company"
-        android:textColor="#8E8E8E"
-        android:textSize="30dp" />
+        android:textSize="25dp" />
 
     <ImageView
         android:layout_width="match_parent"

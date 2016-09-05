@@ -1,18 +1,15 @@
 package com.ctwings.myapplication;
 
-import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-//import android.database.Cursor;
-//import android.database.sqlite.SQLiteDatabase;
+import android.database.SQLException;
 import android.device.ScanManager;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.SoundPool;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 //import android.nfc.NfcAdapter;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -23,27 +20,27 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 
 import java.net.URLConnection;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.TimeZone;
 import java.util.logging.Logger;
 
-//import android.util.Log;
+import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.KeyEvent;
 
-//import android.widget.CompoundButton;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Switch;
-import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ToggleButton;
-//import android.widget.ToggleButton;
 
-//import org.apache.http.HttpRequest;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -52,7 +49,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 
 import org.apache.http.HttpResponse;
@@ -67,16 +63,21 @@ public class MainActivity extends AppCompatActivity {
     private EditText editTextRun;
     private EditText editTextFullName;
     private EditText editTextCompany;
-    private String runStr, fullNameStr, companyStr;
+    private String runStr;
+    private String fullNameStr;
+    private String companyStr;
+    private String location;
+    private String companyCode;
     private RadioGroup rdgProfile;
     private RadioButton rdbEmployee;
     private RadioButton rdbContractor;
     private String profile;
 
+    ProgressDialog pd;
+
     private static final Logger log = Logger.getLogger(MainActivity.class.getName());
     private static String server;
-    private static String server2;
-    private boolean state;
+    private boolean is_permitted;
     private boolean is_input;
     private boolean bus;
 
@@ -94,12 +95,16 @@ public class MainActivity extends AppCompatActivity {
     MediaPlayer mp3Permitted;
     MediaPlayer mp3Error;
 
+    DatabaseHelper db = new DatabaseHelper(this);
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        pd = new ProgressDialog(MainActivity.this);
 
         //remove it
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
@@ -127,7 +132,6 @@ public class MainActivity extends AppCompatActivity {
         rdbContractor = (RadioButton)findViewById(R.id.rdbContractor);
         rdbEmployee.setChecked(true);
         editTextCompany.setVisibility(View.GONE);
-
         mySwitch = (Switch) findViewById(R.id.mySwitch);
         mySwitch.setChecked(true);
 
@@ -138,30 +142,33 @@ public class MainActivity extends AppCompatActivity {
         // end set by default
 
         rdgProfile.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener(){
-
             @Override
             public void onCheckedChanged(RadioGroup group, int checkedId) {
                 // TODO Auto-generated method stub
-                onResume();
+                reset();
                 if (checkedId == R.id.rdbEmployee){
                     profile = "E";
                     bus = false;
                     editTextCompany.setVisibility(View.GONE);
+                    mySwitch.setVisibility(View.VISIBLE);
                 }else if (checkedId == R.id.rdbVisit) {
                     profile = "V";
                     bus = false;
                     imageview.setImageDrawable(null);
                     editTextCompany.setVisibility(View.VISIBLE);
+                    mySwitch.setVisibility(View.VISIBLE);
                 }else if (checkedId == R.id.rdbContractor) {
                     profile = "C";
                     bus = false;
                     imageview.setImageDrawable(null);
                     editTextCompany.setVisibility(View.VISIBLE);
+                    mySwitch.setVisibility(View.VISIBLE);
                 }else if (checkedId == R.id.rdbBus) {
                     profile = "E";
                     bus = true;
                     imageview.setImageDrawable(null);
                     editTextCompany.setVisibility(View.GONE);
+                    mySwitch.setVisibility(View.GONE);
                 }
             }
         });
@@ -186,24 +193,35 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 try {
-                    if(profile.equals("E")) {
-                        new GetPeopleTask().execute(server + "/employee/" +
-                                editTextFullName.getText().toString());
+                    if(profile.equals("E") || profile.equals("C")) {
+                        new GetPeopleTask().execute(editTextFullName.getText().toString());
                     }else if(profile.equals("V") && !editTextRun.getText().toString().isEmpty() &&
                             !editTextFullName.getText().toString().isEmpty()){
                         //Send to AccessControl API
-                        new RegisterTask().execute(server2 + "/api/records/");
+                        Record record = new Record();
+
+                        record.setPerson_run(editTextRun.getText().toString());
+                        record.setPerson_fullname(editTextFullName.getText().toString());
+                        record.setPerson_profile(profile);
+                        if (is_input) record.setRecord_is_input(1);
+                        else record.setRecord_is_input(0);
+                        if (bus) record.setRecord_bus(1);
+                        else record.setRecord_bus(0);
+                        // check first if have net...
+                        new RegisterTask(record).execute();
                         Toast.makeText(MainActivity.this, "Visita Registrada",
                                 Toast.LENGTH_SHORT).show();
-                        onResume();
-                    }else if(profile.equals("C")) {
-                        new GetPeopleTask().execute(server + "/employee/" +
-                                editTextFullName.getText().toString());
+                        //onResume();
+                        reset();
                     }
                 }catch (Exception e) {
-                    //no se muestra...
                     mp3Error.start();
-                    makeToast("Ingrese datos primero.");
+                    runOnUiThread(new Runnable() {
+
+                        @Override
+                        public void run() { makeToast("Ingrese datos primero.");
+                        }
+                    });
                     e.printStackTrace();
                 }
             }
@@ -211,8 +229,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void LoadSettings(){
-        server = "http://10.0.0.125:6000";
-        server2 = "http://10.0.0.125:3000";
+        server = "http://192.168.123.12:3000";
     }
 
     @Override
@@ -231,7 +248,8 @@ public class MainActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_refresh) {
-            onResume();
+            //onResume();
+            reset();
             return true;
         }else if (id == R.id.action_setting) {
             Intent i = new Intent(this, Setting.class);
@@ -241,7 +259,8 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private static String getUrlContents(String theUrl) {
+    //get visitFullname on 24x7
+    private static String getUrlContents(String theUrl, String people_run) {
         StringBuilder content = new StringBuilder();
 
         // many of these calls can throw exceptions, so i've just
@@ -283,6 +302,7 @@ public class MainActivity extends AppCompatActivity {
             //soundpool.play(soundid, 1, 1, 0, 0, 1);
 
             mVibrator.vibrate(100);
+            reset();
 
             byte[] barcode = intent.getByteArrayExtra("barocode");
             int barocodelen = intent.getIntExtra("length", 0);
@@ -290,7 +310,7 @@ public class MainActivity extends AppCompatActivity {
             //android.util.Log.i("debug", "----codetype--" + temp);
             barcodeStr = new String(barcode, 0, barocodelen);
             String rawCode = barcodeStr;
-            log.warning("------CRUDO-----> " + barcodeStr);
+            Log.w("Barcode RAW", barcodeStr);
             int flag=0; // 0 for end without k, 1 with k
             int lenght=0;
 
@@ -300,14 +320,18 @@ public class MainActivity extends AppCompatActivity {
                 if(profile == "V"){
                     //get name from DNI
                     editTextFullName.setText(" ");
+                    //http://datos.24x7.cl/rut/17179347-5/
+                    // use webscrapping here
+                    //getUrlContents("http://datos.24x7.cl/rut/", barcodeStr)
+                    //the from getUrlContents set other params
                 }
-                log.info("------Cedula nueva---->");
+                Log.i("Debugger","NEW DNI");
             }else if(barcodeStr.startsWith("00")) {
-                log.info("------Tarjeta---->");
+                Log.i("Debugger","CARD");
             }else if(barcodeStr.contains("ABCDEFGHIJKLMNOPQRSTUVWXYZ")){ // old DNI
-                log.info("------Cedula vieja---->");
+                Log.i("Debugger","OLD DNI");
                 barcodeStr = barcodeStr.substring(0, 9);
-                log.info("------Cortado------> "+barcodeStr);
+                Log.i("Old DNI Cutted",barcodeStr);
                 barcodeStr = barcodeStr.replace(" ", "");
                 if(barcodeStr.endsWith("K")) {
                     barcodeStr = barcodeStr.replace("K", "");
@@ -315,53 +339,55 @@ public class MainActivity extends AppCompatActivity {
                 }
                 if(Integer.parseInt(barcodeStr) > 400000000 && flag == 0){
                     barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 2);
-                    log.info("adulto mayor");
+                    Log.i("Debugger","Oldman");
                     lenght=9;
                 }else if(flag == 0){
                     lenght=10;
-                    log.info("adulto");
+                    Log.i("Debugger","Elderly person");
                     barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 1);
                 }
-                log.info("-------"+barcodeStr.length()+" digitos----->");
 
                 if(profile == "V"){
                     //get name from DNI
-                    String[] palabrasSeparadas = rawCode.split(" ");
+                    String[] array = rawCode.split("\\s+");
                     try{
-                        editTextFullName.setText(palabrasSeparadas[1].substring(0, palabrasSeparadas[1].indexOf("CHL")));
+                        editTextFullName.setText(array[1].substring(0, array[1].indexOf("CHL")));
                     }catch (Exception e){
-                        editTextFullName.setText(palabrasSeparadas[2].substring(0, palabrasSeparadas[2].indexOf("CHL")));
+                        editTextFullName.setText(array[2].substring(0, array[2].indexOf("CHL")));
                     }
                 }
-            }else{
-                log.info("------Tarjeta---->");
             }
 
             barcodeStr = barcodeStr.replace("k", "");
             barcodeStr = barcodeStr.replace("K", "");
 
-            log.info("------COCINADO-----> " + barcodeStr);
-
+            Log.i("Cooked Barcode", barcodeStr);
 
             try{
-                if(profile.equals("E"))
-                    new GetPeopleTask().execute(server + "/employee/" + barcodeStr);
+                if(profile.equals("E") || profile.equals("C")) {
+                    new GetPeopleTask().execute(barcodeStr);
+                }
                 else if(profile.equals("V")){
                     editTextRun.setText(barcodeStr);
-                    runStr = barcodeStr;
-
-//                String output  = getUrlContents("https://zeus.sii.cl/cvc_cgi/stc/getstc?RUT=17179347&DV=5&txt_captcha=bUc1Rm5JaHpZYW%20syMDE0MTAxNjE1MzMyMjlBcERZY0hpd2h3MjQyNFZ5b1ZrSktn%20VDhjMDBoSWlsdHhrZ1FqLlFVSk5PR1ZPY1ZGWVl5NUlXUT09em%20RNOVdXWmNVY1E%3D&txt_code=2424&PRG=STC&OPC=NOR");
-//                log.info(output);
-
-                    fullNameStr = editTextFullName.getText().toString();
 
                     //Send to AccessControl API
-                    new RegisterTask().execute(server2 + "/api/records/");
-                    new GetCompanyTask().execute(server2 + "/api/records/findOne?filter[where][people_run]=" + barcodeStr);
+                    Record record = new Record();
+
+                    if(!editTextFullName.getText().toString().isEmpty())
+                        record.setPerson_fullname(editTextFullName.getText().toString());
+                    record.setPerson_run(barcodeStr);
+                    record.setPerson_profile(profile);
+                    if (is_input) record.setRecord_is_input(1);
+                    else record.setRecord_is_input(0);
+                    if (bus) record.setRecord_bus(1);
+                    else record.setRecord_bus(0);
+
+                    new RegisterTask(record).execute();
+                    //new GetCompanyTask().execute(server2 + "/api/records/findOne?filter[where][people_run]=" + barcodeStr);
                     mp3Permitted.start();
                 }
             }catch(NullPointerException e){
-                new GetPeopleTask().execute(server + "/employee/" + barcodeStr);
+                //new GetPeopleTask().execute(server + "/employee/" + barcodeStr);
             }
         }
     };
@@ -397,6 +423,36 @@ public class MainActivity extends AppCompatActivity {
         // TODO Auto-generated method stub
         super.onResume();
         initScan();
+        //getApplicationContext().deleteDatabase("mbd");
+        // Synch Records also, pending
+        UpdateDb();
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(SCAN_ACTION);
+        registerReceiver(mScanReceiver, filter);
+    }
+
+    public void UpdateDb(){
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                while(true) {
+                    new LoadDbTask().execute();
+                    Log.d("Update!", "Updating DB");
+                    try {
+                        // thread to sleep for 60000 milliseconds
+                        Thread.sleep(60000);
+                    } catch (Exception e) {
+                        Log.d("Update!","error sleep");
+                    }
+                }
+            }
+        };
+        new Thread(runnable).start();
+    }
+
+    public void reset(){
+
+        initScan();
         editTextRun.setText("");
         editTextFullName.setText("");
         editTextCompany.setText("");
@@ -404,6 +460,15 @@ public class MainActivity extends AppCompatActivity {
         IntentFilter filter = new IntentFilter();
         filter.addAction(SCAN_ACTION);
         registerReceiver(mScanReceiver, filter);
+    }
+
+    public void clean(){
+        barcodeStr="";
+        runStr="";
+        fullNameStr="";
+        companyStr="";
+        location="";
+        companyCode="";
     }
 
     @Override
@@ -418,83 +483,132 @@ public class MainActivity extends AppCompatActivity {
         return super.onKeyDown(keyCode, event);
     }
 
-    public boolean isConnected(){
+    /*public boolean isConnected(){
         ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Activity.CONNECTIVITY_SERVICE);
         NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-        if (networkInfo != null && networkInfo.isConnected())
-            return true;
-        else
-            return false;
-    }
+        return networkInfo != null && networkInfo.isConnected();
+    }*/
 
-    public class GetPeopleTask extends AsyncTask<String, String, String>{
+
+    public class LoadDbTask extends AsyncTask<String, String, String>{
+
+        @Override
+        protected void onPreExecute() {
+            /*pd.setTitle("Processing...");
+              pd.setMessage("Please wait.");
+              pd.setCancelable(false);
+              pd.setIndeterminate(true);
+              pd.show();*/
+        }
 
         @Override
         protected String doInBackground(String... params) {
 
-            HttpURLConnection connection = null;
-            BufferedReader reader = null;
-
-            try {
-                URL url = new URL(params[0]);
-                connection = (HttpURLConnection) url.openConnection();
-                connection.connect();
-
-                if(connection == null) mp3Error.start();
-
-                InputStream stream = connection.getInputStream();
-                reader = new BufferedReader(new InputStreamReader(stream));
-                StringBuffer buffer = new StringBuffer();
-
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    buffer.append(line);
+            String data = DbCall();
+            if(data!="error") {
+                db.add_persons(data);
+                if (db.record_desysync_count() > 0){
+                    OfflineRecordsSynchronizer();
                 }
-
-                String finalJson = buffer.toString();
-                finalJson = finalJson.replace("MARCASMEF.FN_SP_ES_EMPLEADO(:RUT)", "people");
-                finalJson = finalJson.replace("[","");
-                finalJson = finalJson.replace("]","");
-
-                if(!finalJson.isEmpty()){
-                    JSONObject parentObject = new JSONObject(finalJson);
-                    return parentObject.getString("people");
-                }else{
-                    onResume();
-                    mp3Error.start();
-                    makeToast("Error al obtener datos, intente nuevamente");
-                    return null;
-                }
-
-            } catch (MalformedURLException e) {
-                mp3Error.start();
-                log.info("MalformedURLException linea 295: ");
-                e.printStackTrace();
-                onResume();
-                e.printStackTrace();
-            } catch (IOException e) {
-                log.info("Persona no encontrada linea 299");
-                e.printStackTrace();
-                mp3Dennied.start();
-            } catch (JSONException e) {
-                e.printStackTrace();
-                mp3Error.start();
-                onResume();
-                log.info("JSONException linea 304");
-                e.printStackTrace();
-            } finally {
-                if (connection != null) {
-                    connection.disconnect();
-                }
-                try {
-                    if (reader != null) {
-                        reader.close();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+            }else{
+                Log.d("Network","Offline");
             }
-            return null;
+            return "Done";
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            //Log.d("COUNT", db.person_count()+"");
+            //Log.d("Person by id", db.get_person(4000)+"");
+
+            //pd.dismiss();
+        }
+    }
+
+    public String DbCall(){
+        String dataUrl = server + "/api/people?filter[where][or][0][profile]=E&filter[where][or][1][profile]=C";
+        String contentAsString="";
+
+        URL url;
+        HttpURLConnection connection = null;
+
+        try {
+            // Create connection
+            url = new URL(dataUrl);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(5000);
+            connection.connect();
+
+            //int responsecode = connection.getResponseCode();
+
+            // Get Response
+            InputStream is = connection.getInputStream();
+            contentAsString = convertInputStreamToString(is);
+        } catch (Exception e) {
+            e.printStackTrace();
+            contentAsString="error";
+        }
+        if (connection != null) {
+            connection.disconnect();
+        }
+        Log.d("TAG-contentAsString","Server response: "+contentAsString);
+
+        return contentAsString;
+    }
+
+    public void OfflineRecordsSynchronizer(){
+        int count = db.record_desysync_count();
+        if (count > 0) {
+            List records = db.get_desynchronized_records();
+            //Log.d("Lista", String.valueOf(records));
+            Record record = new Record();
+            String[] arr;
+            for (int i = 0; i <= records.size()-1; i++){
+                //Log.d("falta sincronizar", records.get(i).toString());
+                arr = records.get(i).toString().split(";");
+                //get each row to be synchronized
+                record.setRecord_id(Integer.parseInt(arr[0]));
+                record.setPerson_fullname(arr[1]);
+                record.setPerson_run(arr[2]);
+                record.setRecord_is_input(Integer.parseInt(arr[3]));
+                record.setRecord_bus(Integer.parseInt(arr[4]));
+                record.setPerson_is_permitted(Integer.parseInt(arr[5]));
+                record.setPerson_company(arr[6]);
+                record.setPerson_location(arr[7]);
+                record.setPerson_company_code(arr[8]);
+                record.setRecord_input_datetime(arr[9]);
+                record.setRecord_output_datetime(arr[10]);
+                record.setRecord_sync(Integer.parseInt(arr[11]));
+                record.setPerson_profile(arr[12]);
+                new RegisterTask(record).execute();
+            }
+        }else{
+            Log.i("Offline", "Nothing to Synchronize");
+        }
+    }
+
+    //BD query instead of api rest
+    public class GetPeopleTask extends AsyncTask<String, String, String>{
+        @Override
+        protected String doInBackground(String... params) {
+            String finalJson = db.get_person_by_run(params[0].toString());
+
+            if(!finalJson.isEmpty()){
+                //JSONObject parentObject = new JSONObject(finalJson);
+                //return parentObject.getString("people");
+                return finalJson;
+            }else{
+                mp3Error.start();
+                runOnUiThread(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        makeToast("Error al obtener datos, intente nuevamente");
+                    }
+                });
+                return null;
+            }
         }
 
         @Override
@@ -502,39 +616,66 @@ public class MainActivity extends AppCompatActivity {
             try {
                 super.onPostExecute(s);
                 String[] arr = s.split(";");
-                if(arr[0].length() < 6 || arr[0].startsWith("000"))
-                    editTextRun.setText("Tarjeta: " + arr[0]);
-                else
-                    editTextRun.setText("Run: " + arr[0]);
-                editTextFullName.setText(arr[1]);
 
-                runStr = arr[0];
+                editTextRun.setText(arr[0]);
+
+                //build object with that values, then send to registerTarsk()
+                Record record = new Record();
+                record.setPerson_company(arr[3]);
+                record.setPerson_run(arr[0]);
+                record.setPerson_fullname(arr[1]);
+                record.setPerson_location(arr[4]);
+                record.setPerson_company_code(arr[5]);
+
+                if (bus) record.setRecord_bus(1);
+                else record.setRecord_bus(0);
+
+                if (is_input) record.setRecord_is_input(1);
+                else record.setRecord_is_input(0);
+
+                record.setPerson_profile(profile);
+
+                /*runStr = arr[0];
                 fullNameStr = arr[1];
+                companyStr = arr[3];
+                location = arr[4];
+                companyCode = arr[5];*/
+
+                editTextFullName.setText(record.getPerson_fullname());
+                if(profile.equals("C")) editTextCompany.setText(record.getPerson_company());
 
                 if(arr[2].equals("true")) {
+                    //******changed true to 1********
                     mp3Permitted.start();
-                    state = true;
+                    //is_permitted = true;
+                    record.setPerson_is_permitted(1);
                     imageview.setImageResource(R.drawable.img_true);
                 }else {
                     mp3Dennied.start();
-                    state = false;
+                    //is_permitted = false;
+                    record.setPerson_is_permitted(0);
                     imageview.setImageResource(R.drawable.img_false);
                 }
 
-                //if you remove or comment this line, i'll hit your balls
-                new RegisterTask().execute(server2 + "/api/records/");
+                new RegisterTask(record).execute();
 
-                //new GetCompanyTask().execute(server2 + "/api/records/findOne?filter[where][people_run]=" + barcodeStr);
+                /*runOnUiThread(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        makeToast("REGISTERTASK "+runStr+" - "+fullNameStr);
+                    }
+                });*/
+
+                clean();
 
             } catch (NullPointerException e){
-                log.info("Persona no existe en la base de datos linea 361");
                 mp3Error.start();
                 e.printStackTrace();
-                new RegisterTask().execute(server2 + "/api/records/");
+                //new RegisterTask().execute(server + "/api/records/");
             } catch (Exception e){
                 e.printStackTrace();
             }
-
         }
     }
 
@@ -550,9 +691,10 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public String POST(String url){
+    public String POST(Record record, String url){
         InputStream inputStream;
         String result = "";
+        String json="";
         try {
 
             // 1. create HttpClient
@@ -561,161 +703,153 @@ public class MainActivity extends AppCompatActivity {
             // 2. make POST request to the given URL
             HttpPost httpPost = new HttpPost(url);
 
-            String json;
-
-            // 3. build jsonObject
+            // 3. build jsonObject from jsonList
             JSONObject jsonObject = new JSONObject();
-            jsonObject.accumulate("people_run", runStr);
-            jsonObject.accumulate("fullname", fullNameStr);
-            jsonObject.accumulate("is_permitted", state);
-            jsonObject.accumulate("profile", profile);
-            jsonObject.accumulate("is_input", is_input);
-            jsonObject.accumulate("bus", bus);
-            if(bus) {
-                log.info("bus true");
-            }else{
-                log.info("bus false");
-            }
+            jsonObject.accumulate("people_run", record.getPerson_run());
+            jsonObject.accumulate("fullname", record.getPerson_fullname());
+
+            if(record.getPerson_is_permitted() == 1 )
+                jsonObject.accumulate("is_permitted", true);
+            else
+                jsonObject.accumulate("is_permitted", false);
+
+            jsonObject.accumulate("profile", record.getPerson_profile());
+
+            if(record.getRecord_is_input() == 1)
+                jsonObject.accumulate("is_input", true);
+            else
+                jsonObject.accumulate("is_input", false);
+
+            if(record.getRecord_bus() == 1)
+                jsonObject.accumulate("bus", true);
+            else
+                jsonObject.accumulate("bus", false);
+
+            jsonObject.accumulate("company", record.getPerson_company());
+            jsonObject.accumulate("location", record.getPerson_location());
+            jsonObject.accumulate("company_code", record.getPerson_company_code());
+
+            // For offline records only
+            if (record.getRecord_input_datetime() != null)
+                jsonObject.accumulate("input_datetime", record.getRecord_input_datetime());
+            if (record.getRecord_output_datetime() != null)
+                jsonObject.accumulate("output_datetime", record.getRecord_output_datetime());
 
             // 4. convert JSONObject to JSON to String
-            json = jsonObject.toString();
+            if(jsonObject.length() <= 12){ // 10 element on json
+                json = jsonObject.toString();
 
-            // 5. set json to StringEntity
-            StringEntity se = new StringEntity(json);
+                // 5. set json to StringEntity
+                StringEntity se = new StringEntity(json);
 
-            // 6. set httpPost Entity
-            httpPost.setEntity(se);
+                // 6. set httpPost Entity
+                httpPost.setEntity(se);
 
-            // 7. Set some headers to inform server about the type of the content
-            httpPost.setHeader("Accept", "application/json");
-            httpPost.setHeader("Content-type", "application/json");
+                // 7. Set some headers to inform server about the type of the content
+                httpPost.setHeader("Accept", "application/json");
+                httpPost.setHeader("Content-type", "application/json");
 
-            // 8. Execute POST request to the given URL
-            if(!server.equals("http://:0")) {
-                HttpResponse httpResponse = httpclient.execute(httpPost);
-                // 9. receive response as inputStream
-                inputStream = httpResponse.getEntity().getContent();
+                // 8. Execute POST request to the given URL
+                if(!server.equals("http://:0")) {
+                    HttpResponse httpResponse = httpclient.execute(httpPost);
+                    // 9. receive response as inputStream
+                    inputStream = httpResponse.getEntity().getContent();
 
-                // 10. convert inputstream to string
-                if(inputStream != null)
-                    result = convertInputStreamToString(inputStream);
-                else
-                    result = "Did not work!";
+                    // 10. convert inputstream to string
+                    if(inputStream != null)
+                        result = convertInputStreamToString(inputStream);
+                    else
+                        result = "Did not work!";
+                    //result its the json to sent
+                    if (result.startsWith("http://"))
+                        result = "Did not work!";
+                    //Log.d("json to POST", result);
+                }else{
+                    mp3Error.start();
+                    //Toast.makeText(MainActivity.this, "Configure datos del servidor primero", Toast.LENGTH_LONG).show();
+                    runOnUiThread(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            makeToast("Configure datos del servidor primero");
+                        }
+                    });
+                }
             }else{
-                mp3Error.start();
-                //Toast.makeText(MainActivity.this, "Configure datos del servidor primero", Toast.LENGTH_LONG).show();
-                makeToast("Configure datos del servidor primero");
+                Log.d("Json length", "Missing elements in the json");
             }
+
         } catch (Exception e) {
             e.printStackTrace();
+            // Insert records to object, then get from DataBaseHelper to save
+            Record offlineRecord = new Record();
+
+            try {
+                JSONObject jsonObject = new JSONObject(json);
+                offlineRecord.setPerson_run(jsonObject.getString("people_run"));
+                offlineRecord.setPerson_fullname(jsonObject.getString("fullname"));
+                offlineRecord.setPerson_company(jsonObject.getString("company"));
+                offlineRecord.setPerson_company_code(jsonObject.getString("company_code"));
+                offlineRecord.setPerson_location(jsonObject.getString("location"));
+
+                if (jsonObject.getString("is_input").equals("true")) offlineRecord.setRecord_is_input(1);
+                else offlineRecord.setRecord_is_input(0);
+
+                if (jsonObject.getString("bus").equals("true")) offlineRecord.setRecord_bus(1);
+                else offlineRecord.setRecord_bus(0);
+
+                if (jsonObject.getString("is_permitted").equals("true")) offlineRecord.setPerson_is_permitted(1);
+                else offlineRecord.setPerson_is_permitted(0);
+
+                TimeZone tz = TimeZone.getTimeZone("UTC");
+                DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'"); // Quoted "Z" to indicate UTC, no timezone offset
+                df.setTimeZone(tz);
+
+                if(is_input) offlineRecord.setRecord_input_datetime(df.format(new Date()));
+                else offlineRecord.setRecord_output_datetime(df.format(new Date()));
+
+                offlineRecord.setPerson_profile(jsonObject.getString("profile"));
+                Log.d("offline record", offlineRecord.toString());
+                db.add_record(offlineRecord);
+
+                // then must be synchronized.
+            } catch (JSONException e1) {
+                e1.printStackTrace();
+            } catch (SQLException sql) {
+                sql.printStackTrace();
+            }
         }
         // 11. return result
         return result;
     }
 
-    public class RegisterTask extends AsyncTask<String, Void, String>{
+    public class RegisterTask extends AsyncTask<Void, Void, String>{
+
+        private Record newRecord;
+
+        RegisterTask(Record newRecord){
+            this.newRecord = newRecord;
+        }
 
         @Override
-        protected String doInBackground(String... params) {
-            return POST(params[0]);
+        protected String doInBackground(Void... params) {
+            return POST(newRecord, server + "/api/records/");
         }
 
         @Override
         protected void onPostExecute(String s) {
             //makeToast("Persona registrada!");
+            clean();
+
+            // Update record to synchronized (record_sync = 1)
+            Log.d("count", String.valueOf(db.record_desysync_count()));
+            if (db.record_desysync_count()>0){
+                db.update_record(newRecord.getRecord_id());
+            }
         }
     }
 
     public void makeToast(String msg){
         Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG).show();
-    }
-
-    public class GetCompanyTask extends AsyncTask<String, String, String>{
-
-        @Override
-        protected String doInBackground(String... params) {
-
-            HttpURLConnection connection = null;
-            BufferedReader reader = null;
-
-            try {
-                URL url = new URL(params[0]);
-                connection = (HttpURLConnection) url.openConnection();
-                connection.connect();
-
-                if(connection == null) mp3Error.start();
-
-                InputStream stream = connection.getInputStream();
-                reader = new BufferedReader(new InputStreamReader(stream));
-                StringBuffer buffer = new StringBuffer();
-
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    buffer.append(line);
-                }
-
-                String finalJson = buffer.toString();
-
-                if(!finalJson.isEmpty()){
-                    JSONObject parentObject = new JSONObject(finalJson);
-                    try {
-                        return parentObject.getString("company");
-                    }
-                    catch(JSONException e){
-                        return "";
-                    }
-                }else{
-                    onResume();
-                    mp3Error.start();
-                    makeToast("Error al obtener datos, intente nuevamente");
-                    return null;
-                }
-
-            } catch (MalformedURLException e) {
-                mp3Error.start();
-                log.warning("MalformedURLException: ");
-                e.printStackTrace();
-                onResume();
-                e.printStackTrace();
-            } catch (IOException e) {
-                log.warning("Persona no encontrada");
-                e.printStackTrace();
-                mp3Dennied.start();
-            } catch (JSONException e) {
-                e.printStackTrace();
-                mp3Error.start();
-                onResume();
-                log.warning("JSONException");
-                e.printStackTrace();
-            } finally {
-                if (connection != null) {
-                    connection.disconnect();
-                }
-                try {
-                    if (reader != null) {
-                        reader.close();
-                    }
-                } catch (IOException e) {
-                    log.warning("IOException");
-                    e.printStackTrace();
-                }
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(String s) {
-            try {
-                super.onPostExecute(s);
-                editTextCompany.setText(s);
-            } catch (NullPointerException e){
-                log.warning("Persona no existe en la base de datos");
-                e.printStackTrace();
-            } catch (Exception e){
-                log.warning("IOException linea 360");
-                e.printStackTrace();
-            }
-
-        }
     }
 }
