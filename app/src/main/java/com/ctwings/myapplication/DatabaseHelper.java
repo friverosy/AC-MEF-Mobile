@@ -90,7 +90,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String PERSON_LOCATION = "person_location";
     private static final String PERSON_COMPANY_CODE = "person_company_code";
     private static final String RECORD_INPUT_DATETIME = "record_input_datetime";
-    private static final String RECORD_OUTPUT_DATETIME = "record_output_Datetime";
+    private static final String RECORD_OUTPUT_DATETIME = "record_output_datetime";
     private static final String RECORD_SYNC = "record_sync";
 
     // Setting Table Columns names
@@ -301,7 +301,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         Log.d("Update Person", property.toString());
         return i;
-
     }
 
     // Deleting a single Person
@@ -383,12 +382,20 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         List<String> records = new ArrayList<>();
 
         while (cursor.isAfterLast() == false) {
-            records.add(cursor.getString(0)+";"+cursor.getString(1)+";"+
-                    cursor.getString(2)+";"+cursor.getString(3)+";"+
-                    cursor.getString(4)+";"+cursor.getString(5)+";"+
-                    cursor.getString(6)+";"+cursor.getString(7)+";"+
-                    cursor.getString(8)+";"+cursor.getString(9)+";"+
-                    cursor.getString(10)+";"+cursor.getString(11)+";"
+            records.add(
+                    cursor.getInt(0)+";"+ //ID
+                            cursor.getString(1)+";"+ //FULLNAME
+                            cursor.getString(2)+";"+ //RUN
+                            cursor.getInt(3)+";"+ //IS_INPUT
+                            cursor.getInt(4)+";"+ //BUS
+                            cursor.getInt(5)+";"+ //IS_PERMITTED
+                            cursor.getString(6)+";"+ //COMPANY
+                            cursor.getString(7)+";"+ //LOCATION
+                            cursor.getString(8)+";"+ //COMPANY_CODE
+                            cursor.getString(9)+";"+ //INPUT
+                            cursor.getString(10)+";"+ //OUTPUT
+                            cursor.getInt(11)+";"+ //SYNC
+                            cursor.getString(12) //PROFILE
                     //getInt to boolean type 0 (false), 1 (true)
             );
             cursor.moveToNext();
@@ -422,12 +429,20 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         List<String> records = new ArrayList<>();
 
         while (cursor.isAfterLast() == false) {
-            records.add(cursor.getString(0)+";"+cursor.getString(1)+";"+
-                            cursor.getString(2)+";"+cursor.getString(3)+";"+
-                            cursor.getString(4)+";"+cursor.getString(5)+";"+
-                            cursor.getString(6)+";"+cursor.getString(7)+";"+
-                            cursor.getString(8)+";"+cursor.getString(9)+";"+
-                            cursor.getString(10)+";"+cursor.getString(11)+";"
+            records.add(
+                    cursor.getInt(0)+";"+ //ID
+                            cursor.getString(1)+";"+ //FULLNAME
+                            cursor.getString(2)+";"+ //RUN
+                            cursor.getInt(3)+";"+ //IS_INPUT
+                            cursor.getInt(4)+";"+ //BUS
+                            cursor.getInt(5)+";"+ //IS_PERMITTED
+                            cursor.getString(6)+";"+ //COMPANY
+                            cursor.getString(7)+";"+ //LOCATION
+                            cursor.getString(8)+";"+ //COMPANY_CODE
+                            cursor.getString(9)+";"+ //INPUT
+                            cursor.getString(10)+";"+ //OUTPUT
+                            cursor.getInt(11)+";"+ //SYNC
+                            cursor.getString(12) //PROFILE
                     //getInt to boolean type 0 (false), 1 (true)
             );
             cursor.moveToNext();
@@ -450,6 +465,28 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = db.rawQuery("SELECT * FROM RECORD WHERE record_sync=0;", null);
         return cursor.getCount();
+    }
+
+    public int update_record(Integer id) {
+        // 1. get reference to writable DB
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        // 2. create ContentValues to add key "column"/value
+        ContentValues values = new ContentValues();
+        values.put(RECORD_SYNC, 1);
+
+        // 3. updating row
+        int i = db.update(TABLE_RECORD, //table
+                values, // column/value
+                RECORD_ID+"=?", // selections
+                new String[] { String.valueOf(id) }); //selection args
+
+        // 4. close
+        db.close();
+
+        if(i>0) Log.d("Update record", String.valueOf(id));
+        else Log.e("Error updating record", String.valueOf(id));
+        return i;
     }
 
     //Setting
