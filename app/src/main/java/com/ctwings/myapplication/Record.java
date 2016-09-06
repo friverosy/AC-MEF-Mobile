@@ -8,19 +8,11 @@ public class Record {
     int record_id;
     String person_fullname;
     String person_run;
-
-    public String getPerson_profile() {
-        return person_profile;
-    }
-
-    public void setPerson_profile(String person_profile) {
-        this.person_profile = person_profile;
-    }
-
     String person_profile;
     int record_is_input;
     int record_bus;
     int person_is_permitted;
+    int person_card;
     String person_company;
     String person_location;
     String person_company_code;
@@ -34,7 +26,7 @@ public class Record {
 
     }
 
-    public Record(Integer record_id, String person_fullname, String person_run, String person_profile, Integer record_is_input, Integer record_bus, Integer person_is_permitted, String person_company, String person_location, String person_company_code, String record_input_datetime, String record_output_datetime, Integer record_sync){
+    public Record(Integer record_id, String person_fullname, String person_run, String person_profile, Integer record_is_input, Integer record_bus, Integer person_is_permitted, String person_company, String person_location, String person_company_code, String record_input_datetime, String record_output_datetime, Integer record_sync, Integer person_card){
 
         this.record_id = record_id;
         this.person_fullname = person_fullname;
@@ -49,15 +41,26 @@ public class Record {
         this.record_input_datetime = record_input_datetime;
         this.record_output_datetime = record_output_datetime;
         this.record_sync = record_sync;
+        this.person_card = person_card;
+    }
+
+    public int getPerson_card() { return person_card; }
+
+    public void setPerson_card(int person_card) { this.person_card = person_card; }
+
+    public String getPerson_profile() {
+        return person_profile;
+    }
+
+    public void setPerson_profile(String person_profile) {
+        this.person_profile = person_profile;
     }
 
     public int getRecord_id() {
         return record_id;
     }
 
-    public void setRecord_id(int record_id) {
-        this.record_id = record_id;
-    }
+    public void setRecord_id(int record_id) { this.record_id = record_id; }
 
     public String getPerson_fullname() {
         return person_fullname;
@@ -161,6 +164,8 @@ public class Record {
                 ", record_input_datetime=" + record_input_datetime +
                 ", record_output_datetime=" + record_output_datetime +
                 ", record_sync=" + record_sync +
-                ", person_profile=" + person_profile + "]";
+                ", person_profile=" + person_profile +
+                ", person_card=" + person_card +
+                "]";
     }
 }

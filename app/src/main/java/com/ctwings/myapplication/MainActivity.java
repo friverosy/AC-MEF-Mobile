@@ -418,7 +418,6 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         initScan();
         //getApplicationContext().deleteDatabase("mbd");
-        // Synch Records also, pending
         UpdateDb();
         IntentFilter filter = new IntentFilter();
         filter.addAction(SCAN_ACTION);
@@ -434,7 +433,7 @@ public class MainActivity extends AppCompatActivity {
                     Log.d("Update!", "Updating DB");
                     try {
                         // thread to sleep for 60000 milliseconds
-                        Thread.sleep(60000);
+                        Thread.sleep(30000);
                     } catch (Exception e) {
                         Log.d("Update!","error sleep");
                     }
@@ -570,6 +569,7 @@ public class MainActivity extends AppCompatActivity {
                 record.setRecord_output_datetime(arr[10]);
                 record.setRecord_sync(Integer.parseInt(arr[11]));
                 record.setPerson_profile(arr[12]);
+                record.setPerson_card(Integer.parseInt(arr[13]));
                 new RegisterTask(record).execute();
             }
         }else{
@@ -581,7 +581,7 @@ public class MainActivity extends AppCompatActivity {
     public class GetPeopleTask extends AsyncTask<String, String, String>{
         @Override
         protected String doInBackground(String... params) {
-            String finalJson = db.get_person_by_run(params[0].toString());
+            String finalJson = db.get_one_person(params[0].toString());
 
             if(!finalJson.isEmpty()){
                 //JSONObject parentObject = new JSONObject(finalJson);
@@ -605,6 +605,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 super.onPostExecute(s);
                 String[] arr = s.split(";");
+                Log.d("s", s);
 
                 editTextRun.setText(arr[0]);
 
@@ -615,6 +616,7 @@ public class MainActivity extends AppCompatActivity {
                 record.setPerson_fullname(arr[1]);
                 record.setPerson_location(arr[4]);
                 record.setPerson_company_code(arr[5]);
+                record.setPerson_card(6);
 
                 if (bus) record.setRecord_bus(1);
                 else record.setRecord_bus(0);
@@ -631,7 +633,9 @@ public class MainActivity extends AppCompatActivity {
                 companyCode = arr[5];*/
 
                 editTextFullName.setText(record.getPerson_fullname());
-                if(profile.equals("C")) editTextCompany.setText(record.getPerson_company());
+                if(profile.equals("C")){
+                    editTextCompany.setText(record.getPerson_company());
+                }
 
                 if(arr[2].equals("true")) {
                     //******changed true to 1********
@@ -694,7 +698,7 @@ public class MainActivity extends AppCompatActivity {
 
             // 3. build jsonObject from jsonList
             JSONObject jsonObject = new JSONObject();
-            jsonObject.accumulate("people_run", record.getPerson_run());
+            jsonObject.accumulate("run", record.getPerson_run());
             jsonObject.accumulate("fullname", record.getPerson_fullname());
 
             if(record.getPerson_is_permitted() == 1 )
@@ -717,6 +721,7 @@ public class MainActivity extends AppCompatActivity {
             jsonObject.accumulate("company", record.getPerson_company());
             jsonObject.accumulate("location", record.getPerson_location());
             jsonObject.accumulate("company_code", record.getPerson_company_code());
+            jsonObject.accumulate("card", record.getPerson_card());
 
             // For offline records only
             if (record.getRecord_input_datetime() != null)
@@ -725,7 +730,7 @@ public class MainActivity extends AppCompatActivity {
                 jsonObject.accumulate("output_datetime", record.getRecord_output_datetime());
 
             // 4. convert JSONObject to JSON to String
-            if(jsonObject.length() <= 12){ // 10 element on json
+            if(jsonObject.length() <= 13){ // 13 element on json
                 json = jsonObject.toString();
 
                 // 5. set json to StringEntity
@@ -780,6 +785,8 @@ public class MainActivity extends AppCompatActivity {
                 offlineRecord.setPerson_company(jsonObject.getString("company"));
                 offlineRecord.setPerson_company_code(jsonObject.getString("company_code"));
                 offlineRecord.setPerson_location(jsonObject.getString("location"));
+                offlineRecord.setPerson_card(jsonObject.getInt("card"));
+                offlineRecord.setPerson_profile(jsonObject.getString("profile"));
 
                 if (jsonObject.getString("is_input").equals("true")) offlineRecord.setRecord_is_input(1);
                 else offlineRecord.setRecord_is_input(0);

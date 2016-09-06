@@ -11,13 +11,15 @@ public class Person {
     String person_company;
     String person_location;
     String person_company_code;
+    int person_card;
+    String person_profile;
 
     //Constructors
     public Person(){
 
     }
 
-    public Person(String person_fullname, String person_run, String person_is_permitted, String person_company, String person_location, String person_company_code){
+    public Person(String person_fullname, String person_run, String person_is_permitted, String person_company, String person_location, String person_company_code, Integer person_card, String person_profile){
 
         this.person_fullname = person_fullname;
         this.person_run = person_run;
@@ -25,11 +27,21 @@ public class Person {
         this.person_company = person_company;
         this.person_location = person_location;
         this.person_company_code = person_company_code;
+        this.person_card = person_card;
+        this.person_profile = person_profile;
     }
 
     //Set
     public void set_person_id(int person_id) {
         this.person_id = person_id;
+    }
+
+    public void set_person_card(int person_card) {
+        this.person_card = person_card;
+    }
+
+    public void set_person_profile(String person_profile) {
+        this.person_profile = person_profile;
     }
 
     public void set_person_fullname(String person_fullname) {
@@ -63,8 +75,16 @@ public class Person {
         return this.person_id;
     }
 
+    public int get_person_card() {
+        return this.person_card;
+    }
+
     public String get_person_fullname() {
         return this.person_fullname;
+    }
+
+    public String get_person_profile() {
+        return this.person_profile;
     }
 
     public String get_person_run() {
@@ -92,6 +112,8 @@ public class Person {
     public String toString() {
         return "Person [id=" + person_id + ", fullname=" + person_fullname + ", run=" +
                 person_run + ", is_permitted=" + person_is_permitted +
-                ", company=" + person_company + ", location=" + person_location + ", company_code="+ person_company_code + "]";
+                ", company=" + person_company + ", location=" + person_location +
+                ", company_code="+ person_company_code + ", card="+person_card+
+                ", person_profile=" + person_profile + "]";
     }
 }
