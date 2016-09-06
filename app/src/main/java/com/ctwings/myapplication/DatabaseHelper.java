@@ -238,11 +238,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return person;
     }
 
-    public String get_one_person(String id){
+    public String get_one_person(String id, String profile){
 
         // 1. get reference to readable DB
         SQLiteDatabase db = this.getReadableDatabase();
-        String out="null;null;null;null;null";
+        String out="";
 
         Log.d("cantidad de personas",String.valueOf(person_count()));
 
@@ -265,7 +265,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         if (cursor != null) {
             if (!(cursor.moveToFirst()) || cursor.getCount() == 0) {
                 //cursor is empty
-                out = id+";No encontrado;No encontrado;No encontrado;No encontrado;No encontrado;No encontrado; No encontrado; No encontrado"; //Change to whatever error message.....
+                out = id+";No encontrado;No encontrado;No encontrado;No encontrado;No encontrado;No encontrado;" + profile; //Change to whatever error message.....
             } else {
                 // 3. if we got results get the first one
                 cursor.moveToFirst();
