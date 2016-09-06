@@ -624,21 +624,15 @@ public class MainActivity extends AppCompatActivity {
                 if (is_input) record.setRecord_is_input(1);
                 else record.setRecord_is_input(0);
 
-                record.setPerson_profile(profile);
-
-                /*runStr = arr[0];
-                fullNameStr = arr[1];
-                companyStr = arr[3];
-                location = arr[4];
-                companyCode = arr[5];*/
+                // fix profile if don't change by user.
+                if(arr[7].equals("C")  && profile.equals("E")) record.setPerson_profile("C");
+                else record.setPerson_profile("E");
 
                 editTextFullName.setText(record.getPerson_fullname());
-                if(profile.equals("C")){
-                    editTextCompany.setText(record.getPerson_company());
-                }
+
+                if(profile.equals("C")) editTextCompany.setText(record.getPerson_company());
 
                 if(arr[2].equals("true")) {
-                    //******changed true to 1********
                     mp3Permitted.start();
                     //is_permitted = true;
                     record.setPerson_is_permitted(1);
