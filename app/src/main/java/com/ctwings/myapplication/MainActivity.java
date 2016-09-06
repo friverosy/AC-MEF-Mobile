@@ -549,7 +549,7 @@ public class MainActivity extends AppCompatActivity {
         int count = db.record_desysync_count();
         if (count > 0) {
             List records = db.get_desynchronized_records();
-            //Log.d("Lista", String.valueOf(records));
+
             Record record = new Record();
             String[] arr;
             for (int i = 0; i <= records.size()-1; i++){
@@ -581,7 +581,7 @@ public class MainActivity extends AppCompatActivity {
     public class GetPeopleTask extends AsyncTask<String, String, String>{
         @Override
         protected String doInBackground(String... params) {
-            String finalJson = db.get_one_person(params[0].toString());
+            String finalJson = db.get_one_person(params[0].toString(), profile);
 
             if(!finalJson.isEmpty()){
                 //JSONObject parentObject = new JSONObject(finalJson);
@@ -605,7 +605,6 @@ public class MainActivity extends AppCompatActivity {
             try {
                 super.onPostExecute(s);
                 String[] arr = s.split(";");
-                Log.d("s", s);
 
                 editTextRun.setText(arr[0]);
 
@@ -624,9 +623,11 @@ public class MainActivity extends AppCompatActivity {
                 if (is_input) record.setRecord_is_input(1);
                 else record.setRecord_is_input(0);
 
+                record.setPerson_profile(arr[7]);
+
                 // fix profile if don't change by user.
                 if(arr[7].equals("C")  && profile.equals("E")) record.setPerson_profile("C");
-                else record.setPerson_profile("E");
+                if(arr[7].equals("E")  && profile.equals("C")) record.setPerson_profile("E");
 
                 editTextFullName.setText(record.getPerson_fullname());
 
@@ -751,7 +752,6 @@ public class MainActivity extends AppCompatActivity {
                     //result its the json to sent
                     if (result.startsWith("http://"))
                         result = "Did not work!";
-                    //Log.d("json to POST", result);
                 }else{
                     mp3Error.start();
                     //Toast.makeText(MainActivity.this, "Configure datos del servidor primero", Toast.LENGTH_LONG).show();
