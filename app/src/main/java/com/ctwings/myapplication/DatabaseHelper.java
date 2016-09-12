@@ -238,7 +238,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     public String get_one_person(String id, String profile){
-
         // 1. get reference to readable DB
         SQLiteDatabase db = this.getReadableDatabase();
         String out="";

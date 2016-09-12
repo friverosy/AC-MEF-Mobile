@@ -181,26 +181,24 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                try {
-                    if(profile.equals("E") || profile.equals("C")) {
-                        new GetPeopleTask().execute(editTextFullName.getText().toString());
-                    }else if(profile.equals("V") && !editTextRun.getText().toString().isEmpty() &&
-                            !editTextFullName.getText().toString().isEmpty()){
-                        //Send to AccessControl API
-                        Record record = new Record();
+                if((profile.equals("E") || profile.equals("C")) && !editTextRun.getText().toString().isEmpty()) {
+                    new GetPeopleTask().execute(editTextRun.getText().toString());
+                }else if(profile.equals("V") && !editTextRun.getText().toString().isEmpty() &&
+                        !editTextFullName.getText().toString().isEmpty()){
+                    //Send to AccessControl API
+                    Record record = new Record();
 
-                        record.setPerson_run(editTextRun.getText().toString());
-                        record.setPerson_fullname(editTextFullName.getText().toString());
-                        record.setPerson_profile(profile);
-                        if (is_input) record.setRecord_is_input(1);
-                        else record.setRecord_is_input(0);
-                        if (bus) record.setRecord_bus(1);
-                        else record.setRecord_bus(0);
+                    record.setPerson_run(editTextRun.getText().toString());
+                    record.setPerson_fullname(editTextFullName.getText().toString());
+                    record.setPerson_profile(profile);
+                    if (is_input) record.setRecord_is_input(1);
+                    else record.setRecord_is_input(0);
+                    if (bus) record.setRecord_bus(1);
+                    else record.setRecord_bus(0);
 
-                        new RegisterTask(record).execute();
-                        reset();
-                    }
-                }catch (Exception e) {
+                    new RegisterTask(record).execute();
+                    reset();
+                } else {
                     mp3Error.start();
                     runOnUiThread(new Runnable() {
 
@@ -208,7 +206,7 @@ public class MainActivity extends AppCompatActivity {
                         public void run() { makeToast("Ingrese datos primero.");
                         }
                     });
-                    e.printStackTrace();
+                    editTextRun.requestFocus();
                 }
             }
         });
@@ -584,7 +582,6 @@ public class MainActivity extends AppCompatActivity {
             try {
                 super.onPostExecute(s);
                 String[] arr = s.split(";");
-                editTextRun.setText(arr[0]);
 
                 //build object with that values, then send to registerTarsk()
                 Record record = new Record();
@@ -617,25 +614,18 @@ public class MainActivity extends AppCompatActivity {
                 if (is_input) record.setRecord_is_input(1);
                 else record.setRecord_is_input(0);
 
+                editTextRun.setText(record.getPerson_run());
                 editTextFullName.setText(record.getPerson_fullname());
 
                 if(profile.equals("C")) editTextCompany.setText(record.getPerson_company());
 
                 new RegisterTask(record).execute();
 
-                /*runOnUiThread(new Runnable() {
-
-                    @Override
-                    public void run() {
-                        makeToast("REGISTERTASK "+runStr+" - "+fullNameStr);
-                    }
-                });*/
-
                 clean();
 
             } catch (NullPointerException e){
                 mp3Error.start();
-                e.printStackTrace();
+                Log.e("Null ERROR", "Json can't build");
             } catch (Exception e){
                 e.printStackTrace();
             }
