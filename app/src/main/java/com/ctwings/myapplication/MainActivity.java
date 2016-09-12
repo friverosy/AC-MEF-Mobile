@@ -582,6 +582,10 @@ public class MainActivity extends AppCompatActivity {
             try {
                 super.onPostExecute(s);
                 String[] arr = s.split(";");
+                Log.d("s", s);
+                // set edittext here before some exceptions.
+                editTextRun.setText(arr[0]);
+                editTextFullName.setText(arr[1]);
 
                 //build object with that values, then send to registerTarsk()
                 Record record = new Record();
@@ -614,7 +618,6 @@ public class MainActivity extends AppCompatActivity {
                 if (is_input) record.setRecord_is_input(1);
                 else record.setRecord_is_input(0);
 
-                editTextRun.setText(record.getPerson_run());
                 editTextFullName.setText(record.getPerson_fullname());
 
                 if(profile.equals("C")) editTextCompany.setText(record.getPerson_company());
