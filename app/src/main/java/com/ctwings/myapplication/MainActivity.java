@@ -1,6 +1,5 @@
 package com.ctwings.myapplication;
 
-import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -14,6 +13,7 @@ import android.media.SoundPool;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Vibrator;
+import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -68,9 +68,6 @@ public class MainActivity extends AppCompatActivity {
     private RadioButton rdbContractor;
     private String profile;
 
-    ProgressDialog pd;
-
-    private static final Logger log = Logger.getLogger(MainActivity.class.getName());
     private static String server;
     private boolean is_input;
     private boolean bus;
@@ -98,8 +95,6 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        pd = new ProgressDialog(MainActivity.this);
-
         //remove it
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -111,7 +106,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        LoadSettings();
+        server = "http://192.168.123.12:3000"; // use getSetting();
 
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         editTextRun = (EditText) findViewById(R.id.editText_run);
@@ -201,11 +196,8 @@ public class MainActivity extends AppCompatActivity {
                         else record.setRecord_is_input(0);
                         if (bus) record.setRecord_bus(1);
                         else record.setRecord_bus(0);
-                        // check first if have net...
+
                         new RegisterTask(record).execute();
-                        Toast.makeText(MainActivity.this, "Visita Registrada",
-                                Toast.LENGTH_SHORT).show();
-                        //onResume();
                         reset();
                     }
                 }catch (Exception e) {
@@ -220,10 +212,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-    }
-
-    public void LoadSettings(){
-        server = "http://192.168.123.12:3000";
     }
 
     @Override
@@ -242,7 +230,6 @@ public class MainActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_refresh) {
-            //onResume();
             reset();
             return true;
         }else if (id == R.id.action_setting) {
@@ -292,6 +279,10 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
 
             // TODO Auto-generated method stub
+            if (mp3Error.isPlaying()) mp3Error.stop();
+            if (mp3Dennied.isPlaying()) mp3Dennied.stop();
+            if (mp3Permitted.isPlaying()) mp3Permitted.stop();
+
             isScaning = false;
             //soundpool.play(soundid, 1, 1, 0, 0, 1);
 
@@ -381,6 +372,7 @@ public class MainActivity extends AppCompatActivity {
                     mp3Permitted.start();
                 }
             }catch(NullPointerException e){
+                Log.e("NullPointer", e.toString());
                 //new GetPeopleTask().execute(server + "/employee/" + barcodeStr);
             }
         }
@@ -417,7 +409,6 @@ public class MainActivity extends AppCompatActivity {
         // TODO Auto-generated method stub
         super.onResume();
         initScan();
-        //getApplicationContext().deleteDatabase("mbd");
         UpdateDb();
         IntentFilter filter = new IntentFilter();
         filter.addAction(SCAN_ACTION);
@@ -429,14 +420,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 while(true) {
+                    new updateDbFromXml().execute();
+                    try { Thread.sleep(60000); } catch (Exception e) { }
                     new LoadDbTask().execute();
-                    Log.d("Update!", "Updating DB");
-                    try {
-                        // thread to sleep for 60000 milliseconds
-                        Thread.sleep(30000);
-                    } catch (Exception e) {
-                        Log.d("Update!","error sleep");
-                    }
                 }
             }
         };
@@ -471,50 +457,43 @@ public class MainActivity extends AppCompatActivity {
         return super.onKeyDown(keyCode, event);
     }
 
-    /*public boolean isConnected(){
-        ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Activity.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-        return networkInfo != null && networkInfo.isConnected();
-    }*/
+    public class updateDbFromXml extends AsyncTask<String, String, String>{
 
+        @Override
+        protected String doInBackground(String... params) {
+            String xml = DbCall(server + "/api/people/updateDbFromXml");
+            if(xml!="408" && xml!="204") {
+                //Log.d("xml", xml);
+            }else{
+                Log.d("Network","Offline");
+            }
+            return xml;
+        }
+    }
 
     public class LoadDbTask extends AsyncTask<String, String, String>{
 
         @Override
-        protected void onPreExecute() {
-            /*pd.setTitle("Processing...");
-              pd.setMessage("Please wait.");
-              pd.setCancelable(false);
-              pd.setIndeterminate(true);
-              pd.show();*/
-        }
-
-        @Override
         protected String doInBackground(String... params) {
-
-            String data = DbCall();
-            if(data!="error") {
+            String data = DbCall(server + "/api/people?filter[where][or][0][profile]=E&filter[where][or][1][profile]=C");
+            if(data!="408" && data!="204") {
                 db.add_persons(data);
-                if (db.record_desysync_count() > 0){
+                Log.d("count record desync", String.valueOf(db.record_desync_count()));
+                if (db.record_desync_count() >= 1){
                     OfflineRecordsSynchronizer();
                 }
-            }else{
-                Log.d("Network","Offline");
             }
             return "Done";
         }
 
         @Override
         protected void onPostExecute(String result) {
-            //Log.d("COUNT", db.person_count()+"");
-            //Log.d("Person by id", db.get_person(4000)+"");
-
-            //pd.dismiss();
+            Log.d("Person Count", String.valueOf(db.person_count()));
         }
     }
 
-    public String DbCall(){
-        String dataUrl = server + "/api/people?filter[where][or][0][profile]=E&filter[where][or][1][profile]=C";
+    public String DbCall(String dataUrl){
+
         String contentAsString="";
 
         URL url;
@@ -528,52 +507,54 @@ public class MainActivity extends AppCompatActivity {
             connection.setConnectTimeout(5000);
             connection.connect();
 
-            //int responsecode = connection.getResponseCode();
+            int responsecode = connection.getResponseCode();
 
             // Get Response
             InputStream is = connection.getInputStream();
-            contentAsString = convertInputStreamToString(is);
+            if(responsecode != 200) // OK
+                contentAsString = String.valueOf(responsecode);
+            else
+                contentAsString = convertInputStreamToString(is);
         } catch (Exception e) {
-            e.printStackTrace();
-            contentAsString="error";
+            //e.printStackTrace();
+            contentAsString="408"; // Request Timeout
         }
         if (connection != null) {
             connection.disconnect();
         }
-        Log.d("TAG-contentAsString","Server response: "+contentAsString);
+        if (contentAsString.length() <= 2){ //[]
+            contentAsString = "204"; // No content
+        }
+        Log.d("Server response", contentAsString);
 
         return contentAsString;
     }
 
     public void OfflineRecordsSynchronizer(){
-        int count = db.record_desysync_count();
-        if (count > 0) {
-            List records = db.get_desynchronized_records();
+        List records = db.get_desynchronized_records();
+        Log.d("List record", String.valueOf(records));
 
-            Record record = new Record();
-            String[] arr;
-            for (int i = 0; i <= records.size()-1; i++){
-                //Log.d("falta sincronizar", records.get(i).toString());
-                arr = records.get(i).toString().split(";");
-                //get each row to be synchronized
-                record.setRecord_id(Integer.parseInt(arr[0]));
-                record.setPerson_fullname(arr[1]);
-                record.setPerson_run(arr[2]);
-                record.setRecord_is_input(Integer.parseInt(arr[3]));
-                record.setRecord_bus(Integer.parseInt(arr[4]));
-                record.setPerson_is_permitted(Integer.parseInt(arr[5]));
-                record.setPerson_company(arr[6]);
-                record.setPerson_location(arr[7]);
-                record.setPerson_company_code(arr[8]);
-                record.setRecord_input_datetime(arr[9]);
-                record.setRecord_output_datetime(arr[10]);
-                record.setRecord_sync(Integer.parseInt(arr[11]));
-                record.setPerson_profile(arr[12]);
-                record.setPerson_card(Integer.parseInt(arr[13]));
-                new RegisterTask(record).execute();
-            }
-        }else{
-            Log.i("Offline", "Nothing to Synchronize");
+        Record record = new Record();
+        String[] arr;
+        for (int i = 0; i <= records.size()-1; i++){
+            Log.d("falta sincronizar", records.get(i).toString());
+            arr = records.get(i).toString().split(";");
+            //get each row to be synchronized
+            record.setRecord_id(Integer.parseInt(arr[0]));
+            record.setPerson_fullname(arr[1]);
+            record.setPerson_run(arr[2]);
+            record.setRecord_is_input(Integer.parseInt(arr[3]));
+            record.setRecord_bus(Integer.parseInt(arr[4]));
+            record.setPerson_is_permitted(Integer.parseInt(arr[5]));
+            record.setPerson_company(arr[6]);
+            record.setPerson_location(arr[7]);
+            record.setPerson_company_code(arr[8]);
+            record.setRecord_input_datetime(arr[9]);
+            record.setRecord_output_datetime(arr[10]);
+            record.setRecord_sync(Integer.parseInt(arr[11]));
+            record.setPerson_profile(arr[12]);
+            record.setPerson_card(Integer.parseInt(arr[13]));
+            new RegisterTask(record).execute();
         }
     }
 
@@ -584,8 +565,6 @@ public class MainActivity extends AppCompatActivity {
             String finalJson = db.get_one_person(params[0].toString(), profile);
 
             if(!finalJson.isEmpty()){
-                //JSONObject parentObject = new JSONObject(finalJson);
-                //return parentObject.getString("people");
                 return finalJson;
             }else{
                 mp3Error.start();
@@ -605,34 +584,12 @@ public class MainActivity extends AppCompatActivity {
             try {
                 super.onPostExecute(s);
                 String[] arr = s.split(";");
-
                 editTextRun.setText(arr[0]);
 
                 //build object with that values, then send to registerTarsk()
                 Record record = new Record();
-                record.setPerson_company(arr[3]);
                 record.setPerson_run(arr[0]);
                 record.setPerson_fullname(arr[1]);
-                record.setPerson_location(arr[4]);
-                record.setPerson_company_code(arr[5]);
-                record.setPerson_card(6);
-
-                if (bus) record.setRecord_bus(1);
-                else record.setRecord_bus(0);
-
-                if (is_input) record.setRecord_is_input(1);
-                else record.setRecord_is_input(0);
-
-                record.setPerson_profile(arr[7]);
-
-                // fix profile if don't change by user.
-                if(arr[7].equals("C")  && profile.equals("E")) record.setPerson_profile("C");
-                if(arr[7].equals("E")  && profile.equals("C")) record.setPerson_profile("E");
-
-                editTextFullName.setText(record.getPerson_fullname());
-
-                if(profile.equals("C")) editTextCompany.setText(record.getPerson_company());
-
                 if(arr[2].equals("true")) {
                     mp3Permitted.start();
                     //is_permitted = true;
@@ -644,6 +601,25 @@ public class MainActivity extends AppCompatActivity {
                     record.setPerson_is_permitted(0);
                     imageview.setImageResource(R.drawable.img_false);
                 }
+                record.setPerson_company(arr[3]);
+                record.setPerson_location(arr[4]);
+                record.setPerson_company_code(arr[5]);
+                record.setPerson_card(Integer.parseInt(arr[6]));
+                record.setPerson_profile(arr[7]);
+
+                // fix profile if don't change by user.
+                if(arr[7].equals("C")  && profile.equals("E")) record.setPerson_profile("C");
+                if(arr[7].equals("E")  && profile.equals("C")) record.setPerson_profile("E");
+
+                if (bus) record.setRecord_bus(1);
+                else record.setRecord_bus(0);
+
+                if (is_input) record.setRecord_is_input(1);
+                else record.setRecord_is_input(0);
+
+                editTextFullName.setText(record.getPerson_fullname());
+
+                if(profile.equals("C")) editTextCompany.setText(record.getPerson_company());
 
                 new RegisterTask(record).execute();
 
@@ -660,7 +636,6 @@ public class MainActivity extends AppCompatActivity {
             } catch (NullPointerException e){
                 mp3Error.start();
                 e.printStackTrace();
-                //new RegisterTask().execute(server + "/api/records/");
             } catch (Exception e){
                 e.printStackTrace();
             }
@@ -683,6 +658,7 @@ public class MainActivity extends AppCompatActivity {
         InputStream inputStream;
         String result = "";
         String json="";
+        JSONObject jsonObject = new JSONObject();
         try {
 
             // 1. create HttpClient
@@ -692,7 +668,6 @@ public class MainActivity extends AppCompatActivity {
             HttpPost httpPost = new HttpPost(url);
 
             // 3. build jsonObject from jsonList
-            JSONObject jsonObject = new JSONObject();
             jsonObject.accumulate("run", record.getPerson_run());
             jsonObject.accumulate("fullname", record.getPerson_fullname());
 
@@ -719,14 +694,20 @@ public class MainActivity extends AppCompatActivity {
             jsonObject.accumulate("card", record.getPerson_card());
 
             // For offline records only
-            if (record.getRecord_input_datetime() != null)
-                jsonObject.accumulate("input_datetime", record.getRecord_input_datetime());
-            if (record.getRecord_output_datetime() != null)
-                jsonObject.accumulate("output_datetime", record.getRecord_output_datetime());
+            try{
+                if (record.getRecord_input_datetime().length() > 4)
+                    jsonObject.accumulate("input_datetime", record.getRecord_input_datetime());
+            }catch (NullPointerException npe){}
+
+            try {
+                if (record.getRecord_output_datetime().length() > 4)
+                    jsonObject.accumulate("output_datetime", record.getRecord_output_datetime());
+            }catch (NullPointerException npe){}
 
             // 4. convert JSONObject to JSON to String
             if(jsonObject.length() <= 13){ // 13 element on json
                 json = jsonObject.toString();
+                Log.d("json to POST", json);
 
                 // 5. set json to StringEntity
                 StringEntity se = new StringEntity(json);
@@ -745,13 +726,22 @@ public class MainActivity extends AppCompatActivity {
                     inputStream = httpResponse.getEntity().getContent();
 
                     // 10. convert inputstream to string
-                    if(inputStream != null)
+                    if(inputStream != null) {
                         result = convertInputStreamToString(inputStream);
-                    else
-                        result = "Did not work!";
+
+                        if (httpResponse.getStatusLine().getStatusCode() == 200) {
+                            // if has input or output_datetime its becouse its an offline record to be will synchronized.
+                            if (!jsonObject.isNull("input_datetime") || !jsonObject.isNull("output_datetime")) {
+                                Log.d("Debugger", "updating record to be synchronized");
+                                db.update_record(record.getRecord_id());
+                            }
+                        }
+                    } else {
+                        result = String.valueOf(httpResponse.getStatusLine().getStatusCode());
+                    }
                     //result its the json to sent
                     if (result.startsWith("http://"))
-                        result = "Did not work!";
+                        result = "204"; //no content
                 }else{
                     mp3Error.start();
                     //Toast.makeText(MainActivity.this, "Configure datos del servidor primero", Toast.LENGTH_LONG).show();
@@ -764,17 +754,15 @@ public class MainActivity extends AppCompatActivity {
                     });
                 }
             }else{
-                Log.d("Json length", "Missing elements in the json");
+                Log.d("Json length", "Missing elements in the json to be posted");
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
             // Insert records to object, then get from DataBaseHelper to save
             Record offlineRecord = new Record();
 
             try {
-                JSONObject jsonObject = new JSONObject(json);
-                offlineRecord.setPerson_run(jsonObject.getString("people_run"));
+                offlineRecord.setPerson_run(jsonObject.getString("run"));
                 offlineRecord.setPerson_fullname(jsonObject.getString("fullname"));
                 offlineRecord.setPerson_company(jsonObject.getString("company"));
                 offlineRecord.setPerson_company_code(jsonObject.getString("company_code"));
@@ -792,17 +780,15 @@ public class MainActivity extends AppCompatActivity {
                 else offlineRecord.setPerson_is_permitted(0);
 
                 TimeZone tz = TimeZone.getTimeZone("UTC");
-                DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'"); // Quoted "Z" to indicate UTC, no timezone offset
+                DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'"); // Quoted "Z" to indicate UTC, no timezone offset
                 df.setTimeZone(tz);
 
-                if(is_input) offlineRecord.setRecord_input_datetime(df.format(new Date()));
+                if (is_input) offlineRecord.setRecord_input_datetime(df.format(new Date()));
                 else offlineRecord.setRecord_output_datetime(df.format(new Date()));
 
                 offlineRecord.setPerson_profile(jsonObject.getString("profile"));
-                Log.d("offline record", offlineRecord.toString());
-                db.add_record(offlineRecord);
 
-                // then must be synchronized.
+                db.add_record(offlineRecord);
             } catch (JSONException e1) {
                 e1.printStackTrace();
             } catch (SQLException sql) {
@@ -831,11 +817,7 @@ public class MainActivity extends AppCompatActivity {
             //makeToast("Persona registrada!");
             clean();
 
-            // Update record to synchronized (record_sync = 1)
-            Log.d("count", String.valueOf(db.record_desysync_count()));
-            if (db.record_desysync_count()>0){
-                db.update_record(newRecord.getRecord_id());
-            }
+            //update record like a synchronized!
         }
     }
 

@@ -191,9 +191,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             }finally {
                 db.endTransaction();
             }
-
         } catch (JSONException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
         }
 
         db.close();
@@ -249,7 +248,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         //Remove 0 at beginner
         id = String.valueOf(Integer.parseInt(id));
 
-        Log.d("Buscando a ", id);
+        Log.d("Looking for", id);
 
         // 2. build query
         Cursor cursor =
@@ -347,7 +346,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public int person_count(){
 
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery("SELECT * FROM person;", null);
+        Cursor cursor = db.rawQuery("SELECT " + PERSON_ID + " FROM person;", null);
         return cursor.getCount();
     }
 
@@ -367,8 +366,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(PERSON_COMPANY, record.getPerson_company());
         values.put(PERSON_LOCATION, record.getPerson_location());
         values.put(PERSON_COMPANY_CODE, record.getPerson_company_code());
-        values.put(RECORD_INPUT_DATETIME, record.getRecord_input_datetime());
-        values.put(RECORD_OUTPUT_DATETIME, record.getRecord_output_datetime());
+        if(record.getRecord_input_datetime() != null)
+            values.put(RECORD_INPUT_DATETIME, record.getRecord_input_datetime());
+        if(record.getRecord_output_datetime() != null)
+            values.put(RECORD_OUTPUT_DATETIME, record.getRecord_output_datetime());
         values.put(RECORD_SYNC, 0);
         values.put(PERSON_PROFILE,record.getPerson_profile());
         values.put(PERSON_CARD, record.getPerson_card());
@@ -376,9 +377,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         // 3. insert
         try{
             db.insert(TABLE_RECORD, null, values);
-            Log.d("values record insert", String.valueOf(values));
         }catch (SQLException e) {
-            Log.e("DataBase Error", "Error al insertar: "+values);
+            Log.e("DataBase Error", "Error to insert record: "+values);
             e.printStackTrace();
         }
 
@@ -443,8 +443,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         Cursor cursor = //db.rawQuery("SELECT * FROM " + TABLE_RECORD, null);
                 db.query(TABLE_RECORD, // a. table
                         RECORD_COLUMNS, // b. column names
-                        RECORD_SYNC+"=?", // c. selections
-                        new String[]{"0"}, // d. selections args
+                        RECORD_SYNC+"=0", // c. selections
+                        null, // d. selections args
                         null, // e. group by
                         null, // f. having
                         null, // g. order by
@@ -488,32 +488,28 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return cursor.getCount();
     }
 
-    public int record_desysync_count(){
+    public int record_desync_count(){
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = db.rawQuery("SELECT * FROM RECORD WHERE record_sync=0;", null);
         return cursor.getCount();
     }
 
-    public int update_record(Integer id) {
-        // 1. get reference to writable DB
+    public void update_record(int id) {
         SQLiteDatabase db = this.getWritableDatabase();
-
-        // 2. create ContentValues to add key "column"/value
         ContentValues values = new ContentValues();
         values.put(RECORD_SYNC, 1);
 
         // 3. updating row
         int i = db.update(TABLE_RECORD, //table
                 values, // column/value
-                RECORD_ID+"=?", // selections
-                new String[] { String.valueOf(id) }); //selection args
+                RECORD_ID+"="+id, // where
+                null);
 
         // 4. close
         db.close();
 
-        if(i>0) Log.d("Update record", String.valueOf(id));
+        if(i>0) Log.d("Local Record updated", String.valueOf(id));
         else Log.e("Error updating record", String.valueOf(id));
-        return i;
     }
 
     //Setting
@@ -537,7 +533,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     // Updating single contact
-    public int update_server(String url, Integer port) {
+    public int update_server(String url, int port) {
         SQLiteDatabase db = this.getWritableDatabase();
 
         ContentValues values = new ContentValues();
