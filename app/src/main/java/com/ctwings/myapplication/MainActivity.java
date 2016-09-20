@@ -735,7 +735,6 @@ public class MainActivity extends AppCompatActivity {
                         if (httpResponse.getStatusLine().getStatusCode() == 200) {
                             // if has input or output_datetime its becouse its an offline record to be will synchronized.
                             if (!jsonObject.isNull("input_datetime") || !jsonObject.isNull("output_datetime")) {
-                                Log.d("----", "actualizar record");
                                 db.update_record(record.getRecord_id());
                             }
                         }
