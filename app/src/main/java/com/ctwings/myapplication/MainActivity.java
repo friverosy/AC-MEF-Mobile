@@ -300,7 +300,7 @@ public class MainActivity extends AppCompatActivity {
             //android.util.Log.i("debug", "----codetype--" + temp);
             barcodeStr = new String(barcode, 0, barocodelen);
             String rawCode = barcodeStr;
-            Log.w("Barcode RAW", barcodeStr);
+            writeLog("Barcode RAW", barcodeStr);
             int flag=0; // 0 for end without k, 1 with k
             int lenght=0;
 
@@ -352,6 +352,7 @@ public class MainActivity extends AppCompatActivity {
             barcodeStr = barcodeStr.replace("K", "");
 
             Log.i("Cooked Barcode", barcodeStr);
+            writeLog("Cooked Barcode", barcodeStr);
 
             try{
                 if(profile.equals("E") || profile.equals("C")) {
@@ -471,6 +472,7 @@ public class MainActivity extends AppCompatActivity {
                 //Log.d("xml", xml);
             }else{
                 Log.d("Network","Offline");
+                writeLog("Network","Offline");
             }
             return xml;
         }
@@ -484,6 +486,7 @@ public class MainActivity extends AppCompatActivity {
             if(data!="408" && data!="204") {
                 db.add_persons(data);
                 Log.d("count record desync", String.valueOf(db.record_desync_count()));
+                writeLog("count record desync", String.valueOf(db.record_desync_count()));
                 if (db.record_desync_count() >= 1){
                     OfflineRecordsSynchronizer();
                 }
@@ -494,6 +497,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(String result) {
             Log.d("Person Count", String.valueOf(db.person_count()));
+            writeLog("Person Count", String.valueOf(db.person_count()));
         }
     }
 
@@ -537,12 +541,10 @@ public class MainActivity extends AppCompatActivity {
 
     public void OfflineRecordsSynchronizer(){
         List records = db.get_desynchronized_records();
-        Log.d("List record", String.valueOf(records));
 
         Record record = new Record();
         String[] arr;
         for (int i = 0; i <= records.size()-1; i++){
-            Log.d("falta sincronizar", records.get(i).toString());
             arr = records.get(i).toString().split(";");
             //get each row to be synchronized
             record.setRecord_id(Integer.parseInt(arr[0]));
@@ -589,7 +591,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 super.onPostExecute(s);
                 String[] arr = s.split(";");
-                Log.d("s", s);
+
                 // set edittext here before some exceptions.
                 editTextRun.setText(arr[0]);
                 editTextFullName.setText(arr[1]);
@@ -708,6 +710,7 @@ public class MainActivity extends AppCompatActivity {
             if(jsonObject.length() <= 13){ // 13 element on json
                 json = jsonObject.toString();
                 Log.d("json to POST", json);
+                writeLog("json to POST", json);
 
                 // 5. set json to StringEntity
                 StringEntity se = new StringEntity(json);
@@ -732,7 +735,7 @@ public class MainActivity extends AppCompatActivity {
                         if (httpResponse.getStatusLine().getStatusCode() == 200) {
                             // if has input or output_datetime its becouse its an offline record to be will synchronized.
                             if (!jsonObject.isNull("input_datetime") || !jsonObject.isNull("output_datetime")) {
-                                Log.d("Debugger", "updating record to be synchronized");
+                                Log.d("----", "actualizar record");
                                 db.update_record(record.getRecord_id());
                             }
                         }
@@ -755,6 +758,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }else{
                 Log.d("Json length", "Missing elements in the json to be posted");
+                writeLog("Json length", "Missing elements in the json to be posted");
             }
 
         } catch (Exception e) {
@@ -826,7 +830,7 @@ public class MainActivity extends AppCompatActivity {
     }
     public void writeLog(String LogType, String content) {
         String filename = "AccessControl.log";
-        String message = getCurrentDateTime() + "[" + LogType + "]" + ":" + content + "\n";
+        String message = getCurrentDateTime() + " [" + LogType + "]" + ": " + content + "\n";
         FileOutputStream outputStream;
         try {
             outputStream = openFileOutput(filename, Context.MODE_APPEND);
