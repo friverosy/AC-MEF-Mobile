@@ -15,6 +15,7 @@
     android:weightSum="1"
     android:background="#FFF">
 
+
     <Switch
         android:id="@+id/mySwitch"
         android:layout_width="wrap_content"

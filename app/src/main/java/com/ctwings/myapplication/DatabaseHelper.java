@@ -195,6 +195,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
 
         db.close();
+
     }
 
     public Person get_person(int id){
@@ -505,7 +506,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         // 4. close
         db.close();
-
         if(i>0) Log.d("Local Record updated", String.valueOf(id));
         else Log.e("Error updating record", String.valueOf(id));
     }

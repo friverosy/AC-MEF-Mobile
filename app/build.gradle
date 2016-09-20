@@ -27,6 +27,6 @@ dependencies {
     compile 'com.strongloop:loopback-sdk-android:1.5.+'
     compile 'com.google.android.gms:play-services-appindexing:8.1.0'
     compile 'org.jbundle.util.osgi.wrapped:org.jbundle.util.osgi.wrapped.org.apache.http.client:4.1.2'
-    compile files('/Users/cristtopher/Axxezo/Multiexport/RT920 SDK/RT920_SDK_release2016/samples/MagManager/libs/platform_sdk_v2.2.0.jar')
+    compile 'com.pnikosis:materialish-progress:1.7'
     compile files('src/main/java/platform_sdk_v2.2.0.jar')
 }

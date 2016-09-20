@@ -27,10 +27,14 @@ import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Switch;
+import android.widget.TextView;
 import android.widget.Toast;
+
+import com.pnikosis.materialishprogress.ProgressWheel;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
@@ -52,7 +56,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
-
 //import android.nfc.NfcAdapter;
 
 public class MainActivity extends AppCompatActivity {
@@ -65,10 +68,11 @@ public class MainActivity extends AppCompatActivity {
     private RadioButton rdbEmployee;
     private RadioButton rdbContractor;
     private String profile;
-
+    private ProgressWheel loading;
     private static String server;
     private boolean is_input;
     private boolean bus;
+    private TextView lastUpdated;
 
     private final static String SCAN_ACTION = "urovo.rcv.message";//扫描结束action
     private Vibrator mVibrator;
@@ -83,7 +87,6 @@ public class MainActivity extends AppCompatActivity {
     MediaPlayer mp3Dennied;
     MediaPlayer mp3Permitted;
     MediaPlayer mp3Error;
-
     DatabaseHelper db = new DatabaseHelper(this);
 
     @Override
@@ -112,7 +115,11 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
         }
-        writeLog("DEBUG","Application has started Correctly");
+        //call the loading library in xml file
+        loading = (ProgressWheel) findViewById(R.id.loading);
+        loading.setVisibility(View.GONE);
+
+        writeLog("DEBUG", "Application has started Correctly");
         server = "http://192.168.123.12:3000"; // use getSetting();
 
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
@@ -123,43 +130,43 @@ public class MainActivity extends AppCompatActivity {
         mp3Dennied = MediaPlayer.create(MainActivity.this, R.raw.dennied);
         mp3Permitted = MediaPlayer.create(MainActivity.this, R.raw.permitted);
         mp3Error = MediaPlayer.create(MainActivity.this, R.raw.error);
-        rdgProfile = (RadioGroup)findViewById(R.id.rdgProfile);
-        rdbEmployee = (RadioButton)findViewById(R.id.rdbEmployee);
-        rdbContractor = (RadioButton)findViewById(R.id.rdbContractor);
+        rdgProfile = (RadioGroup) findViewById(R.id.rdgProfile);
+        rdbEmployee = (RadioButton) findViewById(R.id.rdbEmployee);
+        rdbContractor = (RadioButton) findViewById(R.id.rdbContractor);
         rdbEmployee.setChecked(true);
         editTextCompany.setVisibility(View.GONE);
         mySwitch = (Switch) findViewById(R.id.mySwitch);
         mySwitch.setChecked(true);
-
+        lastUpdated = (TextView) findViewById(R.id.textView_lastUpdate);
         // set by default
         is_input = true;
         profile = "E";
         bus = false;
         // end set by default
 
-        rdgProfile.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener(){
+        rdgProfile.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(RadioGroup group, int checkedId) {
                 // TODO Auto-generated method stub
                 reset();
-                if (checkedId == R.id.rdbEmployee){
+                if (checkedId == R.id.rdbEmployee) {
                     profile = "E";
                     bus = false;
                     editTextCompany.setVisibility(View.GONE);
                     mySwitch.setVisibility(View.VISIBLE);
-                }else if (checkedId == R.id.rdbVisit) {
+                } else if (checkedId == R.id.rdbVisit) {
                     profile = "V";
                     bus = false;
                     imageview.setImageDrawable(null);
                     editTextCompany.setVisibility(View.VISIBLE);
                     mySwitch.setVisibility(View.VISIBLE);
-                }else if (checkedId == R.id.rdbContractor) {
+                } else if (checkedId == R.id.rdbContractor) {
                     profile = "C";
                     bus = false;
                     imageview.setImageDrawable(null);
                     editTextCompany.setVisibility(View.VISIBLE);
                     mySwitch.setVisibility(View.VISIBLE);
-                }else if (checkedId == R.id.rdbBus) {
+                } else if (checkedId == R.id.rdbBus) {
                     profile = "E";
                     bus = true;
                     imageview.setImageDrawable(null);
@@ -172,8 +179,11 @@ public class MainActivity extends AppCompatActivity {
         mySwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if(isChecked){ is_input = true; }
-                else{ is_input = false; }
+                if (isChecked) {
+                    is_input = true;
+                } else {
+                    is_input = false;
+                }
             }
         });
 
@@ -188,10 +198,10 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if((profile.equals("E") || profile.equals("C")) && !editTextRun.getText().toString().isEmpty()) {
+                if ((profile.equals("E") || profile.equals("C")) && !editTextRun.getText().toString().isEmpty()) {
                     new GetPeopleTask().execute(editTextRun.getText().toString());
-                }else if(profile.equals("V") && !editTextRun.getText().toString().isEmpty() &&
-                        !editTextFullName.getText().toString().isEmpty()){
+                } else if (profile.equals("V") && !editTextRun.getText().toString().isEmpty() &&
+                        !editTextFullName.getText().toString().isEmpty()) {
                     //Send to AccessControl API
                     Record record = new Record();
 
@@ -210,7 +220,8 @@ public class MainActivity extends AppCompatActivity {
                     runOnUiThread(new Runnable() {
 
                         @Override
-                        public void run() { makeToast("Ingrese datos primero.");
+                        public void run() {
+                            makeToast("Ingrese datos primero.");
                         }
                     });
                     editTextRun.requestFocus();
@@ -237,7 +248,7 @@ public class MainActivity extends AppCompatActivity {
         if (id == R.id.action_refresh) {
             reset();
             return true;
-        }else if (id == R.id.action_setting) {
+        } else if (id == R.id.action_setting) {
             Intent i = new Intent(this, Setting.class);
             startActivity(i);
         }
@@ -251,8 +262,7 @@ public class MainActivity extends AppCompatActivity {
 
         // many of these calls can throw exceptions, so i've just
         // wrapped them all in one try/catch statement.
-        try
-        {
+        try {
             // create a url object
             URL url = new URL(theUrl);
 
@@ -265,14 +275,11 @@ public class MainActivity extends AppCompatActivity {
             String line;
 
             // read from the urlconnection via the bufferedreader
-            while ((line = bufferedReader.readLine()) != null)
-            {
+            while ((line = bufferedReader.readLine()) != null) {
                 content.append(line + "\n");
             }
             bufferedReader.close();
-        }
-        catch(Exception e)
-        {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return content.toString();
@@ -304,10 +311,10 @@ public class MainActivity extends AppCompatActivity {
             int flag=0; // 0 for end without k, 1 with k
             int lenght=0;
 
-            if(barcodeStr.startsWith("https")){ // new DNI
+            if (barcodeStr.startsWith("https")) { // new DNI
                 barcodeStr = barcodeStr.substring(52, 62);
                 barcodeStr = barcodeStr.substring(0, barcodeStr.indexOf("-"));
-                if(profile == "V"){
+                if (profile == "V") {
                     //get name from DNI
                     editTextFullName.setText(" ");
                     //http://datos.24x7.cl/rut/17179347-5/
@@ -315,34 +322,34 @@ public class MainActivity extends AppCompatActivity {
                     //getUrlContents("http://datos.24x7.cl/rut/", barcodeStr)
                     //the from getUrlContents set other params
                 }
-                Log.i("Debugger","NEW DNI");
-            }else if(barcodeStr.startsWith("00")) {
-                Log.i("Debugger","CARD");
-            }else if(barcodeStr.contains("ABCDEFGHIJKLMNOPQRSTUVWXYZ")){ // old DNI
-                Log.i("Debugger","OLD DNI");
+                Log.i("Debugger", "NEW DNI");
+            } else if (barcodeStr.startsWith("00")) {
+                Log.i("Debugger", "CARD");
+            } else if (barcodeStr.contains("ABCDEFGHIJKLMNOPQRSTUVWXYZ")) { // old DNI
+                Log.i("Debugger", "OLD DNI");
                 barcodeStr = barcodeStr.substring(0, 9);
-                Log.i("Old DNI Cutted",barcodeStr);
+                Log.i("Old DNI Cutted", barcodeStr);
                 barcodeStr = barcodeStr.replace(" ", "");
-                if(barcodeStr.endsWith("K")) {
+                if (barcodeStr.endsWith("K")) {
                     barcodeStr = barcodeStr.replace("K", "");
                     flag = 1;
                 }
-                if(Integer.parseInt(barcodeStr) > 400000000 && flag == 0){
+                if (Integer.parseInt(barcodeStr) > 400000000 && flag == 0) {
                     barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 2);
-                    Log.i("Debugger","Oldman");
-                    lenght=9;
-                }else if(flag == 0){
-                    lenght=10;
-                    Log.i("Debugger","Elderly person");
+                    Log.i("Debugger", "Oldman");
+                    lenght = 9;
+                } else if (flag == 0) {
+                    lenght = 10;
+                    Log.i("Debugger", "Elderly person");
                     barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 1);
                 }
 
-                if(profile == "V"){
+                if (profile == "V") {
                     //get name from DNI
                     String[] array = rawCode.split("\\s+");
-                    try{
+                    try {
                         editTextFullName.setText(array[1].substring(0, array[1].indexOf("CHL")));
-                    }catch (Exception e){
+                    } catch (Exception e) {
                         editTextFullName.setText(array[2].substring(0, array[2].indexOf("CHL")));
                     }
                 }
@@ -354,17 +361,16 @@ public class MainActivity extends AppCompatActivity {
             Log.i("Cooked Barcode", barcodeStr);
             writeLog("Cooked Barcode", barcodeStr);
 
-            try{
-                if(profile.equals("E") || profile.equals("C")) {
+            try {
+                if (profile.equals("E") || profile.equals("C")) {
                     new GetPeopleTask().execute(barcodeStr);
-                }
-                else if(profile.equals("V")){
+                } else if (profile.equals("V")) {
                     editTextRun.setText(barcodeStr);
 
                     //Send to AccessControl API
                     Record record = new Record();
 
-                    if(!editTextFullName.getText().toString().isEmpty())
+                    if (!editTextFullName.getText().toString().isEmpty())
                         record.setPerson_fullname(editTextFullName.getText().toString());
                     record.setPerson_run(barcodeStr);
                     record.setPerson_profile(profile);
@@ -377,7 +383,7 @@ public class MainActivity extends AppCompatActivity {
                     //new GetCompanyTask().execute(server2 + "/api/records/findOne?filter[where][people_run]=" + barcodeStr);
                     mp3Permitted.start();
                 }
-            }catch(NullPointerException e){
+            } catch (NullPointerException e) {
                 Log.e("NullPointer", e.toString());
                 //new GetPeopleTask().execute(server + "/employee/" + barcodeStr);
             }
@@ -403,7 +409,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         // TODO Auto-generated method stub
         super.onPause();
-        if(mScanManager != null) {
+        if (mScanManager != null) {
             mScanManager.stopDecode();
             isScaning = false;
         }
@@ -421,13 +427,16 @@ public class MainActivity extends AppCompatActivity {
         registerReceiver(mScanReceiver, filter);
     }
 
-    public void UpdateDb(){
+    public void UpdateDb() {
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
-                while(true) {
+                while (true) {
                     new updateDbFromXml().execute();
-                    try { Thread.sleep(60000); } catch (Exception e) { }
+                    try {
+                        Thread.sleep(60000);
+                    } catch (Exception e) {
+                    }
                     new LoadDbTask().execute();
                 }
             }
@@ -435,7 +444,7 @@ public class MainActivity extends AppCompatActivity {
         new Thread(runnable).start();
     }
 
-    public void reset(){
+    public void reset() {
 
         initScan();
         editTextRun.setText("");
@@ -447,8 +456,8 @@ public class MainActivity extends AppCompatActivity {
         registerReceiver(mScanReceiver, filter);
     }
 
-    public void clean(){
-        barcodeStr="";
+    public void clean() {
+        barcodeStr = "";
     }
 
     @Override
@@ -463,12 +472,12 @@ public class MainActivity extends AppCompatActivity {
         return super.onKeyDown(keyCode, event);
     }
 
-    public class updateDbFromXml extends AsyncTask<String, String, String>{
+    public class updateDbFromXml extends AsyncTask<String, String, String> {
 
         @Override
         protected String doInBackground(String... params) {
             String xml = DbCall(server + "/api/people/updateDbFromXml");
-            if(xml!="408" && xml!="204") {
+            if (xml != "408" && xml != "204") {
                 //Log.d("xml", xml);
             }else{
                 Log.d("Network","Offline");
@@ -478,20 +487,27 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public class LoadDbTask extends AsyncTask<String, String, String>{
+    public class LoadDbTask extends AsyncTask<String, String, String> {
 
         @Override
         protected String doInBackground(String... params) {
             String data = DbCall(server + "/api/people?filter[where][or][0][profile]=E&filter[where][or][1][profile]=C");
-            if(data!="408" && data!="204") {
+            if (data != "408" && data != "204") {
                 db.add_persons(data);
                 Log.d("count record desync", String.valueOf(db.record_desync_count()));
-                writeLog("count record desync", String.valueOf(db.record_desync_count()));
-                if (db.record_desync_count() >= 1){
+                if (db.record_desync_count() >= 1) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            loading.setEnabled(true);
+                            loading.setVisibility(View.VISIBLE);
+                        }
+                    });
                     OfflineRecordsSynchronizer();
                 }
             }
             return "Done";
+
         }
 
         @Override
@@ -501,9 +517,62 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public String DbCall(String dataUrl){
+    public class getLastUpdateTask extends AsyncTask<String, Void, String> {
+        private String Updated, postReturn = "";
 
-        String contentAsString="";
+        public getLastUpdateTask(String s) {
+            Updated = s;
+        }
+
+        @Override
+        protected String doInBackground(String... params) {
+            postReturn = GET(Updated);
+            Log.d("get(lastupdate):", postReturn);
+            return postReturn;
+        }
+
+        @Override
+        public String toString() {
+            return postReturn + "";
+        }
+
+        protected void onPostExecute(String result) {
+            lastUpdated.setText(result);
+        }
+
+    }
+
+    public String GET(String url) {
+        String result = "";
+        InputStream inputStream;
+        HttpClient httpclient = new DefaultHttpClient();
+        HttpGet httpGet = new HttpGet(url);
+        HttpResponse httpResponse = null;
+        try {
+            httpResponse = httpclient.execute(httpGet);
+            inputStream = httpResponse.getEntity().getContent();
+
+            if (inputStream != null) {
+                result = convertInputStreamToString(inputStream);
+                String[] splitter=result.split("\"");
+                result=splitter[4];
+                result=result.substring(0,result.length()-1);
+            } else {
+                result = String.valueOf(httpResponse.getStatusLine().getStatusCode());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return result;
+
+
+    }
+
+
+    public String DbCall(String dataUrl) {
+
+        String contentAsString = "";
 
         URL url;
         HttpURLConnection connection = null;
@@ -520,31 +589,37 @@ public class MainActivity extends AppCompatActivity {
 
             // Get Response
             InputStream is = connection.getInputStream();
-            if(responsecode != 200) // OK
+            if (responsecode != 200) // OK
                 contentAsString = String.valueOf(responsecode);
-            else
+            else {
                 contentAsString = convertInputStreamToString(is);
+                //update datetime in textbox from XML file
+                new getLastUpdateTask(server + "/api/people/getLastUpdate?profile=E").execute().toString();
+            }
         } catch (Exception e) {
             //e.printStackTrace();
-            contentAsString="408"; // Request Timeout
+            contentAsString = "408"; // Request Timeout
         }
         if (connection != null) {
             connection.disconnect();
         }
-        if (contentAsString.length() <= 2){ //[]
+        if (contentAsString.length() <= 2) { //[]
             contentAsString = "204"; // No content
         }
         Log.d("Server response", contentAsString);
 
+
+
         return contentAsString;
     }
 
-    public void OfflineRecordsSynchronizer(){
+    public void OfflineRecordsSynchronizer() {
         List records = db.get_desynchronized_records();
-
+        Log.d("List record", String.valueOf(records));
         Record record = new Record();
         String[] arr;
-        for (int i = 0; i <= records.size()-1; i++){
+        for (int i = 0; i <= records.size() - 1; i++) {
+            Log.d("falta sincronizar", records.get(i).toString());
             arr = records.get(i).toString().split(";");
             //get each row to be synchronized
             record.setRecord_id(Integer.parseInt(arr[0]));
@@ -566,14 +641,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //BD query instead of api rest
-    public class GetPeopleTask extends AsyncTask<String, String, String>{
+    public class GetPeopleTask extends AsyncTask<String, String, String> {
         @Override
         protected String doInBackground(String... params) {
             String finalJson = db.get_one_person(params[0].toString(), profile);
 
-            if(!finalJson.isEmpty()){
+            if (!finalJson.isEmpty()) {
                 return finalJson;
-            }else{
+            } else {
                 mp3Error.start();
                 runOnUiThread(new Runnable() {
 
@@ -600,12 +675,12 @@ public class MainActivity extends AppCompatActivity {
                 Record record = new Record();
                 record.setPerson_run(arr[0]);
                 record.setPerson_fullname(arr[1]);
-                if(arr[2].equals("true")) {
+                if (arr[2].equals("true")) {
                     mp3Permitted.start();
                     //is_permitted = true;
                     record.setPerson_is_permitted(1);
                     imageview.setImageResource(R.drawable.img_true);
-                }else {
+                } else {
                     mp3Dennied.start();
                     //is_permitted = false;
                     record.setPerson_is_permitted(0);
@@ -618,8 +693,8 @@ public class MainActivity extends AppCompatActivity {
                 record.setPerson_profile(arr[7]);
 
                 // fix profile if don't change by user.
-                if(arr[7].equals("C")  && profile.equals("E")) record.setPerson_profile("C");
-                if(arr[7].equals("E")  && profile.equals("C")) record.setPerson_profile("E");
+                if (arr[7].equals("C") && profile.equals("E")) record.setPerson_profile("C");
+                if (arr[7].equals("E") && profile.equals("C")) record.setPerson_profile("E");
 
                 if (bus) record.setRecord_bus(1);
                 else record.setRecord_bus(0);
@@ -629,26 +704,26 @@ public class MainActivity extends AppCompatActivity {
 
                 editTextFullName.setText(record.getPerson_fullname());
 
-                if(profile.equals("C")) editTextCompany.setText(record.getPerson_company());
+                if (profile.equals("C")) editTextCompany.setText(record.getPerson_company());
 
                 new RegisterTask(record).execute();
 
                 clean();
 
-            } catch (NullPointerException e){
+            } catch (NullPointerException e) {
                 mp3Error.start();
                 Log.e("Null ERROR", "Json can't build");
-            } catch (Exception e){
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
     }
 
-    private static String convertInputStreamToString(InputStream inputStream) throws IOException{
-        BufferedReader bufferedReader = new BufferedReader( new InputStreamReader(inputStream));
+    private static String convertInputStreamToString(InputStream inputStream) throws IOException {
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
         String line;
         String result = "";
-        while((line = bufferedReader.readLine()) != null)
+        while ((line = bufferedReader.readLine()) != null)
             result += line;
 
         inputStream.close();
@@ -656,10 +731,10 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public String POST(Record record, String url){
+    public String POST(Record record, String url) {
         InputStream inputStream;
         String result = "";
-        String json="";
+        String json = "";
         JSONObject jsonObject = new JSONObject();
         try {
 
@@ -673,19 +748,19 @@ public class MainActivity extends AppCompatActivity {
             jsonObject.accumulate("run", record.getPerson_run());
             jsonObject.accumulate("fullname", record.getPerson_fullname());
 
-            if(record.getPerson_is_permitted() == 1 )
+            if (record.getPerson_is_permitted() == 1)
                 jsonObject.accumulate("is_permitted", true);
             else
                 jsonObject.accumulate("is_permitted", false);
 
             jsonObject.accumulate("profile", record.getPerson_profile());
 
-            if(record.getRecord_is_input() == 1)
+            if (record.getRecord_is_input() == 1)
                 jsonObject.accumulate("is_input", true);
             else
                 jsonObject.accumulate("is_input", false);
 
-            if(record.getRecord_bus() == 1)
+            if (record.getRecord_bus() == 1)
                 jsonObject.accumulate("bus", true);
             else
                 jsonObject.accumulate("bus", false);
@@ -696,18 +771,20 @@ public class MainActivity extends AppCompatActivity {
             jsonObject.accumulate("card", record.getPerson_card());
 
             // For offline records only
-            try{
+            try {
                 if (record.getRecord_input_datetime().length() > 4)
                     jsonObject.accumulate("input_datetime", record.getRecord_input_datetime());
-            }catch (NullPointerException npe){}
+            } catch (NullPointerException npe) {
+            }
 
             try {
                 if (record.getRecord_output_datetime().length() > 4)
                     jsonObject.accumulate("output_datetime", record.getRecord_output_datetime());
-            }catch (NullPointerException npe){}
+            } catch (NullPointerException npe) {
+            }
 
             // 4. convert JSONObject to JSON to String
-            if(jsonObject.length() <= 13){ // 13 element on json
+            if (jsonObject.length() <= 13) { // 13 element on json
                 json = jsonObject.toString();
                 Log.d("json to POST", json);
                 writeLog("json to POST", json);
@@ -723,19 +800,25 @@ public class MainActivity extends AppCompatActivity {
                 httpPost.setHeader("Content-type", "application/json");
 
                 // 8. Execute POST request to the given URL
-                if(!server.equals("http://:0")) {
+                if (!server.equals("http://:0")) {
                     HttpResponse httpResponse = httpclient.execute(httpPost);
                     // 9. receive response as inputStream
                     inputStream = httpResponse.getEntity().getContent();
 
                     // 10. convert inputstream to string
-                    if(inputStream != null) {
+                    if (inputStream != null) {
                         result = convertInputStreamToString(inputStream);
 
                         if (httpResponse.getStatusLine().getStatusCode() == 200) {
                             // if has input or output_datetime its becouse its an offline record to be will synchronized.
                             if (!jsonObject.isNull("input_datetime") || !jsonObject.isNull("output_datetime")) {
                                 db.update_record(record.getRecord_id());
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        loading.setVisibility(View.GONE);
+                                    }
+                                });
                             }
                         }
                     } else {
@@ -744,7 +827,7 @@ public class MainActivity extends AppCompatActivity {
                     //result its the json to sent
                     if (result.startsWith("http://"))
                         result = "204"; //no content
-                }else{
+                } else {
                     mp3Error.start();
                     //Toast.makeText(MainActivity.this, "Configure datos del servidor primero", Toast.LENGTH_LONG).show();
                     runOnUiThread(new Runnable() {
@@ -755,7 +838,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                     });
                 }
-            }else{
+            } else {
                 Log.d("Json length", "Missing elements in the json to be posted");
                 writeLog("Json length", "Missing elements in the json to be posted");
             }
@@ -773,13 +856,15 @@ public class MainActivity extends AppCompatActivity {
                 offlineRecord.setPerson_card(jsonObject.getInt("card"));
                 offlineRecord.setPerson_profile(jsonObject.getString("profile"));
 
-                if (jsonObject.getString("is_input").equals("true")) offlineRecord.setRecord_is_input(1);
+                if (jsonObject.getString("is_input").equals("true"))
+                    offlineRecord.setRecord_is_input(1);
                 else offlineRecord.setRecord_is_input(0);
 
                 if (jsonObject.getString("bus").equals("true")) offlineRecord.setRecord_bus(1);
                 else offlineRecord.setRecord_bus(0);
 
-                if (jsonObject.getString("is_permitted").equals("true")) offlineRecord.setPerson_is_permitted(1);
+                if (jsonObject.getString("is_permitted").equals("true"))
+                    offlineRecord.setPerson_is_permitted(1);
                 else offlineRecord.setPerson_is_permitted(0);
 
                 TimeZone tz = TimeZone.getTimeZone("UTC");
@@ -802,11 +887,11 @@ public class MainActivity extends AppCompatActivity {
         return result;
     }
 
-    public class RegisterTask extends AsyncTask<Void, Void, String>{
+    public class RegisterTask extends AsyncTask<Void, Void, String> {
 
         private Record newRecord;
 
-        RegisterTask(Record newRecord){
+        RegisterTask(Record newRecord) {
             this.newRecord = newRecord;
         }
 
@@ -824,9 +909,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void makeToast(String msg){
+    public void makeToast(String msg) {
         Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
     }
+
     public void writeLog(String LogType, String content) {
         String filename = "AccessControl.log";
         String message = getCurrentDateTime() + " [" + LogType + "]" + ": " + content + "\n";
