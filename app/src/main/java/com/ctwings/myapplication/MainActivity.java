@@ -112,6 +112,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 log.createNewFile();
             } catch (IOException e) {
+                writeLog("ERROR", e.toString());
                 e.printStackTrace();
             }
         }
@@ -256,35 +257,6 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    //get visitFullname on 24x7
-    private static String getUrlContents(String theUrl, String people_run) {
-        StringBuilder content = new StringBuilder();
-
-        // many of these calls can throw exceptions, so i've just
-        // wrapped them all in one try/catch statement.
-        try {
-            // create a url object
-            URL url = new URL(theUrl);
-
-            // create a urlconnection object
-            URLConnection urlConnection = url.openConnection();
-
-            // wrap the urlconnection in a bufferedreader
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
-
-            String line;
-
-            // read from the urlconnection via the bufferedreader
-            while ((line = bufferedReader.readLine()) != null) {
-                content.append(line + "\n");
-            }
-            bufferedReader.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return content.toString();
-    }
-
     private BroadcastReceiver mScanReceiver = new BroadcastReceiver() {
 
         @Override
@@ -317,10 +289,6 @@ public class MainActivity extends AppCompatActivity {
                 if (profile == "V") {
                     //get name from DNI
                     editTextFullName.setText(" ");
-                    //http://datos.24x7.cl/rut/17179347-5/
-                    // use webscrapping here
-                    //getUrlContents("http://datos.24x7.cl/rut/", barcodeStr)
-                    //the from getUrlContents set other params
                 }
                 Log.i("Debugger", "NEW DNI");
             } else if (barcodeStr.startsWith("00")) {
@@ -385,6 +353,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             } catch (NullPointerException e) {
                 Log.e("NullPointer", e.toString());
+                writeLog("ERROR", e.toString());
                 //new GetPeopleTask().execute(server + "/employee/" + barcodeStr);
             }
         }
@@ -432,10 +401,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 while (true) {
-                    new updateDbFromXml().execute();
+                    //new updateDbFromXml().execute();
                     try {
                         Thread.sleep(60000);
                     } catch (Exception e) {
+                        writeLog("ERROR", e.toString());
                     }
                     new LoadDbTask().execute();
                 }
@@ -527,7 +497,6 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected String doInBackground(String... params) {
             postReturn = GET(Updated);
-            Log.d("get(lastupdate):", postReturn);
             return postReturn;
         }
 
@@ -562,11 +531,9 @@ public class MainActivity extends AppCompatActivity {
             }
         } catch (IOException e) {
             e.printStackTrace();
+            writeLog("ERROR", e.toString());
         }
-
         return result;
-
-
     }
 
 
@@ -607,8 +574,7 @@ public class MainActivity extends AppCompatActivity {
             contentAsString = "204"; // No content
         }
         Log.d("Server response", contentAsString);
-
-
+        writeLog("Server response", contentAsString);
 
         return contentAsString;
     }
@@ -644,14 +610,14 @@ public class MainActivity extends AppCompatActivity {
     public class GetPeopleTask extends AsyncTask<String, String, String> {
         @Override
         protected String doInBackground(String... params) {
+            Log.d("param getpeople", params[0]);
             String finalJson = db.get_one_person(params[0].toString(), profile);
-
+            Log.d("finaljson", finalJson);
             if (!finalJson.isEmpty()) {
                 return finalJson;
             } else {
                 mp3Error.start();
                 runOnUiThread(new Runnable() {
-
                     @Override
                     public void run() {
                         makeToast("Error al obtener datos, intente nuevamente");
@@ -713,8 +679,10 @@ public class MainActivity extends AppCompatActivity {
             } catch (NullPointerException e) {
                 mp3Error.start();
                 Log.e("Null ERROR", "Json can't build");
+                writeLog("ERROR", e.toString());
             } catch (Exception e) {
                 e.printStackTrace();
+                writeLog("ERROR", e.toString());
             }
         }
     }
@@ -879,8 +847,10 @@ public class MainActivity extends AppCompatActivity {
                 db.add_record(offlineRecord);
             } catch (JSONException e1) {
                 e1.printStackTrace();
+                writeLog("ERROR", e1.toString());
             } catch (SQLException sql) {
                 sql.printStackTrace();
+                writeLog("ERROR", sql.toString());
             }
         }
         // 11. return result
@@ -922,7 +892,7 @@ public class MainActivity extends AppCompatActivity {
             outputStream.write(message.getBytes());
         } catch (Exception e) {
             e.printStackTrace();
-
+            writeLog("ERROR", e.toString());
         }
     }
 
