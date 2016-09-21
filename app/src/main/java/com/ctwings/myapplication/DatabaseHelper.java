@@ -94,7 +94,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String RECORD_SYNC = "record_sync";
     private static final String PERSON_CARD = "person_card";
 
-
     // Setting Table Columns names
     private static final String SETTING_ID = "id";
     private static final String SETTING_URL = "url";
@@ -242,12 +241,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getReadableDatabase();
         String out="";
 
-        Log.d("cantidad de personas",String.valueOf(person_count()));
-
         //Remove 0 at beginner
         id = String.valueOf(Integer.parseInt(id));
-
-        Log.d("Looking for", id);
 
         // 2. build query
         Cursor cursor =
@@ -273,8 +268,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         cursor.getString(3) + ";" + cursor.getString(4) + ";" +
                         cursor.getString(5) + ";" + cursor.getString(6) + ";" +
                         cursor.getInt(7) + ";" + cursor.getString(8);
+                Log.d("out", out);
             }
         }
+        cursor.close();
         db.close();
 
         // 5. return
