@@ -403,11 +403,11 @@ public class MainActivity extends AppCompatActivity {
                 while (true) {
                     //new updateDbFromXml().execute();
                     try {
+                        new LoadDbTask().execute();
                         Thread.sleep(60000);
                     } catch (Exception e) {
                         writeLog("ERROR", e.toString());
                     }
-                    new LoadDbTask().execute();
                 }
             }
         };
@@ -610,9 +610,7 @@ public class MainActivity extends AppCompatActivity {
     public class GetPeopleTask extends AsyncTask<String, String, String> {
         @Override
         protected String doInBackground(String... params) {
-            Log.d("param getpeople", params[0]);
             String finalJson = db.get_one_person(params[0].toString(), profile);
-            Log.d("finaljson", finalJson);
             if (!finalJson.isEmpty()) {
                 return finalJson;
             } else {
