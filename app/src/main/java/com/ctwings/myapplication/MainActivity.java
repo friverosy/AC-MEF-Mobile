@@ -155,9 +155,11 @@ public class MainActivity extends AppCompatActivity {
                     bus = false;
                     editTextCompany.setVisibility(View.GONE);
                     mySwitch.setVisibility(View.VISIBLE);
+                    lastUpdated.setVisibility(View.VISIBLE);
                 } else if (checkedId == R.id.rdbVisit) {
                     profile = "V";
                     bus = false;
+                    lastUpdated.setVisibility(View.GONE);
                     imageview.setImageDrawable(null);
                     editTextCompany.setVisibility(View.VISIBLE);
                     mySwitch.setVisibility(View.VISIBLE);
@@ -167,9 +169,11 @@ public class MainActivity extends AppCompatActivity {
                     imageview.setImageDrawable(null);
                     editTextCompany.setVisibility(View.VISIBLE);
                     mySwitch.setVisibility(View.VISIBLE);
+                    lastUpdated.setVisibility(View.VISIBLE);
                 } else if (checkedId == R.id.rdbBus) {
                     profile = "E";
                     bus = true;
+                    lastUpdated.setVisibility(View.GONE);
                     imageview.setImageDrawable(null);
                     editTextCompany.setVisibility(View.GONE);
                     mySwitch.setVisibility(View.GONE);
@@ -506,7 +510,16 @@ public class MainActivity extends AppCompatActivity {
         }
 
         protected void onPostExecute(String result) {
-            lastUpdated.setText(result);
+            try {
+                // Parse json
+                String[] splitter=result.split("\"");
+                result = splitter[4];
+                result = result.substring(0,result.length()-1);
+                lastUpdated.setText(result);
+            } catch (Exception e) {
+                e.printStackTrace();
+                writeLog("ERROR", e.toString());
+            }
         }
 
     }
@@ -523,9 +536,6 @@ public class MainActivity extends AppCompatActivity {
 
             if (inputStream != null) {
                 result = convertInputStreamToString(inputStream);
-                String[] splitter=result.split("\"");
-                result=splitter[4];
-                result=result.substring(0,result.length()-1);
             } else {
                 result = String.valueOf(httpResponse.getStatusLine().getStatusCode());
             }
@@ -561,7 +571,7 @@ public class MainActivity extends AppCompatActivity {
             else {
                 contentAsString = convertInputStreamToString(is);
                 //update datetime in textbox from XML file
-                new getLastUpdateTask(server + "/api/people/getLastUpdate?profile=E").execute().toString();
+                new getLastUpdateTask(server + "/api/people/getLastUpdate?profile=" + profile).execute().toString();
             }
         } catch (Exception e) {
             //e.printStackTrace();
