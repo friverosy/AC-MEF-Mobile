@@ -49,7 +49,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -481,7 +480,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             return "Done";
-
         }
 
         @Override
@@ -653,12 +651,14 @@ public class MainActivity extends AppCompatActivity {
                     mp3Permitted.start();
                     //is_permitted = true;
                     record.setPerson_is_permitted(1);
-                    imageview.setImageResource(R.drawable.img_true);
+                    if (is_input)
+                        imageview.setImageResource(R.drawable.permitted);
                 } else {
                     mp3Dennied.start();
                     //is_permitted = false;
                     record.setPerson_is_permitted(0);
-                    imageview.setImageResource(R.drawable.img_false);
+                    if (is_input)
+                        imageview.setImageResource(R.drawable.dennied);
                 }
                 record.setPerson_company(arr[3]);
                 record.setPerson_location(arr[4]);
