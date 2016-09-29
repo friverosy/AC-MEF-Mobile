@@ -127,8 +127,8 @@ public class MainActivity extends AppCompatActivity {
         editTextFullName = (EditText) findViewById(R.id.editText_fullname);
         editTextCompany = (EditText) findViewById(R.id.editText_company);
         imageview = (ImageView) findViewById(R.id.imageView);
-        mp3Dennied = MediaPlayer.create(MainActivity.this, R.raw.dennied);
-        mp3Permitted = MediaPlayer.create(MainActivity.this, R.raw.permitted);
+        mp3Dennied = MediaPlayer.create(MainActivity.this, R.raw.bad);
+        mp3Permitted = MediaPlayer.create(MainActivity.this, R.raw.good);
         mp3Error = MediaPlayer.create(MainActivity.this, R.raw.error);
         rdgProfile = (RadioGroup) findViewById(R.id.rdgProfile);
         rdbEmployee = (RadioButton) findViewById(R.id.rdbEmployee);
@@ -203,7 +203,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if ((profile.equals("E") || profile.equals("C")) && !editTextRun.getText().toString().isEmpty()) {
-                    new GetPeopleTask().execute(editTextRun.getText().toString());
+                    getPeople(editTextRun.getText().toString());
                 } else if (profile.equals("V") && !editTextRun.getText().toString().isEmpty() &&
                         !editTextFullName.getText().toString().isEmpty()) {
                     //Send to AccessControl API
@@ -334,7 +334,7 @@ public class MainActivity extends AppCompatActivity {
 
             try {
                 if (profile.equals("E") || profile.equals("C")) {
-                    new GetPeopleTask().execute(barcodeStr);
+                    getPeople(barcodeStr);
                 } else if (profile.equals("V")) {
                     editTextRun.setText(barcodeStr);
 
@@ -431,6 +431,57 @@ public class MainActivity extends AppCompatActivity {
 
     public void clean() {
         barcodeStr = "";
+    }
+
+    public void getPeople(String rut) {
+        String finalJson = db.get_one_person(rut, profile);
+        String[] arr = finalJson.split(";");
+
+        // set edittext here before some exceptions.
+        editTextRun.setText(arr[0]);
+        editTextFullName.setText(arr[1]);
+
+        //build object with that values, then send to registerTarsk()
+        Record record = new Record();
+        record.setPerson_run(arr[0]);
+        record.setPerson_fullname(arr[1]);
+        if (arr[2].equals("true")) {
+            mp3Permitted.start();
+            //is_permitted = true;
+            record.setPerson_is_permitted(1);
+            if (is_input)
+                imageview.setImageResource(R.drawable.permitted);
+        } else {
+            mp3Dennied.start();
+            //is_permitted = false;
+            record.setPerson_is_permitted(0);
+            if (is_input)
+                imageview.setImageResource(R.drawable.dennied);
+        }
+        record.setPerson_company(arr[3]);
+        record.setPerson_location(arr[4]);
+        if (arr[5].equals("null")) arr[5]="0"; // For Contractors
+        record.setPerson_company_code(arr[5]);
+        record.setPerson_card(Integer.parseInt(arr[6]));
+        record.setPerson_profile(arr[7]);
+
+        // fix profile if don't change by user.
+        if (arr[7].equals("C") && profile.equals("E")) record.setPerson_profile("C");
+        if (arr[7].equals("E") && profile.equals("C")) record.setPerson_profile("E");
+
+        if (bus) record.setRecord_bus(1);
+        else record.setRecord_bus(0);
+
+        if (is_input) record.setRecord_is_input(1);
+        else record.setRecord_is_input(0);
+
+        editTextFullName.setText(record.getPerson_fullname());
+
+        if (profile.equals("C")) editTextCompany.setText(record.getPerson_company());
+
+        new RegisterTask(record).execute();
+
+        clean();
     }
 
     @Override
@@ -611,89 +662,6 @@ public class MainActivity extends AppCompatActivity {
             record.setPerson_profile(arr[12]);
             record.setPerson_card(Integer.parseInt(arr[13]));
             new RegisterTask(record).execute();
-        }
-    }
-
-    //BD query instead of api rest
-    public class GetPeopleTask extends AsyncTask<String, String, String> {
-
-        @Override
-        protected String doInBackground(String... params) {
-            String finalJson = db.get_one_person(params[0], profile);
-            if (!finalJson.isEmpty()) {
-                return finalJson;
-            } else {
-                mp3Error.start();
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        makeToast("Error al obtener datos, intente nuevamente");
-                    }
-                });
-                return null;
-            }
-        }
-
-        @Override
-        protected void onPostExecute(String s) {
-            try {
-                super.onPostExecute(s);
-                String[] arr = s.split(";");
-
-                // set edittext here before some exceptions.
-                editTextRun.setText(arr[0]);
-                editTextFullName.setText(arr[1]);
-
-                //build object with that values, then send to registerTarsk()
-                Record record = new Record();
-                record.setPerson_run(arr[0]);
-                record.setPerson_fullname(arr[1]);
-                if (arr[2].equals("true")) {
-                    mp3Permitted.start();
-                    //is_permitted = true;
-                    record.setPerson_is_permitted(1);
-                    if (is_input)
-                        imageview.setImageResource(R.drawable.permitted);
-                } else {
-                    mp3Dennied.start();
-                    //is_permitted = false;
-                    record.setPerson_is_permitted(0);
-                    if (is_input)
-                        imageview.setImageResource(R.drawable.dennied);
-                }
-                record.setPerson_company(arr[3]);
-                record.setPerson_location(arr[4]);
-                if (arr[5].equals("null")) arr[5]="0"; // For Contractors
-                record.setPerson_company_code(arr[5]);
-                record.setPerson_card(Integer.parseInt(arr[6]));
-                record.setPerson_profile(arr[7]);
-
-                // fix profile if don't change by user.
-                if (arr[7].equals("C") && profile.equals("E")) record.setPerson_profile("C");
-                if (arr[7].equals("E") && profile.equals("C")) record.setPerson_profile("E");
-
-                if (bus) record.setRecord_bus(1);
-                else record.setRecord_bus(0);
-
-                if (is_input) record.setRecord_is_input(1);
-                else record.setRecord_is_input(0);
-
-                editTextFullName.setText(record.getPerson_fullname());
-
-                if (profile.equals("C")) editTextCompany.setText(record.getPerson_company());
-
-                new RegisterTask(record).execute();
-
-                clean();
-
-            } catch (NullPointerException e) {
-                mp3Error.start();
-                Log.e("Null ERROR", "Json can't build");
-                writeLog("ERROR", e.toString());
-            } catch (Exception e) {
-                e.printStackTrace();
-                writeLog("ERROR", e.toString());
-            }
         }
     }
 
