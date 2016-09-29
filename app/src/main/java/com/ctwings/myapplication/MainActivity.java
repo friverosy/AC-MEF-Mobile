@@ -120,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
         loading.setVisibility(View.GONE);
 
         writeLog("DEBUG", "Application has started Correctly");
-        server = "http://192.168.123.12:3000"; // use getSetting();
+        server = "http://192.168.1.101:3000"; // use getSetting();
 
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         editTextRun = (EditText) findViewById(R.id.editText_run);
@@ -557,7 +557,7 @@ public class MainActivity extends AppCompatActivity {
             url = new URL(dataUrl);
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
-            connection.setConnectTimeout(5000);
+            connection.setConnectTimeout(2000);
             connection.connect();
 
             int responsecode = connection.getResponseCode();
@@ -616,9 +616,10 @@ public class MainActivity extends AppCompatActivity {
 
     //BD query instead of api rest
     public class GetPeopleTask extends AsyncTask<String, String, String> {
+
         @Override
         protected String doInBackground(String... params) {
-            String finalJson = db.get_one_person(params[0].toString(), profile);
+            String finalJson = db.get_one_person(params[0], profile);
             if (!finalJson.isEmpty()) {
                 return finalJson;
             } else {
@@ -662,6 +663,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 record.setPerson_company(arr[3]);
                 record.setPerson_location(arr[4]);
+                if (arr[5].equals("null")) arr[5]="0"; // For Contractors
                 record.setPerson_company_code(arr[5]);
                 record.setPerson_card(Integer.parseInt(arr[6]));
                 record.setPerson_profile(arr[7]);
@@ -742,7 +744,7 @@ public class MainActivity extends AppCompatActivity {
                 jsonObject.accumulate("bus", false);
 
             jsonObject.accumulate("company", record.getPerson_company());
-            jsonObject.accumulate("location", record.getPerson_location());
+            jsonObject.accumulate("place", record.getPerson_location());
             jsonObject.accumulate("company_code", record.getPerson_company_code());
             jsonObject.accumulate("card", record.getPerson_card());
 
