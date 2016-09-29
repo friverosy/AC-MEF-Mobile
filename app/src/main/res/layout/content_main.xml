@@ -38,23 +38,22 @@
             android:layout_height="wrap_content"
             android:text="Empl"/>
         <RadioButton
-            android:id="@+id/rdbVisit"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Visita"/>
-        <RadioButton
             android:id="@+id/rdbContractor"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Contr"
             android:enabled="true" />
-
+        <RadioButton
+            android:id="@+id/rdbVisit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Visita"/>
         <RadioButton
             android:id="@+id/rdbBus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Bus"
-            android:enabled="true" />
+            android:enabled="false" />
     </RadioGroup>
 
     <EditText
