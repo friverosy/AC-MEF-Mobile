@@ -9,7 +9,7 @@ public class Person {
     String person_run;
     String person_is_permitted;
     String person_company;
-    String person_location;
+    String person_place;
     String person_company_code;
     int person_card;
     String person_profile;
@@ -19,13 +19,13 @@ public class Person {
 
     }
 
-    public Person(String person_fullname, String person_run, String person_is_permitted, String person_company, String person_location, String person_company_code, Integer person_card, String person_profile){
+    public Person(String person_fullname, String person_run, String person_is_permitted, String person_company, String person_place, String person_company_code, Integer person_card, String person_profile){
 
         this.person_fullname = person_fullname;
         this.person_run = person_run;
         this.person_is_permitted = person_is_permitted;
         this.person_company = person_company;
-        this.person_location = person_location;
+        this.person_place = person_place;
         this.person_company_code = person_company_code;
         this.person_card = person_card;
         this.person_profile = person_profile;
@@ -61,8 +61,8 @@ public class Person {
         this.person_company = person_company;
     }
 
-    public void set_person_location(String person_location) {
-        this.person_company = person_location;
+    public void set_person_place(String person_place) {
+        this.person_place = person_place;
     }
 
     public void set_person_company_code(String person_company_code) {
@@ -99,8 +99,8 @@ public class Person {
         return this.person_company;
     }
 
-    public String get_person_location() {
-        return this.person_location;
+    public String get_person_place() {
+        return this.person_place;
     }
 
     public String get_person_company_code() {
@@ -112,7 +112,7 @@ public class Person {
     public String toString() {
         return "Person [id=" + person_id + ", fullname=" + person_fullname + ", run=" +
                 person_run + ", is_permitted=" + person_is_permitted +
-                ", company=" + person_company + ", location=" + person_location +
+                ", company=" + person_company + ", place=" + person_place +
                 ", company_code="+ person_company_code + ", card="+person_card+
                 ", person_profile=" + person_profile + "]";
     }

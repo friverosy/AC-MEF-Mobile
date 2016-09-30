@@ -352,7 +352,6 @@ public class MainActivity extends AppCompatActivity {
 
                     new RegisterTask(record).execute();
                     //new GetCompanyTask().execute(server2 + "/api/records/findOne?filter[where][people_run]=" + barcodeStr);
-                    mp3Permitted.start();
                 }
             } catch (NullPointerException e) {
                 Log.e("NullPointer", e.toString());
@@ -459,15 +458,15 @@ public class MainActivity extends AppCompatActivity {
                 imageview.setImageResource(R.drawable.dennied);
         }
         record.setPerson_company(arr[3]);
-        record.setPerson_location(arr[4]);
+        record.setPerson_place(arr[4]);
         if (arr[5].equals("null")) arr[5]="0"; // For Contractors
         record.setPerson_company_code(arr[5]);
         record.setPerson_card(Integer.parseInt(arr[6]));
         record.setPerson_profile(arr[7]);
 
         // fix profile if don't change by user.
-        if (arr[7].equals("C") && profile.equals("E")) record.setPerson_profile("C");
-        if (arr[7].equals("E") && profile.equals("C")) record.setPerson_profile("E");
+        //if (arr[7].equals("C") && profile.equals("E")) record.setPerson_profile("C");
+        //if (arr[7].equals("E") && profile.equals("C")) record.setPerson_profile("E");
 
         if (bus) record.setRecord_bus(1);
         else record.setRecord_bus(0);
@@ -496,20 +495,20 @@ public class MainActivity extends AppCompatActivity {
         return super.onKeyDown(keyCode, event);
     }
 
-    public class updateDbFromXml extends AsyncTask<String, String, String> {
-
-        @Override
-        protected String doInBackground(String... params) {
-            String xml = DbCall(server + "/api/people/updateDbFromXml");
-            if (xml != "408" && xml != "204") {
-                //Log.d("xml", xml);
-            }else{
-                Log.d("Network","Offline");
-                writeLog("Network","Offline");
-            }
-            return xml;
-        }
-    }
+//    public class updateDbFromXml extends AsyncTask<String, String, String> {
+//
+//        @Override
+//        protected String doInBackground(String... params) {
+//            String xml = DbCall(server + "/api/people/updateDbFromXml");
+//            if (xml != "408" && xml != "204") {
+//                //Log.d("xml", xml);
+//            }else{
+//                Log.d("Network","Offline");
+//                writeLog("Network","Offline");
+//            }
+//            return xml;
+//        }
+//    }
 
     public class LoadDbTask extends AsyncTask<String, String, String> {
 
@@ -517,18 +516,24 @@ public class MainActivity extends AppCompatActivity {
         protected String doInBackground(String... params) {
             String data = DbCall(server + "/api/people?filter[where][or][0][profile]=E&filter[where][or][1][profile]=C");
             if (data != "408" && data != "204") {
-                db.add_persons(data);
-                Log.d("count record desync", String.valueOf(db.record_desync_count()));
-                if (db.record_desync_count() >= 1) {
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            loading.setEnabled(true);
-                            loading.setVisibility(View.VISIBLE);
-                        }
-                    });
-                    OfflineRecordsSynchronizer();
+                try {
+                    db.add_persons(data);
+                    Log.d("count record desync", String.valueOf(db.record_desync_count()));
+                    if (db.record_desync_count() >= 1) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                loading.setEnabled(true);
+                                loading.setVisibility(View.VISIBLE);
+                            }
+                        });
+                        OfflineRecordsSynchronizer();
+                    }
+                } catch (IllegalStateException ise){
+                    ise.printStackTrace();
+                    return "";
                 }
+
             }
             return "Done";
         }
@@ -620,7 +625,7 @@ public class MainActivity extends AppCompatActivity {
             else {
                 contentAsString = convertInputStreamToString(is);
                 //update datetime in textbox from XML file
-                new getLastUpdateTask(server + "/api/people/getLastUpdate?profile=" + profile).execute().toString();
+                //new getLastUpdateTask(server + "/api/people/getLastUpdate?profile=" + profile).execute().toString();
             }
         } catch (Exception e) {
             //e.printStackTrace();
@@ -640,10 +645,10 @@ public class MainActivity extends AppCompatActivity {
 
     public void OfflineRecordsSynchronizer() {
         List records = db.get_desynchronized_records();
-        Log.d("List record", String.valueOf(records));
-        Record record = new Record();
+
         String[] arr;
         for (int i = 0; i <= records.size() - 1; i++) {
+            Record record = new Record();
             Log.d("falta sincronizar", records.get(i).toString());
             arr = records.get(i).toString().split(";");
             //get each row to be synchronized
@@ -654,7 +659,7 @@ public class MainActivity extends AppCompatActivity {
             record.setRecord_bus(Integer.parseInt(arr[4]));
             record.setPerson_is_permitted(Integer.parseInt(arr[5]));
             record.setPerson_company(arr[6]);
-            record.setPerson_location(arr[7]);
+            record.setPerson_place(arr[7]);
             record.setPerson_company_code(arr[8]);
             record.setRecord_input_datetime(arr[9]);
             record.setRecord_output_datetime(arr[10]);
@@ -712,7 +717,7 @@ public class MainActivity extends AppCompatActivity {
                 jsonObject.accumulate("bus", false);
 
             jsonObject.accumulate("company", record.getPerson_company());
-            jsonObject.accumulate("place", record.getPerson_location());
+            jsonObject.accumulate("place", record.getPerson_place());
             jsonObject.accumulate("company_code", record.getPerson_company_code());
             jsonObject.accumulate("card", record.getPerson_card());
 
@@ -750,14 +755,15 @@ public class MainActivity extends AppCompatActivity {
                     HttpResponse httpResponse = httpclient.execute(httpPost);
                     // 9. receive response as inputStream
                     inputStream = httpResponse.getEntity().getContent();
+                    Log.d("inputStream", String.valueOf(inputStream));
 
                     // 10. convert inputstream to string
                     if (inputStream != null) {
                         result = convertInputStreamToString(inputStream);
-
                         if (httpResponse.getStatusLine().getStatusCode() == 200) {
                             // if has input or output_datetime its becouse its an offline record to be will synchronized.
                             if (!jsonObject.isNull("input_datetime") || !jsonObject.isNull("output_datetime")) {
+                                Log.d("---", "going into update record");
                                 db.update_record(record.getRecord_id());
                                 runOnUiThread(new Runnable() {
                                     @Override
@@ -791,41 +797,16 @@ public class MainActivity extends AppCompatActivity {
 
         } catch (Exception e) {
             // Insert records to object, then get from DataBaseHelper to save
-            Record offlineRecord = new Record();
-
+            Log.d("---","offline");
             try {
-                offlineRecord.setPerson_run(jsonObject.getString("run"));
-                offlineRecord.setPerson_fullname(jsonObject.getString("fullname"));
-                offlineRecord.setPerson_company(jsonObject.getString("company"));
-                offlineRecord.setPerson_company_code(jsonObject.getString("company_code"));
-                offlineRecord.setPerson_location(jsonObject.getString("location"));
-                offlineRecord.setPerson_card(jsonObject.getInt("card"));
-                offlineRecord.setPerson_profile(jsonObject.getString("profile"));
-
-                if (jsonObject.getString("is_input").equals("true"))
-                    offlineRecord.setRecord_is_input(1);
-                else offlineRecord.setRecord_is_input(0);
-
-                if (jsonObject.getString("bus").equals("true")) offlineRecord.setRecord_bus(1);
-                else offlineRecord.setRecord_bus(0);
-
-                if (jsonObject.getString("is_permitted").equals("true"))
-                    offlineRecord.setPerson_is_permitted(1);
-                else offlineRecord.setPerson_is_permitted(0);
-
                 TimeZone tz = TimeZone.getTimeZone("UTC");
                 DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'"); // Quoted "Z" to indicate UTC, no timezone offset
                 df.setTimeZone(tz);
 
-                if (is_input) offlineRecord.setRecord_input_datetime(df.format(new Date()));
-                else offlineRecord.setRecord_output_datetime(df.format(new Date()));
+                if (is_input) record.setRecord_input_datetime(df.format(new Date()));
+                else record.setRecord_output_datetime(df.format(new Date()));
 
-                offlineRecord.setPerson_profile(jsonObject.getString("profile"));
-
-                db.add_record(offlineRecord);
-            } catch (JSONException e1) {
-                e1.printStackTrace();
-                writeLog("ERROR", e1.toString());
+                db.add_record(record);
             } catch (SQLException sql) {
                 sql.printStackTrace();
                 writeLog("ERROR", sql.toString());

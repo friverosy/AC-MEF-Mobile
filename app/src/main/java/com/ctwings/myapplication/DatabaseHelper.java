@@ -29,7 +29,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             "person_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
             "person_fullname TEXT, "+"person_run TEXT, " +
             "person_is_permitted TEXT, " + "person_company TEXT, " +
-            "person_location TEXT, " + "person_company_code TEXT, " +
+            "person_place TEXT, " + "person_company_code TEXT, " +
             "person_card INTEGER, " + "person_profile TEXT)";
 
     String CREATE_RECORD_TABLE = "CREATE TABLE IF NOT EXISTS " + TABLE_RECORD + " ( " +
@@ -37,7 +37,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             "person_fullname TEXT, " + "person_run TEXT, " +
             "record_is_input INTEGER, " + "record_bus INTEGER, " +
             "person_is_permitted INTEGER, " + "person_company TEXT, " +
-            "person_location TEXT, " + "person_company_code TEXT," +
+            "person_place TEXT, " + "person_company_code TEXT," +
             "record_input_datetime TEXT, " + "record_output_datetime TEXT, " +
             "record_sync INTEGER,"+ "person_profile TEXT, "+"person_card INTEGER)";
 
@@ -87,7 +87,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String RECORD_BUS = "record_bus";
     private static final String PERSON_IS_PERMITTED = "person_is_permitted";
     private static final String PERSON_COMPANY = "person_company";
-    private static final String PERSON_LOCATION = "person_location";
+    private static final String PERSON_PLACE = "person_place";
     private static final String PERSON_COMPANY_CODE = "person_company_code";
     private static final String RECORD_INPUT_DATETIME = "record_input_datetime";
     private static final String RECORD_OUTPUT_DATETIME = "record_output_datetime";
@@ -99,8 +99,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String SETTING_URL = "url";
     private static final String SETTING_PORT = "port";
 
-    private static final String[] PERSON_COLUMNS = {PERSON_ID, PERSON_FULLNAME, PERSON_RUN, PERSON_IS_PERMITTED, PERSON_COMPANY, PERSON_LOCATION, PERSON_COMPANY_CODE, PERSON_CARD, PERSON_PROFILE};
-    private static final String[] RECORD_COLUMNS = {RECORD_ID, PERSON_FULLNAME, PERSON_RUN, RECORD_IS_INPUT, RECORD_BUS, PERSON_IS_PERMITTED, PERSON_COMPANY, PERSON_LOCATION, PERSON_COMPANY_CODE, RECORD_INPUT_DATETIME, RECORD_OUTPUT_DATETIME, RECORD_SYNC, PERSON_PROFILE, PERSON_CARD};
+    private static final String[] PERSON_COLUMNS = {PERSON_ID, PERSON_FULLNAME, PERSON_RUN, PERSON_IS_PERMITTED, PERSON_COMPANY, PERSON_PLACE, PERSON_COMPANY_CODE, PERSON_CARD, PERSON_PROFILE};
+    private static final String[] RECORD_COLUMNS = {RECORD_ID, PERSON_FULLNAME, PERSON_RUN, RECORD_IS_INPUT, RECORD_BUS, PERSON_IS_PERMITTED, PERSON_COMPANY, PERSON_PLACE, PERSON_COMPANY_CODE, RECORD_INPUT_DATETIME, RECORD_OUTPUT_DATETIME, RECORD_SYNC, PERSON_PROFILE, PERSON_CARD};
 
 
     //Person
@@ -115,7 +115,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(PERSON_RUN, person.get_person_run());
         values.put(PERSON_IS_PERMITTED, person.get_person_is_permitted());
         values.put(PERSON_COMPANY, person.get_person_company());
-        values.put(PERSON_LOCATION, person.get_person_location());
+        values.put(PERSON_PLACE, person.get_person_place());
         values.put(PERSON_COMPANY_CODE, person.get_person_company_code());
         values.put(PERSON_CARD, person.get_person_card());
         values.put(PERSON_PROFILE, person.get_person_profile());
@@ -132,16 +132,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public void add_persons(String json){
 
         JSONArray json_db_array;
-        SQLiteDatabase db = this.getWritableDatabase();
+        SQLiteDatabase db1 = this.getWritableDatabase();
 
         try {
             json_db_array = new JSONArray(json);
-
-            db.beginTransaction();
+            Log.d("--add person", String.valueOf(db1.isOpen()));
+            db1.beginTransaction();
             try {
 
-                db.execSQL("DROP TABLE IF EXISTS person");
-                db.execSQL(CREATE_PERSON_TABLE);
+                db1.execSQL("DROP TABLE IF EXISTS person");
+                db1.execSQL(CREATE_PERSON_TABLE);
 
                 for(int i = 0; i<json_db_array.length();i++){
                     ContentValues values = new ContentValues();
@@ -150,7 +150,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                                 json_db_array.getJSONObject(i).getString("run"),
                                 json_db_array.getJSONObject(i).getString("is_permitted"),
                                 json_db_array.getJSONObject(i).getString("company"),
-                                json_db_array.getJSONObject(i).getString("location"),
+                                json_db_array.getJSONObject(i).getString("place"),
                                 json_db_array.getJSONObject(i).getString("company_code"),
                                 json_db_array.getJSONObject(i).getInt("card"),
                                 json_db_array.getJSONObject(i).getString("profile"));
@@ -158,7 +158,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         values.put(PERSON_RUN, person.get_person_run());
                         values.put(PERSON_IS_PERMITTED, person.get_person_is_permitted());
                         values.put(PERSON_COMPANY, person.get_person_company());
-                        values.put(PERSON_LOCATION, person.get_person_location());
+                        values.put(PERSON_PLACE, person.get_person_place());
                         values.put(PERSON_COMPANY_CODE, person.get_person_company_code());
                         values.put(PERSON_CARD, person.get_person_card());
                         values.put(PERSON_PROFILE, person.get_person_profile());
@@ -167,33 +167,35 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                                 json_db_array.getJSONObject(i).getString("run"),
                                 json_db_array.getJSONObject(i).getString("is_permitted"),
                                 json_db_array.getJSONObject(i).getString("company"),
-                                json_db_array.getJSONObject(i).getString("location"),
+                                json_db_array.getJSONObject(i).getString("place"),
                                 json_db_array.getJSONObject(i).getString("company_code"),0,
                                 json_db_array.getJSONObject(i).getString("profile"));
                         values.put(PERSON_FULLNAME, person.get_person_fullname());
                         values.put(PERSON_RUN, person.get_person_run());
                         values.put(PERSON_IS_PERMITTED, person.get_person_is_permitted());
                         values.put(PERSON_COMPANY, person.get_person_company());
-                        values.put(PERSON_LOCATION, person.get_person_location());
+                        values.put(PERSON_PLACE, person.get_person_place());
                         values.put(PERSON_COMPANY_CODE, person.get_person_company_code());
                         values.put(PERSON_PROFILE, person.get_person_profile());
                     }
 
-                    db.insert(TABLE_PERSON, // table
+                    db1.insert(TABLE_PERSON, // table
                             null, //nullColumnHack
                             values); // key/value -> keys = column names/ values = column values
                 }
-                db.setTransactionSuccessful();
-            }catch(Exception e) {
+                db1.setTransactionSuccessful();
+            } catch(IllegalStateException ise){
+                ise.printStackTrace();
+            } catch(Exception e) {
                 e.printStackTrace();
-            }finally {
-                db.endTransaction();
+            } finally {
+                db1.endTransaction();
             }
         } catch (JSONException e) {
             //e.printStackTrace();
         }
 
-        db.close();
+        db1.close();
 
     }
 
@@ -224,7 +226,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         person.set_person_run(cursor.getString(2));
         person.set_person_is_permitted(cursor.getString(3));
         person.set_person_company(cursor.getString(4));
-        person.set_person_location(cursor.getString(5));
+        person.set_person_place(cursor.getString(5));
         person.set_person_company_code(cursor.getString(6));
         person.set_person_card(cursor.getInt(7));
         person.set_person_profile(cursor.getString(8));
@@ -242,6 +244,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         String out="";
 
         //Remove 0 at beginner
+        id.replace("%", "");
         id = String.valueOf(Integer.parseInt(id));
 
         // 2. build query
@@ -258,7 +261,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         if (cursor != null) {
             if (!(cursor.moveToFirst()) || cursor.getCount() == 0) {
                 //cursor is empty
-                out = id+";No encontrado;No encontrado;No encontrado;No encontrado;0;0;" + profile; //Change to whatever error message.....
+                out = id+";No encontrado;No encontrado;No encontrado;No encontrado;0;0;" + profile;
             } else {
                 // 3. if we got results get the first one
                 cursor.moveToFirst();
@@ -360,7 +363,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(RECORD_BUS, record.getRecord_bus());
         values.put(PERSON_IS_PERMITTED, record.getPerson_is_permitted());
         values.put(PERSON_COMPANY, record.getPerson_company());
-        values.put(PERSON_LOCATION, record.getPerson_location());
+        values.put(PERSON_PLACE, record.getPerson_place());
         values.put(PERSON_COMPANY_CODE, record.getPerson_company_code());
         if(record.getRecord_input_datetime() != null)
             values.put(RECORD_INPUT_DATETIME, record.getRecord_input_datetime());
@@ -411,7 +414,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                             cursor.getInt(4)+";"+ //BUS
                             cursor.getInt(5)+";"+ //IS_PERMITTED
                             cursor.getString(6)+";"+ //COMPANY
-                            cursor.getString(7)+";"+ //LOCATION
+                            cursor.getString(7)+";"+ //PLACE
                             cursor.getString(8)+";"+ //COMPANY_CODE
                             cursor.getString(9)+";"+ //INPUT
                             cursor.getString(10)+";"+ //OUTPUT
@@ -459,7 +462,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                             cursor.getInt(4)+";"+ //BUS
                             cursor.getInt(5)+";"+ //IS_PERMITTED
                             cursor.getString(6)+";"+ //COMPANY
-                            cursor.getString(7)+";"+ //LOCATION
+                            cursor.getString(7)+";"+ //PLACE
                             cursor.getString(8)+";"+ //COMPANY_CODE
                             cursor.getString(9)+";"+ //INPUT
                             cursor.getString(10)+";"+ //OUTPUT
@@ -488,6 +491,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = db.rawQuery("SELECT * FROM RECORD WHERE record_sync=0;", null);
         return cursor.getCount();
+    }
+
+    public boolean dbIsOpen(){
+        SQLiteDatabase db = this.getWritableDatabase();
+        if (db.isOpen())
+            return true;
+        else
+            return false;
     }
 
     public void update_record(int id) {
