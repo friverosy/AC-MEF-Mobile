@@ -120,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
         loading.setVisibility(View.GONE);
 
         writeLog("DEBUG", "Application has started Correctly");
-        server = "http://192.168.1.101:3000"; // use getSetting();
+        server = "http://192.168.1.104:3000"; // use getSetting();
 
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         editTextRun = (EditText) findViewById(R.id.editText_run);
@@ -282,7 +282,6 @@ public class MainActivity extends AppCompatActivity {
             //android.util.Log.i("debug", "----codetype--" + temp);
             barcodeStr = new String(barcode, 0, barocodelen);
             String rawCode = barcodeStr;
-            writeLog("Barcode RAW", barcodeStr);
             int flag=0; // 0 for end without k, 1 with k
             int lenght=0;
 
@@ -334,7 +333,11 @@ public class MainActivity extends AppCompatActivity {
 
             try {
                 if (profile.equals("E") || profile.equals("C")) {
-                    getPeople(barcodeStr);
+                    if (barcodeStr.length() >= 5) {
+                        getPeople(barcodeStr);
+                    } else {
+                        mp3Dennied.start();
+                    }
                 } else if (profile.equals("V")) {
                     editTextRun.setText(barcodeStr);
 
@@ -406,7 +409,7 @@ public class MainActivity extends AppCompatActivity {
                     //new updateDbFromXml().execute();
                     try {
                         new LoadDbTask().execute();
-                        Thread.sleep(60000);
+                        Thread.sleep(100000);
                     } catch (Exception e) {
                         writeLog("ERROR", e.toString());
                     }
@@ -638,7 +641,7 @@ public class MainActivity extends AppCompatActivity {
             contentAsString = "204"; // No content
         }
         Log.d("Server response", contentAsString);
-        writeLog("Server response", contentAsString);
+        //writeLog("Server response", contentAsString);
 
         return contentAsString;
     }
@@ -738,7 +741,7 @@ public class MainActivity extends AppCompatActivity {
             if (jsonObject.length() <= 13) { // 13 element on json
                 json = jsonObject.toString();
                 Log.d("json to POST", json);
-                writeLog("json to POST", json);
+                //writeLog("json to POST", json);
 
                 // 5. set json to StringEntity
                 StringEntity se = new StringEntity(json);
