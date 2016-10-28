@@ -55,7 +55,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
-//import android.nfc.NfcAdapter;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -120,7 +119,7 @@ public class MainActivity extends AppCompatActivity {
         loading.setVisibility(View.GONE);
 
         writeLog("DEBUG", "Application has started Correctly");
-        server = "http://192.168.1.101:3000"; // use getSetting();
+        server = "http://10.0.0.125:3000"; // use getSetting();
 
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         editTextRun = (EditText) findViewById(R.id.editText_run);
@@ -190,14 +189,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-
-//        NfcAdapter nfcAdapter = NfcAdapter.getDefaultAdapter(this);
-//
-//        if(nfcAdapter != null && nfcAdapter.isEnabled()){
-//            //get text from chip
-//        }else{
-//            Toast.makeText(this, "NFC desactivado, porfavor activar!", Toast.LENGTH_LONG).show();
-//        }
 
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -282,7 +273,6 @@ public class MainActivity extends AppCompatActivity {
             //android.util.Log.i("debug", "----codetype--" + temp);
             barcodeStr = new String(barcode, 0, barocodelen);
             String rawCode = barcodeStr;
-            writeLog("Barcode RAW", barcodeStr);
             int flag=0; // 0 for end without k, 1 with k
             int lenght=0;
 
@@ -406,7 +396,7 @@ public class MainActivity extends AppCompatActivity {
                     //new updateDbFromXml().execute();
                     try {
                         new LoadDbTask().execute();
-                        Thread.sleep(60000);
+                        Thread.sleep(240000); // 4 Min. 240000
                     } catch (Exception e) {
                         writeLog("ERROR", e.toString());
                     }
@@ -434,52 +424,52 @@ public class MainActivity extends AppCompatActivity {
 
     public void getPeople(String rut) {
         String finalJson = db.get_one_person(rut, profile);
+        writeLog("getOnePerson out", finalJson);
         String[] arr = finalJson.split(";");
 
-        // set edittext here before some exceptions.
-        editTextRun.setText(arr[0]);
-        editTextFullName.setText(arr[1]);
+        try{
+            // set edittext here before some exceptions.
+            editTextRun.setText(arr[0]);
+            editTextFullName.setText(arr[1]);
 
-        //build object with that values, then send to registerTarsk()
-        Record record = new Record();
-        record.setPerson_run(arr[0]);
-        record.setPerson_fullname(arr[1]);
-        if (arr[2].equals("true")) {
-            mp3Permitted.start();
-            //is_permitted = true;
-            record.setPerson_is_permitted(1);
-            if (is_input)
-                imageview.setImageResource(R.drawable.permitted);
-        } else {
-            mp3Dennied.start();
-            //is_permitted = false;
-            record.setPerson_is_permitted(0);
-            if (is_input)
-                imageview.setImageResource(R.drawable.dennied);
+            //build object with that values, then send to registerTarsk()
+            Record record = new Record();
+            record.setPerson_run(arr[0]);
+            record.setPerson_fullname(arr[1]);
+            if (arr[2].equals("true")) {
+                mp3Permitted.start();
+                //is_permitted = true;
+                record.setPerson_is_permitted(1);
+                if (is_input)
+                    imageview.setImageResource(R.drawable.permitted);
+            } else {
+                mp3Dennied.start();
+                //is_permitted = false;
+                record.setPerson_is_permitted(0);
+                if (is_input)
+                    imageview.setImageResource(R.drawable.dennied);
+            }
+            record.setPerson_company(arr[3]);
+            record.setPerson_place(arr[4]);
+            if (arr[5].equals("null")) arr[5]="0"; // For Contractors
+            record.setPerson_company_code(arr[5]);
+            record.setPerson_card(Integer.parseInt(arr[6]));
+            record.setPerson_profile(arr[7]);
+
+            if (bus) record.setRecord_bus(1);
+            else record.setRecord_bus(0);
+
+            if (is_input) record.setRecord_is_input(1);
+            else record.setRecord_is_input(0);
+
+            editTextFullName.setText(record.getPerson_fullname());
+
+            if (profile.equals("C")) editTextCompany.setText(record.getPerson_company());
+
+            new RegisterTask(record).execute();
+        }catch (Exception e){
+            e.printStackTrace();
         }
-        record.setPerson_company(arr[3]);
-        record.setPerson_place(arr[4]);
-        if (arr[5].equals("null")) arr[5]="0"; // For Contractors
-        record.setPerson_company_code(arr[5]);
-        record.setPerson_card(Integer.parseInt(arr[6]));
-        record.setPerson_profile(arr[7]);
-
-        // fix profile if don't change by user.
-        //if (arr[7].equals("C") && profile.equals("E")) record.setPerson_profile("C");
-        //if (arr[7].equals("E") && profile.equals("C")) record.setPerson_profile("E");
-
-        if (bus) record.setRecord_bus(1);
-        else record.setRecord_bus(0);
-
-        if (is_input) record.setRecord_is_input(1);
-        else record.setRecord_is_input(0);
-
-        editTextFullName.setText(record.getPerson_fullname());
-
-        if (profile.equals("C")) editTextCompany.setText(record.getPerson_company());
-
-        new RegisterTask(record).execute();
-
         clean();
     }
 
@@ -638,7 +628,7 @@ public class MainActivity extends AppCompatActivity {
             contentAsString = "204"; // No content
         }
         Log.d("Server response", contentAsString);
-        writeLog("Server response", contentAsString);
+        //writeLog("Server response", contentAsString);
 
         return contentAsString;
     }
@@ -738,7 +728,7 @@ public class MainActivity extends AppCompatActivity {
             if (jsonObject.length() <= 13) { // 13 element on json
                 json = jsonObject.toString();
                 Log.d("json to POST", json);
-                writeLog("json to POST", json);
+                //writeLog("json to POST", json);
 
                 // 5. set json to StringEntity
                 StringEntity se = new StringEntity(json);
