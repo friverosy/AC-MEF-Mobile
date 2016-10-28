@@ -324,7 +324,11 @@ public class MainActivity extends AppCompatActivity {
 
             try {
                 if (profile.equals("E") || profile.equals("C")) {
-                    getPeople(barcodeStr);
+                    if (barcodeStr.length() >= 5) {
+                        getPeople(barcodeStr);
+                    } else {
+                        mp3Dennied.start();
+                    }
                 } else if (profile.equals("V")) {
                     editTextRun.setText(barcodeStr);
 
