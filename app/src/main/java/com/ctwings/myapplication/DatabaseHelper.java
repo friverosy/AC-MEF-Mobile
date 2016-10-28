@@ -104,31 +104,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
 
     //Person
-    public void add_person(Person person){
-
-        // 1. get reference to writable DB
-        SQLiteDatabase db = this.getWritableDatabase();
-
-        // 2. create ContentValues to add key "column"/value
-        ContentValues values = new ContentValues();
-        values.put(PERSON_FULLNAME, person.get_person_fullname());
-        values.put(PERSON_RUN, person.get_person_run());
-        values.put(PERSON_IS_PERMITTED, person.get_person_is_permitted());
-        values.put(PERSON_COMPANY, person.get_person_company());
-        values.put(PERSON_PLACE, person.get_person_place());
-        values.put(PERSON_COMPANY_CODE, person.get_person_company_code());
-        values.put(PERSON_CARD, person.get_person_card());
-        values.put(PERSON_PROFILE, person.get_person_profile());
-
-        // 3. insert
-        db.insert(TABLE_PERSON, // table
-                null, //nullColumnHack
-                values); // key/value -> keys = column names/ values = column values
-
-        // 4. close
-        db.close();
-    }
-
     public void add_persons(String json){
 
         JSONArray json_db_array;
@@ -196,46 +171,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
 
         db1.close();
-
-    }
-
-    public Person get_person(int id){
-
-        // 1. get reference to readable DB
-        SQLiteDatabase db = this.getReadableDatabase();
-
-        // 2. build query
-        Cursor cursor =
-                db.query(TABLE_PERSON, // a. table
-                        PERSON_COLUMNS, // b. column names
-                        " person_id = ?", // c. selections
-                        new String[] { String.valueOf(id) }, // d. selections args
-                        null, // e. group by
-                        null, // f. having
-                        null, // g. order by
-                        null); // h. limit
-
-        // 3. if we got results get the first one
-        if (cursor != null)
-            cursor.moveToFirst();
-
-        // 4. build object
-        Person person = new Person();
-        person.set_person_id(Integer.parseInt(cursor.getString(0)));
-        person.set_person_fullname(cursor.getString(1));
-        person.set_person_run(cursor.getString(2));
-        person.set_person_is_permitted(cursor.getString(3));
-        person.set_person_company(cursor.getString(4));
-        person.set_person_place(cursor.getString(5));
-        person.set_person_company_code(cursor.getString(6));
-        person.set_person_card(cursor.getInt(7));
-        person.set_person_profile(cursor.getString(8));
-
-        cursor.close();
-        db.close();
-
-        // 5. return
-        return person;
     }
 
     public String get_one_person(String id, String profile){
@@ -243,103 +178,46 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getReadableDatabase();
         String out="";
 
-        //Remove 0 at beginner
-        id.replace("%", "");
-        id = String.valueOf(Integer.parseInt(id));
+        try{
+            //Remove 0 at beginner
+            id.replace("%", "");
+            id = String.valueOf(Integer.parseInt(id));
 
-        // 2. build query
-        Cursor cursor =
-                db.query(TABLE_PERSON, // a. table
-                        PERSON_COLUMNS, // b. column names
-                        " person_run = ? OR person_card = ?", // c. selections
-                        new String[] { String.valueOf(id), String.valueOf(id) }, // d. selections args
-                        null, // e. group by
-                        null, // f. having
-                        null, // g. order by
-                        null); // h. limit
+            // 2. build query
+            Cursor cursor =
+                    db.query(TABLE_PERSON, // a. table
+                            PERSON_COLUMNS, // b. column names
+                            " person_run = ? OR person_card = ?", // c. selections
+                            new String[] { String.valueOf(id), String.valueOf(id) }, // d. selections args
+                            null, // e. group by
+                            null, // f. having
+                            null, // g. order by
+                            null); // h. limit
 
-        if (cursor != null) {
-            if (!(cursor.moveToFirst()) || cursor.getCount() == 0) {
-                //cursor is empty
-                out = id+";No encontrado;No encontrado;No encontrado;No encontrado;0;0;" + profile;
-            } else {
-                // 3. if we got results get the first one
-                cursor.moveToFirst();
+            if (cursor != null) {
+                if (!(cursor.moveToFirst()) || cursor.getCount() == 0) {
+                    //cursor is empty
+                    out = id+";No encontrado;No encontrado;No encontrado;No encontrado;0;0;" + profile;
+                } else {
+                    // 3. if we got results get the first one
+                    cursor.moveToFirst();
 
-                // 4. build String
-                out = cursor.getString(2) + ";" + cursor.getString(1) + ";" +
-                        cursor.getString(3) + ";" + cursor.getString(4) + ";" +
-                        cursor.getString(5) + ";" + cursor.getString(6) + ";" +
-                        cursor.getInt(7) + ";" + cursor.getString(8);
-                Log.d("out", out);
+                    // 4. build String
+                    out = cursor.getString(2) + ";" + cursor.getString(1) + ";" +
+                            cursor.getString(3) + ";" + cursor.getString(4) + ";" +
+                            cursor.getString(5) + ";" + cursor.getString(6) + ";" +
+                            cursor.getInt(7) + ";" + cursor.getString(8);
+                }
             }
+            cursor.close();
+        }catch (Exception e){
+            e.printStackTrace();
         }
-        cursor.close();
+
         db.close();
 
         // 5. return
         return out;
-    }
-
-    public boolean person_is_empty(){
-
-        SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_PERSON, null);
-        Boolean Exists;
-
-        if (cursor.moveToFirst())
-        {
-            Exists = false;
-        } else
-        {
-            //EMPTY
-            Exists = true;
-        }
-        cursor.close();
-
-        return Exists;
-    }
-
-    // Updating a single Property
-    public int update_person(Person property) {
-
-        // 1. get reference to writable DB
-        SQLiteDatabase db = this.getWritableDatabase();
-
-        // 2. create ContentValues to add key "column"/value
-        ContentValues values = new ContentValues();
-        values.put("person_fulname", property.get_person_fullname());
-        values.put("person_run", property.get_person_run());
-        values.put("person_is_permitted", property.get_person_is_permitted());
-
-        // 3. updating row
-        int i = db.update(TABLE_PERSON, //table
-                values, // column/value
-                PERSON_ID+" = ?", // selections
-                new String[] { String.valueOf(property.get_person_id()) }); //selection args
-
-        // 4. close
-        db.close();
-
-        Log.d("Update Person", property.toString());
-        return i;
-    }
-
-    // Deleting a single Person
-    public void delete_person(int id) {
-
-        // 1. get reference to writable DB
-        SQLiteDatabase db = this.getWritableDatabase();
-
-        // 2. delete
-        db.delete(TABLE_PERSON,
-                PERSON_ID+" = ?",
-                new String[] { String.valueOf(id) });
-
-        // 3. close
-        db.close();
-
-        Log.d("delete Person", id+"");
     }
 
     public int person_count(){
@@ -383,54 +261,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         // 4. close
         db.close();
-    }
-
-    public List get_records(){
-
-        // 1. get reference to readable DB
-        SQLiteDatabase db = this.getReadableDatabase();
-
-        // 2. build query
-        Cursor cursor = //db.rawQuery("SELECT * FROM " + TABLE_RECORD, null);
-                db.query(TABLE_RECORD, // a. table
-                        RECORD_COLUMNS, // b. column names
-                        null, // c. selections
-                        null, // d. selections args
-                        null, // e. group by
-                        null, // f. having
-                        null, // g. order by
-                        null); // h. limit
-
-        // 3. get all
-        cursor.moveToFirst();
-        List<String> records = new ArrayList<>();
-
-        while (cursor.isAfterLast() == false) {
-            records.add(
-                    cursor.getInt(0)+";"+ //ID
-                            cursor.getString(1)+";"+ //FULLNAME
-                            cursor.getString(2)+";"+ //RUN
-                            cursor.getInt(3)+";"+ //IS_INPUT
-                            cursor.getInt(4)+";"+ //BUS
-                            cursor.getInt(5)+";"+ //IS_PERMITTED
-                            cursor.getString(6)+";"+ //COMPANY
-                            cursor.getString(7)+";"+ //PLACE
-                            cursor.getString(8)+";"+ //COMPANY_CODE
-                            cursor.getString(9)+";"+ //INPUT
-                            cursor.getString(10)+";"+ //OUTPUT
-                            cursor.getInt(11)+";"+ //SYNC
-                            cursor.getString(12)+";"+ //PROFILE
-                            cursor.getInt(13) //CARD
-                    //getInt to boolean type 0 (false), 1 (true)
-            );
-            cursor.moveToNext();
-        }
-
-        cursor.close();
-        db.close();
-
-        // 5. return
-        return records;
     }
 
     public List get_desynchronized_records(){
@@ -481,24 +311,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return records;
     }
 
-    public int record_count(){
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery("SELECT * FROM RECORD;", null);
-        return cursor.getCount();
-    }
-
     public int record_desync_count(){
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery("SELECT * FROM RECORD WHERE record_sync=0;", null);
+        Cursor cursor = db.rawQuery("SELECT " + RECORD_ID + " FROM RECORD WHERE record_sync=0;", null);
         return cursor.getCount();
-    }
-
-    public boolean dbIsOpen(){
-        SQLiteDatabase db = this.getWritableDatabase();
-        if (db.isOpen())
-            return true;
-        else
-            return false;
     }
 
     public void update_record(int id) {
@@ -516,38 +332,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.close();
         if(i>0) Log.d("Local Record updated", String.valueOf(id));
         else Log.e("Error updating record", String.valueOf(id));
-    }
-
-    //Setting
-    public void add_server(Server server){
-
-        // 1. get reference to writable DB
-        SQLiteDatabase db = this.getWritableDatabase();
-
-        // 2. create ContentValues to add key "column"/value
-        ContentValues values = new ContentValues();
-        values.put(SETTING_PORT, server.get_port());
-        values.put(SETTING_URL, server.get_url());
-
-        // 3. insert
-        db.insert(TABLE_SETTING, // table
-                null, //nullColumnHack
-                values); // key/value -> keys = column names/ values = column values
-
-        // 4. close
-        db.close();
-    }
-
-    // Updating single contact
-    public int update_server(String url, int port) {
-        SQLiteDatabase db = this.getWritableDatabase();
-
-        ContentValues values = new ContentValues();
-        values.put(SETTING_URL, url);
-        values.put(SETTING_PORT, port);
-
-        // updating row
-        return db.update(TABLE_SETTING,values,null,null);
     }
 
 }
