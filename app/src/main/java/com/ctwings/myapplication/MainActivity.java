@@ -527,7 +527,6 @@ public class MainActivity extends AppCompatActivity {
                     ise.printStackTrace();
                     return "";
                 }
-
             }
             return "Done";
         }
@@ -569,7 +568,6 @@ public class MainActivity extends AppCompatActivity {
                 writeLog("ERROR", e.toString());
             }
         }
-
     }
 
     public String GET(String url) {
@@ -619,7 +617,7 @@ public class MainActivity extends AppCompatActivity {
             else {
                 contentAsString = convertInputStreamToString(is);
                 //update datetime in textbox from XML file
-                //new getLastUpdateTask(server + "/api/people/getLastUpdate?profile=" + profile).execute().toString();
+                new getLastUpdateTask(server + "/api/people/getLastUpdate?profile=" + profile).execute().toString();
             }
         } catch (Exception e) {
             //e.printStackTrace();
@@ -693,12 +691,15 @@ public class MainActivity extends AppCompatActivity {
             jsonObject.accumulate("run", record.getPerson_run());
             jsonObject.accumulate("fullname", record.getPerson_fullname());
 
-            if (record.getPerson_is_permitted() == 1)
-                jsonObject.accumulate("is_permitted", true);
-            else
-                jsonObject.accumulate("is_permitted", false);
-
             jsonObject.accumulate("profile", record.getPerson_profile());
+            if(record.getPerson_profile().equals("V")){
+                jsonObject.accumulate("is_permitted", true);
+            } else {
+                if (record.getPerson_is_permitted() == 1)
+                    jsonObject.accumulate("is_permitted", true);
+                else
+                    jsonObject.accumulate("is_permitted", false);
+            }
 
             if (record.getRecord_is_input() == 1)
                 jsonObject.accumulate("is_input", true);
