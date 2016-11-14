@@ -111,7 +111,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         try {
             json_db_array = new JSONArray(json);
-            Log.d("--add person", String.valueOf(db1.isOpen()));
             db1.beginTransaction();
             try {
 
@@ -120,6 +119,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
                 for(int i = 0; i<json_db_array.length();i++){
                     ContentValues values = new ContentValues();
+
                     try{ // for employees
                         Person person = new Person(json_db_array.getJSONObject(i).getString("fullname"),
                                 json_db_array.getJSONObject(i).getString("run"),
@@ -247,7 +247,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             values.put(RECORD_INPUT_DATETIME, record.getRecord_input_datetime());
         if(record.getRecord_output_datetime() != null)
             values.put(RECORD_OUTPUT_DATETIME, record.getRecord_output_datetime());
-        values.put(RECORD_SYNC, 0);
+        values.put(RECORD_SYNC, record.getRecord_sync());
         values.put(PERSON_PROFILE,record.getPerson_profile());
         values.put(PERSON_CARD, record.getPerson_card());
 

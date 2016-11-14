@@ -47,6 +47,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.DateFormat;
@@ -119,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
         loading.setVisibility(View.GONE);
 
         writeLog("DEBUG", "Application has started Correctly");
-        server = "http://10.0.0.125:3000"; // use getSetting();
+        server = "http://192.168.1.100:3000"; // use getSetting();
 
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         editTextRun = (EditText) findViewById(R.id.editText_run);
@@ -137,6 +138,7 @@ public class MainActivity extends AppCompatActivity {
         mySwitch = (Switch) findViewById(R.id.mySwitch);
         mySwitch.setChecked(true);
         lastUpdated = (TextView) findViewById(R.id.textView_lastUpdate);
+
         // set by default
         is_input = true;
         profile = "E";
@@ -269,49 +271,52 @@ public class MainActivity extends AppCompatActivity {
 
             byte[] barcode = intent.getByteArrayExtra("barocode");
             int barocodelen = intent.getIntExtra("length", 0);
-            //byte temp = intent.getByteExtra("barcodeType", (byte) 0);
-            //android.util.Log.i("debug", "----codetype--" + temp);
+            byte barcodeType = intent.getByteExtra("barcodeType", (byte) 0);
+            Log.i("codetype", String.valueOf(barcodeType));
             barcodeStr = new String(barcode, 0, barocodelen);
             String rawCode = barcodeStr;
-            int flag=0; // 0 for end without k, 1 with k
-            int lenght=0;
 
-            if (barcodeStr.startsWith("https")) { // new DNI
-                barcodeStr = barcodeStr.substring(52, 62);
+            int flag=0; // 0 for end without k, 1 with k
+
+            if (barcodeType == 28) { // QR code
+                Log.i("Debugger", "QR");
+                // get just run
+                barcodeStr = barcodeStr.substring(
+                        barcodeStr.indexOf("RUN=") + 4,
+                        barcodeStr.indexOf("&type"));
+                // remove dv.
                 barcodeStr = barcodeStr.substring(0, barcodeStr.indexOf("-"));
+
                 if (profile == "V") {
-                    //get name from DNI
+                    // Set empty name for QR DNI.
                     editTextFullName.setText(" ");
                 }
-                Log.i("Debugger", "NEW DNI");
-            } else if (barcodeStr.startsWith("00")) {
+            } else if (barcodeType == 1 || barcodeStr.startsWith("00")) {
                 Log.i("Debugger", "CARD");
-            } else if (barcodeStr.contains("ABCDEFGHIJKLMNOPQRSTUVWXYZ")) { // old DNI
-                Log.i("Debugger", "OLD DNI");
+            } else if (barcodeType == 17) { // PDF417
+                Log.i("Debugger", "PDF417");
                 barcodeStr = barcodeStr.substring(0, 9);
-                Log.i("Old DNI Cutted", barcodeStr);
                 barcodeStr = barcodeStr.replace(" ", "");
                 if (barcodeStr.endsWith("K")) {
-                    barcodeStr = barcodeStr.replace("K", "");
                     flag = 1;
                 }
+
+                // Define length of character.
                 if (Integer.parseInt(barcodeStr) > 400000000 && flag == 0) {
                     barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 2);
-                    Log.i("Debugger", "Oldman");
-                    lenght = 9;
                 } else if (flag == 0) {
-                    lenght = 10;
-                    Log.i("Debugger", "Elderly person");
                     barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 1);
                 }
 
                 if (profile == "V") {
-                    //get name from DNI
-                    String[] array = rawCode.split("\\s+");
+                    // Get name from DNI.
+                    String[] array = rawCode.split("\\s+"); // Split by whitespace.
                     try {
                         editTextFullName.setText(array[1].substring(0, array[1].indexOf("CHL")));
-                    } catch (Exception e) {
+                    } catch (ArrayIndexOutOfBoundsException e) {
                         editTextFullName.setText(array[2].substring(0, array[2].indexOf("CHL")));
+                    } catch (Exception ex) {
+                        editTextFullName.setText("");
                     }
                 }
             }
@@ -324,7 +329,7 @@ public class MainActivity extends AppCompatActivity {
 
             try {
                 if (profile.equals("E") || profile.equals("C")) {
-                    if (barcodeStr.length() >= 5) {
+                    if (barcodeStr.length() > 5) {
                         getPeople(barcodeStr);
                     } else {
                         mp3Dennied.start();
@@ -397,10 +402,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 while (true) {
-                    //new updateDbFromXml().execute();
                     try {
                         new LoadDbTask().execute();
-                        Thread.sleep(240000); // 4 Min. 240000
+                        Thread.sleep(120000); // 4 Min. 240000
                     } catch (Exception e) {
                         writeLog("ERROR", e.toString());
                     }
@@ -488,21 +492,6 @@ public class MainActivity extends AppCompatActivity {
         // TODO Auto-generated method stub
         return super.onKeyDown(keyCode, event);
     }
-
-//    public class updateDbFromXml extends AsyncTask<String, String, String> {
-//
-//        @Override
-//        protected String doInBackground(String... params) {
-//            String xml = DbCall(server + "/api/people/updateDbFromXml");
-//            if (xml != "408" && xml != "204") {
-//                //Log.d("xml", xml);
-//            }else{
-//                Log.d("Network","Offline");
-//                writeLog("Network","Offline");
-//            }
-//            return xml;
-//        }
-//    }
 
     public class LoadDbTask extends AsyncTask<String, String, String> {
 
@@ -690,9 +679,9 @@ public class MainActivity extends AppCompatActivity {
             // 3. build jsonObject from jsonList
             jsonObject.accumulate("run", record.getPerson_run());
             jsonObject.accumulate("fullname", record.getPerson_fullname());
-
             jsonObject.accumulate("profile", record.getPerson_profile());
-            if(record.getPerson_profile().equals("V")){
+
+            if (record.getPerson_profile().equals("V")){
                 jsonObject.accumulate("is_permitted", true);
             } else {
                 if (record.getPerson_is_permitted() == 1)
@@ -701,10 +690,20 @@ public class MainActivity extends AppCompatActivity {
                     jsonObject.accumulate("is_permitted", false);
             }
 
-            if (record.getRecord_is_input() == 1)
+            TimeZone tz = TimeZone.getTimeZone("UTC");
+            DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'"); // Quoted "Z" to indicate UTC, no timezone offset
+            df.setTimeZone(tz);
+
+            if (record.getRecord_is_input() == 1) {
                 jsonObject.accumulate("is_input", true);
-            else
+                record.setRecord_input_datetime(df.format(new Date()));
+                jsonObject.accumulate("input_datetime", record.getRecord_input_datetime());
+
+            } else {
                 jsonObject.accumulate("is_input", false);
+                record.setRecord_output_datetime(df.format(new Date()));
+                jsonObject.accumulate("output_datetime", record.getRecord_output_datetime());
+            }
 
             if (record.getRecord_bus() == 1)
                 jsonObject.accumulate("bus", true);
@@ -716,24 +715,10 @@ public class MainActivity extends AppCompatActivity {
             jsonObject.accumulate("company_code", record.getPerson_company_code());
             jsonObject.accumulate("card", record.getPerson_card());
 
-            // For offline records only
-            try {
-                if (record.getRecord_input_datetime().length() > 4)
-                    jsonObject.accumulate("input_datetime", record.getRecord_input_datetime());
-            } catch (NullPointerException npe) {
-            }
-
-            try {
-                if (record.getRecord_output_datetime().length() > 4)
-                    jsonObject.accumulate("output_datetime", record.getRecord_output_datetime());
-            } catch (NullPointerException npe) {
-            }
-
             // 4. convert JSONObject to JSON to String
             if (jsonObject.length() <= 13) { // 13 element on json
                 json = jsonObject.toString();
                 Log.d("json to POST", json);
-                //writeLog("json to POST", json);
 
                 // 5. set json to StringEntity
                 StringEntity se = new StringEntity(json);
@@ -756,8 +741,8 @@ public class MainActivity extends AppCompatActivity {
                     if (inputStream != null) {
                         result = convertInputStreamToString(inputStream);
                         if (httpResponse.getStatusLine().getStatusCode() == 200) {
-                            // if has input or output_datetime its becouse its an offline record to be will synchronized.
-                            if (!jsonObject.isNull("input_datetime") || !jsonObject.isNull("output_datetime")) {
+                            // if has sync=0 its becouse its an offline record to be will synchronized.
+                            if (record.getRecord_sync()==0) {
                                 Log.d("---", "going into update record");
                                 db.update_record(record.getRecord_id());
                                 runOnUiThread(new Runnable() {
@@ -766,7 +751,11 @@ public class MainActivity extends AppCompatActivity {
                                         loading.setVisibility(View.GONE);
                                     }
                                 });
+                            } else {
+                                record.setRecord_sync(1);
+                                db.add_record(record);
                             }
+
                         }
                     } else {
                         result = String.valueOf(httpResponse.getStatusLine().getStatusCode());
@@ -793,19 +782,9 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             // Insert records to object, then get from DataBaseHelper to save
             Log.d("---","offline");
-            try {
-                TimeZone tz = TimeZone.getTimeZone("UTC");
-                DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'"); // Quoted "Z" to indicate UTC, no timezone offset
-                df.setTimeZone(tz);
-
-                if (is_input) record.setRecord_input_datetime(df.format(new Date()));
-                else record.setRecord_output_datetime(df.format(new Date()));
-
-                db.add_record(record);
-            } catch (SQLException sql) {
-                sql.printStackTrace();
-                writeLog("ERROR", sql.toString());
-            }
+            record.setRecord_sync(0);
+            Log.d("offline record",record.toString());
+            db.add_record(record);
         }
         // 11. return result
         return result;
