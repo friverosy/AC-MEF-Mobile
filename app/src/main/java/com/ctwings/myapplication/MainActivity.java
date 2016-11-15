@@ -301,6 +301,9 @@ public class MainActivity extends AppCompatActivity {
                     flag = 1;
                 }
 
+                barcodeStr = barcodeStr.replace("k", "");
+                barcodeStr = barcodeStr.replace("K", "");
+
                 // Define length of character.
                 if (Integer.parseInt(barcodeStr) > 400000000 && flag == 0) {
                     barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 2);
@@ -320,9 +323,6 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             }
-
-            barcodeStr = barcodeStr.replace("k", "");
-            barcodeStr = barcodeStr.replace("K", "");
 
             Log.i("Cooked Barcode", barcodeStr);
             writeLog("Cooked Barcode", barcodeStr);
