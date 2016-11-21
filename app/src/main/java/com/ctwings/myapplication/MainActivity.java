@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.database.SQLException;
 import android.device.ScanManager;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -38,7 +37,6 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -47,7 +45,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.DateFormat;
@@ -120,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
         loading.setVisibility(View.GONE);
 
         writeLog("DEBUG", "Application has started Correctly");
-        server = "http://192.168.1.100:3000"; // use getSetting();
+        server = "http://controlid-test.multiexportfoods.com:3000"; // use getSetting();
 
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         editTextRun = (EditText) findViewById(R.id.editText_run);
@@ -329,7 +326,7 @@ public class MainActivity extends AppCompatActivity {
 
             try {
                 if (profile.equals("E") || profile.equals("C")) {
-                    if (barcodeStr.length() > 5) {
+                    if (barcodeStr.length() > 4) {
                         getPeople(barcodeStr);
                     } else {
                         mp3Dennied.start();
@@ -348,7 +345,9 @@ public class MainActivity extends AppCompatActivity {
                     else record.setRecord_is_input(0);
                     if (bus) record.setRecord_bus(1);
                     else record.setRecord_bus(0);
+                    record.setRecord_sync(0);
 
+                    db.add_record(record);
                     new RegisterTask(record).execute();
                     //new GetCompanyTask().execute(server2 + "/api/records/findOne?filter[where][people_run]=" + barcodeStr);
                 }
@@ -463,6 +462,7 @@ public class MainActivity extends AppCompatActivity {
             record.setPerson_company_code(arr[5]);
             record.setPerson_card(Integer.parseInt(arr[6]));
             record.setPerson_profile(arr[7]);
+            record.setRecord_sync(0);
 
             if (bus) record.setRecord_bus(1);
             else record.setRecord_bus(0);
@@ -474,6 +474,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (profile.equals("C")) editTextCompany.setText(record.getPerson_company());
 
+            db.add_record(record);
             new RegisterTask(record).execute();
         }catch (Exception e){
             e.printStackTrace();
@@ -630,7 +631,7 @@ public class MainActivity extends AppCompatActivity {
         String[] arr;
         for (int i = 0; i <= records.size() - 1; i++) {
             Record record = new Record();
-            Log.d("falta sincronizar", records.get(i).toString());
+            Log.d("Missing Sync", records.get(i).toString());
             arr = records.get(i).toString().split(";");
             //get each row to be synchronized
             record.setRecord_id(Integer.parseInt(arr[0]));
@@ -690,18 +691,19 @@ public class MainActivity extends AppCompatActivity {
                     jsonObject.accumulate("is_permitted", false);
             }
 
-            TimeZone tz = TimeZone.getTimeZone("UTC");
-            DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'"); // Quoted "Z" to indicate UTC, no timezone offset
-            df.setTimeZone(tz);
+            Calendar cal = Calendar.getInstance();
+            Date currentLocalTime = cal.getTime();
+            DateFormat date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String localTime = date.format(currentLocalTime);
 
             if (record.getRecord_is_input() == 1) {
                 jsonObject.accumulate("is_input", true);
-                record.setRecord_input_datetime(df.format(new Date()));
+                record.setRecord_input_datetime(localTime);
                 jsonObject.accumulate("input_datetime", record.getRecord_input_datetime());
 
             } else {
                 jsonObject.accumulate("is_input", false);
-                record.setRecord_output_datetime(df.format(new Date()));
+                record.setRecord_output_datetime(localTime);
                 jsonObject.accumulate("output_datetime", record.getRecord_output_datetime());
             }
 
@@ -751,11 +753,7 @@ public class MainActivity extends AppCompatActivity {
                                         loading.setVisibility(View.GONE);
                                     }
                                 });
-                            } else {
-                                record.setRecord_sync(1);
-                                db.add_record(record);
                             }
-
                         }
                     } else {
                         result = String.valueOf(httpResponse.getStatusLine().getStatusCode());
@@ -782,9 +780,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             // Insert records to object, then get from DataBaseHelper to save
             Log.d("---","offline");
-            record.setRecord_sync(0);
-            Log.d("offline record",record.toString());
-            db.add_record(record);
         }
         // 11. return result
         return result;
