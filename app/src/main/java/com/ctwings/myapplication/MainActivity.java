@@ -336,13 +336,22 @@ public class MainActivity extends AppCompatActivity {
 
                     //Send to AccessControl API
                     Record record = new Record();
+                    Calendar cal = Calendar.getInstance();
+                    Date currentLocalTime = cal.getTime();
+                    DateFormat date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                    String localTime = date.format(currentLocalTime);
 
                     if (!editTextFullName.getText().toString().isEmpty())
                         record.setPerson_fullname(editTextFullName.getText().toString());
                     record.setPerson_run(barcodeStr);
                     record.setPerson_profile(profile);
-                    if (is_input) record.setRecord_is_input(1);
-                    else record.setRecord_is_input(0);
+                    if (is_input){
+                        record.setRecord_is_input(1);
+                        record.setRecord_input_datetime(localTime);
+                    } else {
+                        record.setRecord_is_input(0);
+                        record.setRecord_output_datetime(localTime);
+                    }
                     if (bus) record.setRecord_bus(1);
                     else record.setRecord_bus(0);
                     record.setRecord_sync(0);
@@ -439,6 +448,11 @@ public class MainActivity extends AppCompatActivity {
             editTextRun.setText(arr[0]);
             editTextFullName.setText(arr[1]);
 
+            Calendar cal = Calendar.getInstance();
+            Date currentLocalTime = cal.getTime();
+            DateFormat date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String localTime = date.format(currentLocalTime);
+
             //build object with that values, then send to registerTarsk()
             Record record = new Record();
             record.setPerson_run(arr[0]);
@@ -467,8 +481,13 @@ public class MainActivity extends AppCompatActivity {
             if (bus) record.setRecord_bus(1);
             else record.setRecord_bus(0);
 
-            if (is_input) record.setRecord_is_input(1);
-            else record.setRecord_is_input(0);
+            if (is_input) {
+                record.setRecord_is_input(1);
+                record.setRecord_input_datetime(localTime);
+            } else {
+                record.setRecord_is_input(0);
+                record.setRecord_output_datetime(localTime);
+            }
 
             editTextFullName.setText(record.getPerson_fullname());
 
@@ -554,8 +573,9 @@ public class MainActivity extends AppCompatActivity {
                 result = result.substring(0,result.length()-1);
                 lastUpdated.setText(result);
             } catch (Exception e) {
+                Log.d("result", result);
                 e.printStackTrace();
-                writeLog("ERROR", e.toString());
+                writeLog("ERROR", result);
             }
         }
     }
@@ -691,19 +711,12 @@ public class MainActivity extends AppCompatActivity {
                     jsonObject.accumulate("is_permitted", false);
             }
 
-            Calendar cal = Calendar.getInstance();
-            Date currentLocalTime = cal.getTime();
-            DateFormat date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            String localTime = date.format(currentLocalTime);
-
             if (record.getRecord_is_input() == 1) {
                 jsonObject.accumulate("is_input", true);
-                record.setRecord_input_datetime(localTime);
                 jsonObject.accumulate("input_datetime", record.getRecord_input_datetime());
 
             } else {
                 jsonObject.accumulate("is_input", false);
-                record.setRecord_output_datetime(localTime);
                 jsonObject.accumulate("output_datetime", record.getRecord_output_datetime());
             }
 
