@@ -60,9 +60,7 @@ public class MainActivity extends AppCompatActivity {
     private EditText editTextRun;
     private EditText editTextFullName;
     private EditText editTextCompany;
-    private RadioGroup rdgProfile;
-    private RadioButton rdbEmployee;
-    private RadioButton rdbContractor;
+    private TextView textViewProfile;
     private String profile;
     private ProgressWheel loading;
     private static String server;
@@ -123,14 +121,11 @@ public class MainActivity extends AppCompatActivity {
         editTextRun = (EditText) findViewById(R.id.editText_run);
         editTextFullName = (EditText) findViewById(R.id.editText_fullname);
         editTextCompany = (EditText) findViewById(R.id.editText_company);
+        textViewProfile = (TextView) findViewById(R.id.textView_profile);
         imageview = (ImageView) findViewById(R.id.imageView);
         mp3Dennied = MediaPlayer.create(MainActivity.this, R.raw.bad);
         mp3Permitted = MediaPlayer.create(MainActivity.this, R.raw.good);
         mp3Error = MediaPlayer.create(MainActivity.this, R.raw.error);
-        rdgProfile = (RadioGroup) findViewById(R.id.rdgProfile);
-        rdbEmployee = (RadioButton) findViewById(R.id.rdbEmployee);
-        rdbContractor = (RadioButton) findViewById(R.id.rdbContractor);
-        rdbEmployee.setChecked(true);
         editTextCompany.setVisibility(View.GONE);
         mySwitch = (Switch) findViewById(R.id.mySwitch);
         mySwitch.setChecked(true);
@@ -138,45 +133,6 @@ public class MainActivity extends AppCompatActivity {
 
         // set by default
         is_input = true;
-        profile = "E";
-        bus = false;
-        // end set by default
-
-        rdgProfile.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(RadioGroup group, int checkedId) {
-                // TODO Auto-generated method stub
-                reset();
-                if (checkedId == R.id.rdbEmployee) {
-                    profile = "E";
-                    bus = false;
-                    editTextCompany.setVisibility(View.GONE);
-                    mySwitch.setVisibility(View.VISIBLE);
-                    lastUpdated.setVisibility(View.VISIBLE);
-                } else if (checkedId == R.id.rdbVisit) {
-                    profile = "V";
-                    bus = false;
-                    lastUpdated.setVisibility(View.GONE);
-                    imageview.setImageDrawable(null);
-                    editTextCompany.setVisibility(View.VISIBLE);
-                    mySwitch.setVisibility(View.VISIBLE);
-                } else if (checkedId == R.id.rdbContractor) {
-                    profile = "C";
-                    bus = false;
-                    imageview.setImageDrawable(null);
-                    editTextCompany.setVisibility(View.VISIBLE);
-                    mySwitch.setVisibility(View.VISIBLE);
-                    lastUpdated.setVisibility(View.VISIBLE);
-                } else if (checkedId == R.id.rdbBus) {
-                    profile = "E";
-                    bus = true;
-                    lastUpdated.setVisibility(View.GONE);
-                    imageview.setImageDrawable(null);
-                    editTextCompany.setVisibility(View.GONE);
-                    mySwitch.setVisibility(View.GONE);
-                }
-            }
-        });
 
         mySwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -192,34 +148,7 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if ((profile.equals("E") || profile.equals("C")) && !editTextRun.getText().toString().isEmpty()) {
-                    getPeople(editTextRun.getText().toString());
-                } else if (profile.equals("V") && !editTextRun.getText().toString().isEmpty() &&
-                        !editTextFullName.getText().toString().isEmpty()) {
-                    //Send to AccessControl API
-                    Record record = new Record();
-
-                    record.setPerson_run(editTextRun.getText().toString());
-                    record.setPerson_fullname(editTextFullName.getText().toString());
-                    record.setPerson_profile(profile);
-                    if (is_input) record.setRecord_is_input(1);
-                    else record.setRecord_is_input(0);
-                    if (bus) record.setRecord_bus(1);
-                    else record.setRecord_bus(0);
-
-                    new RegisterTask(record).execute();
-                    reset();
-                } else {
-                    mp3Error.start();
-                    runOnUiThread(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            makeToast("Ingrese datos primero.");
-                        }
-                    });
-                    editTextRun.requestFocus();
-                }
+                getPeople(editTextRun.getText().toString());
             }
         });
     }
@@ -307,59 +236,13 @@ public class MainActivity extends AppCompatActivity {
                 } else if (flag == 0) {
                     barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 1);
                 }
-
-                if (profile == "V") {
-                    // Get name from DNI.
-                    String[] array = rawCode.split("\\s+"); // Split by whitespace.
-                    try {
-                        editTextFullName.setText(array[1].substring(0, array[1].indexOf("CHL")));
-                    } catch (ArrayIndexOutOfBoundsException e) {
-                        editTextFullName.setText(array[2].substring(0, array[2].indexOf("CHL")));
-                    } catch (Exception ex) {
-                        editTextFullName.setText("");
-                    }
-                }
             }
 
             Log.i("Cooked Barcode", barcodeStr);
             writeLog("Cooked Barcode", barcodeStr);
 
             try {
-                if (profile.equals("E") || profile.equals("C")) {
-                    if (barcodeStr.length() > 4) {
-                        getPeople(barcodeStr);
-                    } else {
-                        mp3Dennied.start();
-                    }
-                } else if (profile.equals("V")) {
-                    editTextRun.setText(barcodeStr);
-
-                    //Send to AccessControl API
-                    Record record = new Record();
-                    Calendar cal = Calendar.getInstance();
-                    Date currentLocalTime = cal.getTime();
-                    DateFormat date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                    String localTime = date.format(currentLocalTime);
-
-                    if (!editTextFullName.getText().toString().isEmpty())
-                        record.setPerson_fullname(editTextFullName.getText().toString());
-                    record.setPerson_run(barcodeStr);
-                    record.setPerson_profile(profile);
-                    if (is_input){
-                        record.setRecord_is_input(1);
-                        record.setRecord_input_datetime(localTime);
-                    } else {
-                        record.setRecord_is_input(0);
-                        record.setRecord_output_datetime(localTime);
-                    }
-                    if (bus) record.setRecord_bus(1);
-                    else record.setRecord_bus(0);
-                    record.setRecord_sync(0);
-
-                    db.add_record(record);
-                    new RegisterTask(record).execute();
-                    //new GetCompanyTask().execute(server2 + "/api/records/findOne?filter[where][people_run]=" + barcodeStr);
-                }
+                getPeople(barcodeStr);
             } catch (NullPointerException e) {
                 Log.e("NullPointer", e.toString());
                 writeLog("ERROR", e.toString());
@@ -440,7 +323,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void getPeople(String rut) {
         String finalJson = db.get_one_person(rut, profile);
-        writeLog("getOnePerson out", finalJson);
+        Log.d("getOnePerson out", finalJson);
         String[] arr = finalJson.split(";");
 
         try{
@@ -470,6 +353,19 @@ public class MainActivity extends AppCompatActivity {
                 if (is_input)
                     imageview.setImageResource(R.drawable.dennied);
             }
+
+            switch (arr[7]) {
+                case "E":
+                    textViewProfile.setText("Empleado");
+                    break;
+                case "C":
+                    textViewProfile.setText("Subcontratista");
+                    break;
+                default:
+                    textViewProfile.setText("Visita");
+                    break;
+            }
+
             record.setPerson_company(arr[3]);
             record.setPerson_place(arr[4]);
             if (arr[5].equals("null")) arr[5]="0"; // For Contractors
@@ -491,7 +387,7 @@ public class MainActivity extends AppCompatActivity {
 
             editTextFullName.setText(record.getPerson_fullname());
 
-            if (profile.equals("C")) editTextCompany.setText(record.getPerson_company());
+            if (arr[7].equals("C")) editTextCompany.setText(record.getPerson_company());
 
             db.add_record(record);
             new RegisterTask(record).execute();

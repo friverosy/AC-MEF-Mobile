@@ -24,38 +24,6 @@
         android:textOn="Entrada"
         android:textOff="Salida" />
 
-    <RadioGroup
-        android:id="@+id/rdgProfile"
-        android:orientation="horizontal"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:checkedButton="@+id/rdbOne"
-        android:layout_column="0"
-        android:layout_span="3">
-        <RadioButton
-            android:id="@+id/rdbEmployee"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Empl"/>
-        <RadioButton
-            android:id="@+id/rdbContractor"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Contr"
-            android:enabled="true" />
-        <RadioButton
-            android:id="@+id/rdbVisit"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Visita"/>
-        <RadioButton
-            android:id="@+id/rdbBus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Bus"
-            android:enabled="false" />
-    </RadioGroup>
-
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -83,6 +51,12 @@
         android:layout_height="wrap_content"
         android:id="@+id/editText_company"
         android:textSize="25dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/textView_profile"
+        android:textSize="20dp" />
 
     <ImageView
         android:layout_width="match_parent"
