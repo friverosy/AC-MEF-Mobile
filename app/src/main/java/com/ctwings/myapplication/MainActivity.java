@@ -61,11 +61,9 @@ public class MainActivity extends AppCompatActivity {
     private EditText editTextFullName;
     private EditText editTextCompany;
     private TextView textViewProfile;
-    private String profile;
     private ProgressWheel loading;
     private static String server;
     private boolean is_input;
-    private boolean bus;
     private TextView lastUpdated;
 
     private final static String SCAN_ACTION = "urovo.rcv.message";//扫描结束action
@@ -212,11 +210,6 @@ public class MainActivity extends AppCompatActivity {
                         barcodeStr.indexOf("&type"));
                 // remove dv.
                 barcodeStr = barcodeStr.substring(0, barcodeStr.indexOf("-"));
-
-                if (profile == "V") {
-                    // Set empty name for QR DNI.
-                    editTextFullName.setText(" ");
-                }
             } else if (barcodeType == 1 || barcodeStr.startsWith("00")) {
                 Log.i("Debugger", "CARD");
             } else if (barcodeType == 17) { // PDF417
@@ -317,12 +310,20 @@ public class MainActivity extends AppCompatActivity {
         registerReceiver(mScanReceiver, filter);
     }
 
+    public String getCurrentDateTime() {
+        Calendar cal = Calendar.getInstance();
+        Date currentLocalTime = cal.getTime();
+        DateFormat date = new SimpleDateFormat("dd-MM-yyy HH:mm:ss");
+        String localTime = date.format(currentLocalTime);
+        return localTime;
+    }
+
     public void clean() {
         barcodeStr = "";
     }
 
     public void getPeople(String rut) {
-        String finalJson = db.get_one_person(rut, profile);
+        String finalJson = db.get_one_person(rut);
         Log.d("getOnePerson out", finalJson);
         String[] arr = finalJson.split(";");
 
@@ -330,11 +331,6 @@ public class MainActivity extends AppCompatActivity {
             // set edittext here before some exceptions.
             editTextRun.setText(arr[0]);
             editTextFullName.setText(arr[1]);
-
-            Calendar cal = Calendar.getInstance();
-            Date currentLocalTime = cal.getTime();
-            DateFormat date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            String localTime = date.format(currentLocalTime);
 
             //build object with that values, then send to registerTarsk()
             Record record = new Record();
@@ -373,16 +369,14 @@ public class MainActivity extends AppCompatActivity {
             record.setPerson_card(Integer.parseInt(arr[6]));
             record.setPerson_profile(arr[7]);
             record.setRecord_sync(0);
-
-            if (bus) record.setRecord_bus(1);
-            else record.setRecord_bus(0);
+            record.setRecord_bus(0);
 
             if (is_input) {
                 record.setRecord_is_input(1);
-                record.setRecord_input_datetime(localTime);
+                record.setRecord_input_datetime(getCurrentDateTime());
             } else {
                 record.setRecord_is_input(0);
-                record.setRecord_output_datetime(localTime);
+                record.setRecord_output_datetime(getCurrentDateTime());
             }
 
             editTextFullName.setText(record.getPerson_fullname());
@@ -523,7 +517,7 @@ public class MainActivity extends AppCompatActivity {
             else {
                 contentAsString = convertInputStreamToString(is);
                 //update datetime in textbox from XML file
-                new getLastUpdateTask(server + "/api/people/getLastUpdate?profile=" + profile).execute().toString();
+                new getLastUpdateTask(server + "/api/people/getLastUpdate?profile=E").execute().toString();
             }
         } catch (Exception e) {
             //e.printStackTrace();
@@ -731,13 +725,5 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
             writeLog("ERROR", e.toString());
         }
-    }
-
-    public String getCurrentDateTime() {
-        Calendar cal = Calendar.getInstance();
-        Date currentLocalTime = cal.getTime();
-        DateFormat date = new SimpleDateFormat("dd-MM-yyy HH:mm:ss");
-        String localTime = date.format(currentLocalTime);
-        return localTime;
     }
 }
