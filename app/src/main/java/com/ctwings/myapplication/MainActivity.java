@@ -10,6 +10,7 @@ import android.media.MediaPlayer;
 import android.media.SoundPool;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Vibrator;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -23,8 +24,6 @@ import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -39,20 +38,23 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileOutputStream;
+import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.TimeZone;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -113,7 +115,7 @@ public class MainActivity extends AppCompatActivity {
         loading.setVisibility(View.GONE);
 
         writeLog("DEBUG", "Application has started Correctly");
-        server = "http://controlid-test.multiexportfoods.com:3000"; // use getSetting();
+        server = "http://controlid.multiexportfoods.com:3000"; // use getSetting();
 
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         editTextRun = (EditText) findViewById(R.id.editText_run);
@@ -146,7 +148,7 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                getPeople(editTextRun.getText().toString());
+                getPeople(editTextRun.getText().toString(), null);
             }
         });
     }
@@ -199,6 +201,7 @@ public class MainActivity extends AppCompatActivity {
             Log.i("codetype", String.valueOf(barcodeType));
             barcodeStr = new String(barcode, 0, barocodelen);
             String rawCode = barcodeStr;
+            String name = null;
 
             int flag=0; // 0 for end without k, 1 with k
 
@@ -229,13 +232,22 @@ public class MainActivity extends AppCompatActivity {
                 } else if (flag == 0) {
                     barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 1);
                 }
+
+                //get name from DNI
+                String[] array = rawCode.split("\\s+");
+                try {
+                    name = (array[1].substring(0, array[1].indexOf("CHL")));
+                } catch (Exception e) {
+                    name = (array[2].substring(0, array[2].indexOf("CHL")));
+                }
+                name.replace("�","");
             }
 
             Log.i("Cooked Barcode", barcodeStr);
             writeLog("Cooked Barcode", barcodeStr);
 
             try {
-                getPeople(barcodeStr);
+                getPeople(barcodeStr, name);
             } catch (NullPointerException e) {
                 Log.e("NullPointer", e.toString());
                 writeLog("ERROR", e.toString());
@@ -287,8 +299,10 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
                 while (true) {
                     try {
+                        //File root = new File(Environment.getExternalStorageDirectory()+"LOGS"+"/AccessControl.log");
+                        //uploadLog("192.168.1.100","cristtopher","test","AccessControl.log",root);
                         new LoadDbTask().execute();
-                        Thread.sleep(120000); // 4 Min. 240000
+                        Thread.sleep(30000); // 4 Min. 240000
                     } catch (Exception e) {
                         writeLog("ERROR", e.toString());
                     }
@@ -313,7 +327,7 @@ public class MainActivity extends AppCompatActivity {
     public String getCurrentDateTime() {
         Calendar cal = Calendar.getInstance();
         Date currentLocalTime = cal.getTime();
-        DateFormat date = new SimpleDateFormat("dd-MM-yyy HH:mm:ss");
+        DateFormat date = new SimpleDateFormat("yyy-MM-dd HH:mm:ss");
         String localTime = date.format(currentLocalTime);
         return localTime;
     }
@@ -322,7 +336,7 @@ public class MainActivity extends AppCompatActivity {
         barcodeStr = "";
     }
 
-    public void getPeople(String rut) {
+    public void getPeople(String rut, String name) {
         String finalJson = db.get_one_person(rut);
         Log.d("getOnePerson out", finalJson);
         String[] arr = finalJson.split(";");
@@ -330,12 +344,13 @@ public class MainActivity extends AppCompatActivity {
         try{
             // set edittext here before some exceptions.
             editTextRun.setText(arr[0]);
-            editTextFullName.setText(arr[1]);
+            if (name == null) editTextFullName.setText(arr[1]);
+            else editTextFullName.setText(name);
 
             //build object with that values, then send to registerTarsk()
             Record record = new Record();
             record.setPerson_run(arr[0]);
-            record.setPerson_fullname(arr[1]);
+            record.setPerson_fullname(editTextFullName.getText().toString());
             if (arr[2].equals("true")) {
                 mp3Permitted.start();
                 //is_permitted = true;
@@ -350,16 +365,23 @@ public class MainActivity extends AppCompatActivity {
                     imageview.setImageResource(R.drawable.dennied);
             }
 
-            switch (arr[7]) {
-                case "E":
-                    textViewProfile.setText("Empleado");
-                    break;
-                case "C":
-                    textViewProfile.setText("Subcontratista");
-                    break;
-                default:
-                    textViewProfile.setText("Visita");
-                    break;
+            try {
+                switch (arr[7]) {
+                    case "E":
+                        textViewProfile.setText("Empleado");
+                        break;
+                    case "C":
+                        textViewProfile.setText("Subcontratista");
+                        editTextCompany.setText(record.getPerson_company());
+                        break;
+                    default:
+                        textViewProfile.setText("Visita");
+                        break;
+                }
+                record.setPerson_profile(arr[7]);
+            } catch (Exception e){
+                textViewProfile.setText("Visita");
+                record.setPerson_profile("V");
             }
 
             record.setPerson_company(arr[3]);
@@ -367,7 +389,6 @@ public class MainActivity extends AppCompatActivity {
             if (arr[5].equals("null")) arr[5]="0"; // For Contractors
             record.setPerson_company_code(arr[5]);
             record.setPerson_card(Integer.parseInt(arr[6]));
-            record.setPerson_profile(arr[7]);
             record.setRecord_sync(0);
             record.setRecord_bus(0);
 
@@ -379,12 +400,7 @@ public class MainActivity extends AppCompatActivity {
                 record.setRecord_output_datetime(getCurrentDateTime());
             }
 
-            editTextFullName.setText(record.getPerson_fullname());
-
-            if (arr[7].equals("C")) editTextCompany.setText(record.getPerson_company());
-
             db.add_record(record);
-            new RegisterTask(record).execute();
         }catch (Exception e){
             e.printStackTrace();
         }
@@ -636,7 +652,7 @@ public class MainActivity extends AppCompatActivity {
                 httpPost.setHeader("Content-type", "application/json");
 
                 // 8. Execute POST request to the given URL
-                if (!server.equals("http://:0")) {
+                if (!server.equals("http://:0")) { // || record.getRecord_id() != 0 // not update at first record, only after with sync method.
                     HttpResponse httpResponse = httpclient.execute(httpPost);
                     // 9. receive response as inputStream
                     inputStream = httpResponse.getEntity().getContent();
@@ -647,6 +663,7 @@ public class MainActivity extends AppCompatActivity {
                         result = convertInputStreamToString(inputStream);
                         if (httpResponse.getStatusLine().getStatusCode() == 200) {
                             // if has sync=0 its becouse its an offline record to be will synchronized.
+                            Log.d("<<<", String.valueOf(record.getRecord_sync()));
                             if (record.getRecord_sync()==0) {
                                 Log.d("---", "going into update record");
                                 db.update_record(record.getRecord_id());
@@ -703,10 +720,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(String s) {
-            //makeToast("Persona registrada!");
             clean();
-
-            //update record like a synchronized!
         }
     }
 
@@ -717,13 +731,89 @@ public class MainActivity extends AppCompatActivity {
     public void writeLog(String LogType, String content) {
         String filename = "AccessControl.log";
         String message = getCurrentDateTime() + " [" + LogType + "]" + ": " + content + "\n";
-        FileOutputStream outputStream;
         try {
-            outputStream = openFileOutput(filename, Context.MODE_APPEND);
-            outputStream.write(message.getBytes());
-        } catch (Exception e) {
+            File root = new File(Environment.getExternalStorageDirectory(), "LOGS");
+            if (!root.exists()) {
+                root.mkdirs();
+            }
+            File gpxfile = new File(root, filename);
+            FileWriter writer = new FileWriter(gpxfile, true);
+            writer.append(message);
+            writer.flush();
+            writer.close();
+        } catch (IOException e) {
             e.printStackTrace();
-            writeLog("ERROR", e.toString());
+        }
+    }
+
+
+    public void uploadLog( String ftpServer, String user, String password,
+                        String fileName, File source ) throws
+            IOException
+    {
+        if (ftpServer != null && fileName != null && source != null)
+        {
+            StringBuffer sb = new StringBuffer( "ftp://" );
+            // check for authentication else assume its anonymous access.
+            if (user != null && password != null)
+            {
+                sb.append( user );
+                sb.append( ':' );
+                sb.append( password );
+                sb.append( '@' );
+            }
+            sb.append( ftpServer );
+            sb.append( '/' );
+            sb.append( fileName );
+         /*
+          * type ==&gt; a=ASCII mode, i=image (binary) mode, d= file directory
+          * listing
+          */
+            sb.append( ";type=i" );
+
+            BufferedInputStream bis = null;
+            BufferedOutputStream bos = null;
+            try
+            {
+                Log.d("---",sb.toString());
+                URL url = new URL( sb.toString() );
+                URLConnection urlc = url.openConnection();
+
+                bos = new BufferedOutputStream( urlc.getOutputStream() );
+                bis = new BufferedInputStream( new FileInputStream( source ) );
+
+                int i;
+                // read byte by byte until end of stream
+                while ((i = bis.read()) != -1)
+                {
+                    bos.write( i );
+                }
+            }
+            finally
+            {
+                if (bis != null)
+                    try
+                    {
+                        bis.close();
+                    }
+                    catch (IOException ioe)
+                    {
+                        ioe.printStackTrace();
+                    }
+                if (bos != null)
+                    try
+                    {
+                        bos.close();
+                    }
+                    catch (IOException ioe)
+                    {
+                        ioe.printStackTrace();
+                    }
+            }
+        }
+        else
+        {
+            Log.d("---", "Input not available." );
         }
     }
 }

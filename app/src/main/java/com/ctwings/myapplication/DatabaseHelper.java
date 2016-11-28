@@ -107,15 +107,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public void add_persons(String json){
 
         JSONArray json_db_array;
-        SQLiteDatabase db1 = this.getWritableDatabase();
+        SQLiteDatabase db = this.getWritableDatabase();
 
         try {
             json_db_array = new JSONArray(json);
-            db1.beginTransaction();
+            db.beginTransaction();
             try {
 
-                db1.execSQL("DROP TABLE IF EXISTS person");
-                db1.execSQL(CREATE_PERSON_TABLE);
+                db.execSQL("DROP TABLE IF EXISTS person");
+                db.execSQL(CREATE_PERSON_TABLE);
 
                 for(int i = 0; i<json_db_array.length();i++){
                     ContentValues values = new ContentValues();
@@ -154,23 +154,23 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         values.put(PERSON_PROFILE, person.get_person_profile());
                     }
 
-                    db1.insert(TABLE_PERSON, // table
+                    db.insert(TABLE_PERSON, // table
                             null, //nullColumnHack
                             values); // key/value -> keys = column names/ values = column values
                 }
-                db1.setTransactionSuccessful();
+                db.setTransactionSuccessful();
             } catch(IllegalStateException ise){
                 ise.printStackTrace();
             } catch(Exception e) {
                 e.printStackTrace();
             } finally {
-                db1.endTransaction();
+                db.endTransaction();
             }
         } catch (JSONException e) {
             //e.printStackTrace();
         }
 
-        db1.close();
+        db.close();
     }
 
     public String get_one_person(String id){
@@ -197,7 +197,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             if (cursor != null) {
                 if (!(cursor.moveToFirst()) || cursor.getCount() == 0) {
                     //cursor is empty
-                    out = id+";No encontrado;No encontrado;No encontrado;No encontrado;0;0;;";
+                    out = id+";;;;;0;0;;";
                 } else {
                     // 3. if we got results get the first one
                     cursor.moveToFirst();
@@ -318,6 +318,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     public void update_record(int id) {
+        Log.d("<<<<<<", "updating "+ id);
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(RECORD_SYNC, 1);
