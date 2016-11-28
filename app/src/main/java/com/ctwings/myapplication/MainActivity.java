@@ -635,6 +635,7 @@ public class MainActivity extends AppCompatActivity {
             jsonObject.accumulate("place", record.getPerson_place());
             jsonObject.accumulate("company_code", record.getPerson_company_code());
             jsonObject.accumulate("card", record.getPerson_card());
+            jsonObject.accumulate("type", "DINNER");
 
             // 4. convert JSONObject to JSON to String
             if (jsonObject.length() <= 13) { // 13 element on json
