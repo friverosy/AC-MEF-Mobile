@@ -198,12 +198,12 @@ public class MainActivity extends AppCompatActivity {
             byte[] barcode = intent.getByteArrayExtra("barocode");
             int barocodelen = intent.getIntExtra("length", 0);
             byte barcodeType = intent.getByteExtra("barcodeType", (byte) 0);
-            Log.i("codetype", String.valueOf(barcodeType));
+            //Log.i("codetype", String.valueOf(barcodeType));
             barcodeStr = new String(barcode, 0, barocodelen);
             String rawCode = barcodeStr;
             String name = null;
 
-            int flag=0; // 0 for end without k, 1 with k
+            int flag = 0; // 0 for end without k, 1 with k
 
             if (barcodeType == 28) { // QR code
                 Log.i("Debugger", "QR");
@@ -301,8 +301,9 @@ public class MainActivity extends AppCompatActivity {
                     try {
                         //File root = new File(Environment.getExternalStorageDirectory()+"LOGS"+"/AccessControl.log");
                         //uploadLog("192.168.1.100","cristtopher","test","AccessControl.log",root);
+                        Log.i("iniciando", "loadTask");
                         new LoadDbTask().execute();
-                        Thread.sleep(30000); // 4 Min. 240000
+                        Thread.sleep(240000); // 4 Min. 240000
                     } catch (Exception e) {
                         writeLog("ERROR", e.toString());
                     }
@@ -338,7 +339,6 @@ public class MainActivity extends AppCompatActivity {
 
     public void getPeople(String rut, String name) {
         String finalJson = db.get_one_person(rut);
-        Log.d("getOnePerson out", finalJson);
         String[] arr = finalJson.split(";");
 
         try{
@@ -424,11 +424,12 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected String doInBackground(String... params) {
             String data = DbCall(server + "/api/people?filter[where][or][0][profile]=E&filter[where][or][1][profile]=C");
+            Log.i("data", data);
             if (data != "408" && data != "204") {
                 try {
-                    db.add_persons(data);
-                    Log.d("count record desync", String.valueOf(db.record_desync_count()));
-                    if (db.record_desync_count() >= 1) {
+                    db.add_people(data);
+                    Log.i("count record desync", String.valueOf(db.record_desync_count()));
+                    if (db.record_desync_count() > 0) {
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -479,7 +480,7 @@ public class MainActivity extends AppCompatActivity {
                 result = result.substring(0,result.length()-1);
                 lastUpdated.setText(result);
             } catch (Exception e) {
-                Log.d("result", result);
+                Log.d("Error", result);
                 e.printStackTrace();
                 writeLog("ERROR", result);
             }
@@ -557,7 +558,6 @@ public class MainActivity extends AppCompatActivity {
         String[] arr;
         for (int i = 0; i <= records.size() - 1; i++) {
             Record record = new Record();
-            Log.d("Missing Sync", records.get(i).toString());
             arr = records.get(i).toString().split(";");
             //get each row to be synchronized
             record.setRecord_id(Integer.parseInt(arr[0]));
@@ -663,9 +663,8 @@ public class MainActivity extends AppCompatActivity {
                         result = convertInputStreamToString(inputStream);
                         if (httpResponse.getStatusLine().getStatusCode() == 200) {
                             // if has sync=0 its becouse its an offline record to be will synchronized.
-                            Log.d("<<<", String.valueOf(record.getRecord_sync()));
-                            if (record.getRecord_sync()==0) {
-                                Log.d("---", "going into update record");
+                            if (record.getRecord_sync() == 0) {
+                                Log.i("going into update", record.toString());
                                 db.update_record(record.getRecord_id());
                                 runOnUiThread(new Runnable() {
                                     @Override
@@ -699,7 +698,7 @@ public class MainActivity extends AppCompatActivity {
 
         } catch (Exception e) {
             // Insert records to object, then get from DataBaseHelper to save
-            Log.d("---","offline");
+            Log.i("---","offline");
         }
         // 11. return result
         return result;
@@ -733,9 +732,7 @@ public class MainActivity extends AppCompatActivity {
         String message = getCurrentDateTime() + " [" + LogType + "]" + ": " + content + "\n";
         try {
             File root = new File(Environment.getExternalStorageDirectory(), "LOGS");
-            if (!root.exists()) {
-                root.mkdirs();
-            }
+            if (!root.exists()) { root.mkdirs(); }
             File gpxfile = new File(root, filename);
             FileWriter writer = new FileWriter(gpxfile, true);
             writer.append(message);
@@ -785,35 +782,19 @@ public class MainActivity extends AppCompatActivity {
                 int i;
                 // read byte by byte until end of stream
                 while ((i = bis.read()) != -1)
-                {
                     bos.write( i );
-                }
             }
             finally
             {
                 if (bis != null)
-                    try
-                    {
-                        bis.close();
-                    }
-                    catch (IOException ioe)
-                    {
-                        ioe.printStackTrace();
-                    }
+                    try { bis.close(); }
+                    catch (IOException ioe) { ioe.printStackTrace(); }
                 if (bos != null)
-                    try
-                    {
-                        bos.close();
-                    }
-                    catch (IOException ioe)
-                    {
-                        ioe.printStackTrace();
-                    }
+                    try { bos.close(); }
+                    catch (IOException ioe) { ioe.printStackTrace(); }
             }
         }
         else
-        {
             Log.d("---", "Input not available." );
-        }
     }
 }

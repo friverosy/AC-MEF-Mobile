@@ -104,7 +104,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
 
     //Person
-    public void add_persons(String json){
+    public void add_people(String json){
 
         JSONArray json_db_array;
         SQLiteDatabase db = this.getWritableDatabase();
@@ -139,7 +139,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         values.put(PERSON_PROFILE, person.get_person_profile());
                     }catch (Exception e){ // for contractors (without card)
                         Person person = new Person(json_db_array.getJSONObject(i).getString("fullname"),
-                                json_db_array.getJSONObject(i).getString("run"),
+                                json_db_array.getJSONObject(i).getString("id"),
                                 json_db_array.getJSONObject(i).getString("is_permitted"),
                                 json_db_array.getJSONObject(i).getString("company"),
                                 json_db_array.getJSONObject(i).getString("place"),
