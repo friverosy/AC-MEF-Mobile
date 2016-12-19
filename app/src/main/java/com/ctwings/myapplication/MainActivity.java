@@ -751,11 +751,14 @@ public class MainActivity extends AppCompatActivity {
                 jsonObject.accumulate("bus", false);
 
             jsonObject.accumulate("company", record.getPerson_company());
-            jsonObject.accumulate("place", record.getPerson_place());
-            jsonObject.accumulate("company_code", record.getPerson_company_code());
-            jsonObject.accumulate("card", record.getPerson_card());
+            if (!record.getPerson_profile().equals("V")) {
+                jsonObject.accumulate("place", record.getPerson_place());
+                jsonObject.accumulate("company_code", record.getPerson_company_code());
+                jsonObject.accumulate("card", record.getPerson_card());
+            }
+
             jsonObject.accumulate("type", "PDA");
-            jsonObject.accumulate("PDA", 3);
+            jsonObject.accumulate("PDA", db.get_config_id_pda());
 
             // 4. convert JSONObject to JSON to String
             if (jsonObject.length() <= 13) { // 13 element on json
@@ -777,7 +780,6 @@ public class MainActivity extends AppCompatActivity {
                     HttpResponse httpResponse = httpclient.execute(httpPost);
                     // 9. receive response as inputStream
                     inputStream = httpResponse.getEntity().getContent();
-                    Log.d("inputStream", String.valueOf(inputStream));
 
                     // 10. convert inputstream to string
                     if (inputStream != null) {
@@ -785,7 +787,6 @@ public class MainActivity extends AppCompatActivity {
                         if (httpResponse.getStatusLine().getStatusCode() == 200) {
                             // if has sync=0 its becouse its an offline record to be will synchronized.
                             if (record.getRecord_sync() == 0) {
-                                Log.i("---going into update", record.toString());
                                 db.update_record(record.getRecord_id());
                                 runOnUiThread(new Runnable() {
                                     @Override
@@ -817,6 +818,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
         } catch (Exception e) {
+            e.printStackTrace();
             Log.i("---", "offline");
         }
         // 11. return result

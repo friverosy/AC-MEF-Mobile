@@ -7,12 +7,13 @@ import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 
 public class Setting extends AppCompatActivity {
-    EditText editText_url, editText_port;
+    EditText editText_url, editText_port, editText_pda;
     DatabaseHelper db = new DatabaseHelper(this);
 
     @Override
@@ -22,6 +23,7 @@ public class Setting extends AppCompatActivity {
 
         editText_url = (EditText) findViewById(R.id.editText_url);
         editText_port = (EditText) findViewById(R.id.editText_port);
+        editText_pda = (EditText) findViewById(R.id.editText_pda);
 
         Load();
 
@@ -38,48 +40,53 @@ public class Setting extends AppCompatActivity {
     }
 
     public void Load(){
-//        DBHelper databaseHelper = new DBHelper(this, "Sealand", null,1);
-//        SQLiteDatabase db = databaseHelper.getReadableDatabase();
-//        if(db != null){
-//            Cursor c = db.rawQuery("select * from Setting",null);
-//
-//            String url="";
-//            Integer port=0;
-//
-//            if(c.moveToFirst()) {
-//                Log.d(TAG, c.toString());
-//                do {
-//                    Log.d("LOAD select ----------", c.getString(0));
-//                    url = c.getString(0);
-//                    port = c.getInt(1);
-//                } while (c.moveToNext());
-//            }
-//
-//            if(!url.isEmpty()) {
-//                editText_url.setText(url);
-//                editText_port.setText(Integer.toString(port));
-//            }
-//
-//            if (!c.isClosed()) c.close();
-//        }
-//        try {
-//            //Method invocation 'db.close()' may produce 'java.lang.NullPointerException'
-//            db.close();
-//        }catch (NullPointerException n){
-//            n.printStackTrace();
-//        }
+        try {
+            if(db != null){
+                Cursor c = db.get_config();
+
+                String url = "";
+                Integer port = 0;
+                Integer id_pda = 0;
+
+                if(c.moveToFirst()) {
+                    do {
+                        url = c.getString(1);
+                        port = c.getInt(2);
+                        id_pda = c.getInt(3);
+                    } while (c.moveToNext());
+                }
+
+                if(!url.isEmpty()) {
+                    editText_url.setText(url);
+                    editText_port.setText(Integer.toString(port));
+                    editText_pda.setText(Integer.toString(id_pda));
+                }
+
+                if (!c.isClosed()) c.close();
+            }
+        } catch (NullPointerException n){
+            n.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        db.close();
     }
 
     public void Save(View view){
 
-        if(editText_url.getText().toString().isEmpty() ||
+        if (editText_url.getText().toString().isEmpty() ||
                 editText_port.getText().toString().isEmpty()){
             Toast.makeText(this, "Ingrese datos del servidor", Toast.LENGTH_SHORT).show();
-        }else{
+        } else {
             String url = editText_url.getText().toString();
             int port = Integer.parseInt(editText_port.getText().toString());
+            int id_pda = Integer.parseInt(editText_pda.getText().toString());
 
+            db.set_config_url(url);
+            db.set_config_port(port);
+            db.set_config_id_pda(id_pda);
 
+            Toast.makeText(this, "Configuración guardada!", Toast.LENGTH_LONG).show();
         }
     }
 }

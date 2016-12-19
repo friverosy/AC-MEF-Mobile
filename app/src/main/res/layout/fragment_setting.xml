@@ -1,4 +1,4 @@
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -7,46 +7,46 @@
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context=".SettingFragment"
-    tools:showIn="@layout/activity_setting">
+    tools:showIn="@layout/activity_setting"
+    android:orientation="vertical">
 
 
     <TextView
-        android:layout_width="wrap_content"
+        android:text="Server"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="IP Server"
-        android:id="@+id/textView"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentStart="true" />
+        android:id="@+id/textView6" />
 
     <EditText
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:inputType="text"
+        android:inputType="textPersonName"
         android:ems="10"
-        android:id="@+id/editText_url"
-        android:layout_below="@+id/textView"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentEnd="true"
-        android:maxLength="15" />
+        android:id="@+id/editText_url" />
 
     <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
         android:text="Port"
-        android:id="@+id/textView2"
-        android:layout_below="@+id/editText_url"
-        android:layout_alignParentStart="true" />
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/textView8" />
 
     <EditText
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:inputType="number"
         android:ems="10"
-        android:id="@+id/editText_port"
-        android:layout_below="@+id/textView2"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentEnd="true"
-        android:numeric="integer"
-        android:maxLength="4" />
+        android:id="@+id/editText_port" />
 
-</RelativeLayout>
+    <TextView
+        android:text="PDA ID"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/textView9" />
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="number"
+        android:ems="10"
+        android:id="@+id/editText_pda" />
+</LinearLayout>

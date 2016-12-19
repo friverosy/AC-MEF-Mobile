@@ -54,7 +54,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL(CREATE_RECORD_TABLE);
 
         db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_SETTING + " (" +
-                "id INTEGER PRIMARY KEY, url TEXT, port INTEGET)");
+                "id INTEGER PRIMARY KEY, url TEXT, port INTEGET, id_pda INTEGER);");
 
         db.execSQL("CREATE INDEX people_idx_by_run " +
                 "  ON " + TABLE_PERSON + " (" + PERSON_RUN + ");");
@@ -403,4 +403,60 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
+    public Cursor get_config() {
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_SETTING, null);
+        return cursor;
+    }
+
+    public int get_config_id_pda() {
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery("SELECT id_pda FROM " + TABLE_SETTING, null);
+        if (cursor.moveToFirst()) {
+            return cursor.getInt(cursor.getColumnIndex("id_pda"));
+        } else {
+            return 0;
+        }
+    }
+
+    public String get_config_url() {
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery("SELECT url FROM " + TABLE_SETTING, null);
+        if (cursor.moveToFirst()) {
+            return cursor.getString(cursor.getColumnIndex("id_pda"));
+        } else {
+            return "";
+        }
+    }
+
+    public int get_config_port() {
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery("SELECT port FROM " + TABLE_SETTING, null);
+        if (cursor.moveToFirst()) {
+            return cursor.getInt(cursor.getColumnIndex("port"));
+        } else {
+            return 0;
+        }
+    }
+
+    public void set_config_url(String url) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put("url", url);
+        db.update(TABLE_SETTING, cv, null, null);
+    }
+
+    public void set_config_port(int port) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put("port", port);
+        db.update(TABLE_SETTING, cv, null, null);
+    }
+
+    public void set_config_id_pda(int id) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put("id_pda", id);
+        db.update(TABLE_SETTING, cv, null, null);
+    }
 }
