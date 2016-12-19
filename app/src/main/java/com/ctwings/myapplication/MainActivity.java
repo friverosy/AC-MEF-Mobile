@@ -8,6 +8,7 @@ import android.device.ScanManager;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.SoundPool;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
@@ -28,6 +29,10 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.appindexing.Action;
+import com.google.android.gms.appindexing.AppIndex;
+import com.google.android.gms.appindexing.Thing;
+import com.google.android.gms.common.api.GoogleApiClient;
 import com.pnikosis.materialishprogress.ProgressWheel;
 
 import org.apache.http.HttpResponse;
@@ -61,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageView imageview;
     private EditText editTextRun;
     private EditText editTextFullName;
+    private String name = "";
     private EditText editTextCompany;
     private TextView textViewProfile;
     private ProgressWheel loading;
@@ -82,6 +88,11 @@ public class MainActivity extends AppCompatActivity {
     MediaPlayer mp3Permitted;
     MediaPlayer mp3Error;
     DatabaseHelper db = new DatabaseHelper(this);
+    /**
+     * ATTENTION: This was auto-generated to implement the App Indexing API.
+     * See https://g.co/AppIndexing/AndroidStudio for more information.
+     */
+    private GoogleApiClient client;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 log.createNewFile();
             } catch (IOException e) {
-                writeLog("ERROR", e.toString());
+                writeLog("ERROR", e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -115,7 +126,8 @@ public class MainActivity extends AppCompatActivity {
         loading.setVisibility(View.GONE);
 
         writeLog("DEBUG", "Application has started Correctly");
-        server = "http://controlid.multiexportfoods.com:3000"; // use getSetting();
+        //server = "http://controlid.multiexportfoods.com:3000"; // use getSetting();
+        server = "http://192.168.2.77:3000";
 
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         editTextRun = (EditText) findViewById(R.id.editText_run);
@@ -148,9 +160,12 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                getPeople(editTextRun.getText().toString(), null);
+                getPeople(editTextRun.getText().toString());
             }
         });
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
     }
 
     @Override
@@ -185,76 +200,121 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
 
             // TODO Auto-generated method stub
-            if (mp3Error.isPlaying()) mp3Error.stop();
-            if (mp3Dennied.isPlaying()) mp3Dennied.stop();
-            if (mp3Permitted.isPlaying()) mp3Permitted.stop();
-
-            isScaning = false;
-            //soundpool.play(soundid, 1, 1, 0, 0, 1);
-
-            mVibrator.vibrate(100);
-            reset();
-
-            byte[] barcode = intent.getByteArrayExtra("barocode");
-            int barocodelen = intent.getIntExtra("length", 0);
-            byte barcodeType = intent.getByteExtra("barcodeType", (byte) 0);
-            //Log.i("codetype", String.valueOf(barcodeType));
-            barcodeStr = new String(barcode, 0, barocodelen);
-            String rawCode = barcodeStr;
-            String name = null;
-
-            int flag = 0; // 0 for end without k, 1 with k
-
-            if (barcodeType == 28) { // QR code
-                Log.i("Debugger", "QR");
-                // get just run
-                barcodeStr = barcodeStr.substring(
-                        barcodeStr.indexOf("RUN=") + 4,
-                        barcodeStr.indexOf("&type"));
-                // remove dv.
-                barcodeStr = barcodeStr.substring(0, barcodeStr.indexOf("-"));
-            } else if (barcodeType == 1 || barcodeStr.startsWith("00")) {
-                Log.i("Debugger", "CARD");
-            } else if (barcodeType == 17) { // PDF417
-                Log.i("Debugger", "PDF417");
-                barcodeStr = barcodeStr.substring(0, 9);
-                barcodeStr = barcodeStr.replace(" ", "");
-                if (barcodeStr.endsWith("K")) {
-                    flag = 1;
-                }
-
-                barcodeStr = barcodeStr.replace("k", "");
-                barcodeStr = barcodeStr.replace("K", "");
-
-                // Define length of character.
-                if (Integer.parseInt(barcodeStr) > 400000000 && flag == 0) {
-                    barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 2);
-                } else if (flag == 0) {
-                    barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 1);
-                }
-
-                //get name from DNI
-                String[] array = rawCode.split("\\s+");
-                try {
-                    name = (array[1].substring(0, array[1].indexOf("CHL")));
-                } catch (Exception e) {
-                    name = (array[2].substring(0, array[2].indexOf("CHL")));
-                }
-                name.replace("�","");
-            }
-
-            Log.i("Cooked Barcode", barcodeStr);
-            writeLog("Cooked Barcode", barcodeStr);
-
             try {
-                getPeople(barcodeStr, name);
+                if (mp3Error.isPlaying()) mp3Error.stop();
+                if (mp3Dennied.isPlaying()) mp3Dennied.stop();
+                if (mp3Permitted.isPlaying()) mp3Permitted.stop();
+
+                isScaning = false;
+                //soundpool.play(soundid, 1, 1, 0, 0, 1);
+
+                mVibrator.vibrate(100);
+                reset();
+
+                byte[] barcode = intent.getByteArrayExtra("barocode");
+                int barocodelen = intent.getIntExtra("length", 0);
+                byte barcodeType = intent.getByteExtra("barcodeType", (byte) 0);
+                barcodeStr = new String(barcode, 0, barocodelen);
+                String rawCode = barcodeStr;
+
+                int flag = 0; // 0 for end without k, 1 with k
+                int flagSetUp = 0; // 0 for no config QR code.
+
+                if (barcodeType == 28) { // QR code
+                    if (barcodeStr.startsWith("CONFIG-AXX-")) {
+                        flagSetUp = 1;
+                        SetUp(barcodeStr);
+                    } else {
+                        // get just run
+                        barcodeStr = barcodeStr.substring(
+                                barcodeStr.indexOf("RUN=") + 4,
+                                barcodeStr.indexOf("&type"));
+                        // remove dv.
+                        barcodeStr = barcodeStr.substring(0, barcodeStr.indexOf("-"));
+                    }
+                } else if (barcodeType == 1 || barcodeStr.startsWith("00")) {
+                    //Log.i("Debugger", "CARD");
+                } else if (barcodeType == 17) { // PDF417
+                    barcodeStr = barcodeStr.substring(0, 9);
+                    barcodeStr = barcodeStr.replace(" ", "");
+                    if (barcodeStr.endsWith("K")) {
+                        flag = 1;
+                    }
+
+                    barcodeStr = barcodeStr.replace("k", "");
+                    barcodeStr = barcodeStr.replace("K", "");
+
+                    // Define length of character.
+                    if (Integer.parseInt(barcodeStr) > 400000000 && flag == 0) {
+                        barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 2);
+                    } else if (flag == 0) {
+                        barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 1);
+                    }
+
+                    //get name from DNI
+                    String[] array = rawCode.split("\\s+");
+                    try {
+                        name = (array[1].substring(0, array[1].indexOf("CHL")));
+                    } catch (Exception e) {
+                        name = (array[2].substring(0, array[2].indexOf("CHL")));
+                    }
+                    name.replace("�", ""); // Dont work :(
+                }
+
+                writeLog("Cooked Barcode", barcodeStr);
+                if (flagSetUp == 0)
+                    getPeople(barcodeStr);
             } catch (NullPointerException e) {
-                Log.e("NullPointer", e.toString());
-                writeLog("ERROR", e.toString());
-                //new GetPeopleTask().execute(server + "/employee/" + barcodeStr);
+                writeLog("ERROR", e.getMessage());
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
     };
+
+    private void SetUp(String barcodeStr) {
+        switch (barcodeStr) {
+            case "CONFIG-AXX-637B55B8AA55C7C7D3810E0CE05B1E80":
+                // Offline record Syncronize
+                if (db.record_desync_count() > 0) {
+                    OfflineRecordsSynchronizer();
+                    makeToast("Sincronizados!");
+                } else
+                    makeToast("No hay registros offline para sincronizar");
+                break;
+            case "CONFIG-AXX-F5CCAFFD2C2225A7CE0FBEC87993F6EF":
+                // Offline record counter
+                makeToast(String.valueOf(db.record_desync_count()) + " Registros aun no sincronizados");
+                break;
+            case "CONFIG-AXX-75687092BFAE94A0CBF81572E2C8C015":
+                // People counter
+                makeToast(String.valueOf(db.people_count()) + " Personas");
+                break;
+            case "CONFIG-AXX-C78768F72CBE1C08A4AFD98285FE0C7D":
+                // Employee counter
+                makeToast(String.valueOf(db.employees_count()) + " Empleados");
+                break;
+            case "CONFIG-AXX-B71580A4F60179BC005D359A8344FA63":
+                // Contractors counter
+                makeToast(String.valueOf(db.contractors_count()) + " Contratistas");
+                break;
+            case "CONFIG-AXX-4B6DA20544C994DAE45088C4A80C25F4":
+                // Visits counter
+                makeToast(String.valueOf(db.visits_count()) + " Visitas");
+                break;
+            case "CONFIG-AXX-CD0A4191D9CC5214650E32E13EFBD086":
+                // Drop people table
+                db.clean_people();
+                makeToast("Tabla personas vaciada.");
+            case "CONFIG-AXX-A11C9984001C27A12CC09A3C53B39ADF":
+                // Drop record table
+                db.clean_records();
+                makeToast("Tabla records vaciada.");
+            default:
+                makeToast("Código de configuración incorrecto!");
+                break;
+        }
+    }
 
     private void initScan() {
         // TODO Auto-generated method stub
@@ -301,11 +361,12 @@ public class MainActivity extends AppCompatActivity {
                     try {
                         //File root = new File(Environment.getExternalStorageDirectory()+"LOGS"+"/AccessControl.log");
                         //uploadLog("192.168.1.100","cristtopher","test","AccessControl.log",root);
-                        Log.i("iniciando", "loadTask");
                         new LoadDbTask().execute();
-                        Thread.sleep(240000); // 4 Min. 240000
+                        Thread.sleep(60000); // 4 Min. 240000
+                        if (db.record_desync_count() > 0)
+                            OfflineRecordsSynchronizer();
                     } catch (Exception e) {
-                        writeLog("ERROR", e.toString());
+                        writeLog("ERROR", e.getMessage());
                     }
                 }
             }
@@ -314,11 +375,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void reset() {
-
         initScan();
         editTextRun.setText("");
         editTextFullName.setText("");
         editTextCompany.setText("");
+        barcodeStr = "";
+        name = null;
         imageview.setImageDrawable(null);
         IntentFilter filter = new IntentFilter();
         filter.addAction(SCAN_ACTION);
@@ -328,29 +390,23 @@ public class MainActivity extends AppCompatActivity {
     public String getCurrentDateTime() {
         Calendar cal = Calendar.getInstance();
         Date currentLocalTime = cal.getTime();
-        DateFormat date = new SimpleDateFormat("yyy-MM-dd HH:mm:ss");
+        DateFormat date = new SimpleDateFormat("yyy-MM-dd HH:mm:ss.S");
         String localTime = date.format(currentLocalTime);
         return localTime;
     }
 
-    public void clean() {
-        barcodeStr = "";
-    }
-
-    public void getPeople(String rut, String name) {
+    public void getPeople(String rut) {
         String finalJson = db.get_one_person(rut);
+        editTextCompany.setVisibility(View.GONE);
         String[] arr = finalJson.split(";");
-
-        try{
-            // set edittext here before some exceptions.
+        try {
+            // set editText here before any exceptions.
             editTextRun.setText(arr[0]);
-            if (name == null) editTextFullName.setText(arr[1]);
-            else editTextFullName.setText(name);
 
             //build object with that values, then send to registerTarsk()
             Record record = new Record();
             record.setPerson_run(arr[0]);
-            record.setPerson_fullname(editTextFullName.getText().toString());
+
             if (arr[2].equals("true")) {
                 mp3Permitted.start();
                 //is_permitted = true;
@@ -359,34 +415,60 @@ public class MainActivity extends AppCompatActivity {
                     imageview.setImageResource(R.drawable.permitted);
             } else {
                 mp3Dennied.start();
+                // if has card number define as denied and as employee
                 //is_permitted = false;
                 record.setPerson_is_permitted(0);
                 if (is_input)
                     imageview.setImageResource(R.drawable.dennied);
             }
 
-            try {
-                switch (arr[7]) {
-                    case "E":
-                        textViewProfile.setText("Empleado");
-                        break;
-                    case "C":
-                        textViewProfile.setText("Subcontratista");
-                        editTextCompany.setText(record.getPerson_company());
-                        break;
-                    default:
-                        textViewProfile.setText("Visita");
-                        break;
-                }
-                record.setPerson_profile(arr[7]);
-            } catch (Exception e){
-                textViewProfile.setText("Visita");
-                record.setPerson_profile("V");
+            switch (arr[7]) {
+                case "E":
+                    editTextFullName.setText(arr[1]);
+                    record.setPerson_fullname(arr[1]);
+                    textViewProfile.setText("Empleado");
+                    break;
+                case "C":
+                    editTextFullName.setText(arr[1]);
+                    record.setPerson_fullname(arr[1]);
+                    textViewProfile.setText("Subcontratista");
+                    editTextCompany.setText(record.getPerson_company());
+                    editTextCompany.setVisibility(View.VISIBLE);
+                    break;
+                case "V":
+                    textViewProfile.setText("Visita");
+                    // Show denied image, but internally setup record as permitted.
+                    record.setPerson_is_permitted(1);
+                    // If could get the name of pdf417 show it.
+
+                    try {
+                        if (!arr[1].isEmpty()) {
+                            editTextFullName.setText(arr[1]);
+                            record.setPerson_fullname(arr[1]);
+                        } else {
+                            editTextFullName.setText(name);
+                            record.setPerson_fullname(name);
+                        }
+                    } catch (NullPointerException npe) {
+                        editTextFullName.setText("");
+                        record.setPerson_fullname("");
+                    }
+
+                    // If have company show it.
+                    if (!arr[3].isEmpty()) {
+                        editTextCompany.setText(arr[3]);
+                        editTextCompany.setVisibility(View.VISIBLE);
+                    } else {
+                        editTextCompany.setVisibility(View.GONE);
+                    }
+                    break;
             }
 
+
+            record.setPerson_profile(arr[7]);
             record.setPerson_company(arr[3]);
             record.setPerson_place(arr[4]);
-            if (arr[5].equals("null")) arr[5]="0"; // For Contractors
+            if (arr[5].equals("null")) arr[5] = "0"; // Card -> For Contractors it 0.
             record.setPerson_company_code(arr[5]);
             record.setPerson_card(Integer.parseInt(arr[6]));
             record.setRecord_sync(0);
@@ -400,17 +482,25 @@ public class MainActivity extends AppCompatActivity {
                 record.setRecord_output_datetime(getCurrentDateTime());
             }
 
+            // Save record on local database
             db.add_record(record);
-        }catch (Exception e){
+        } catch (ArrayIndexOutOfBoundsException aiobe) {
+            mp3Error.start();
+        } catch (Exception e) {
             e.printStackTrace();
+            mp3Error.start();
         }
-        clean();
     }
 
     @Override
     protected void onStart() {
         // TODO Auto-generated method stub
-        super.onStart();
+        super.onStart();// ATTENTION: This was auto-generated to implement the App Indexing API.
+// See https://g.co/AppIndexing/AndroidStudio for more information.
+        client.connect();
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        AppIndex.AppIndexApi.start(client, getIndexApiAction());
     }
 
     @Override
@@ -419,27 +509,50 @@ public class MainActivity extends AppCompatActivity {
         return super.onKeyDown(keyCode, event);
     }
 
+    /**
+     * ATTENTION: This was auto-generated to implement the App Indexing API.
+     * See https://g.co/AppIndexing/AndroidStudio for more information.
+     */
+    public Action getIndexApiAction() {
+        Thing object = new Thing.Builder()
+                .setName("Main Page") // TODO: Define a title for the content shown.
+                // TODO: Make sure this auto-generated URL is correct.
+                .setUrl(Uri.parse("http://[ENTER-YOUR-URL-HERE]"))
+                .build();
+        return new Action.Builder(Action.TYPE_VIEW)
+                .setObject(object)
+                .setActionStatus(Action.STATUS_TYPE_COMPLETED)
+                .build();
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        AppIndex.AppIndexApi.end(client, getIndexApiAction());
+        client.disconnect();
+    }
+
     public class LoadDbTask extends AsyncTask<String, String, String> {
 
-        @Override
         protected String doInBackground(String... params) {
-            String data = DbCall(server + "/api/people?filter[where][or][0][profile]=E&filter[where][or][1][profile]=C");
-            Log.i("data", data);
-            if (data != "408" && data != "204") {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    loading.setSpinSpeed(3);
+                    loading.setVisibility(View.VISIBLE);
+                }
+            });
+            if (isScaning) {
+                mScanManager.stopDecode();
+            }
+            String json = DbCall(server + "/api/people");
+            if (json != "408" && json != "204") {
                 try {
-                    db.add_people(data);
-                    Log.i("count record desync", String.valueOf(db.record_desync_count()));
-                    if (db.record_desync_count() > 0) {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                loading.setEnabled(true);
-                                loading.setVisibility(View.VISIBLE);
-                            }
-                        });
-                        OfflineRecordsSynchronizer();
-                    }
-                } catch (IllegalStateException ise){
+                    db.add_people(json);
+                } catch (IllegalStateException ise) {
                     ise.printStackTrace();
                     return "";
                 }
@@ -447,10 +560,19 @@ public class MainActivity extends AppCompatActivity {
             return "Done";
         }
 
-        @Override
-        protected void onPostExecute(String result) {
-            Log.d("Person Count", String.valueOf(db.person_count()));
-            writeLog("Person Count", String.valueOf(db.person_count()));
+        protected void onProgressUpdate(String... progress) {
+            return;
+        }
+
+        protected void onPostExecute(String progress) {
+            if (progress.equals("Done")) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        loading.setVisibility(View.GONE);
+                    }
+                });
+            }
         }
     }
 
@@ -475,13 +597,11 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(String result) {
             try {
                 // Parse json
-                String[] splitter=result.split("\"");
+                String[] splitter = result.split("\"");
                 result = splitter[4];
-                result = result.substring(0,result.length()-1);
+                result = result.substring(0, result.length() - 1);
                 lastUpdated.setText(result);
             } catch (Exception e) {
-                Log.d("Error", result);
-                e.printStackTrace();
                 writeLog("ERROR", result);
             }
         }
@@ -492,7 +612,7 @@ public class MainActivity extends AppCompatActivity {
         InputStream inputStream;
         HttpClient httpclient = new DefaultHttpClient();
         HttpGet httpGet = new HttpGet(url);
-        HttpResponse httpResponse = null;
+        HttpResponse httpResponse;
         try {
             httpResponse = httpclient.execute(httpGet);
             inputStream = httpResponse.getEntity().getContent();
@@ -504,7 +624,7 @@ public class MainActivity extends AppCompatActivity {
             }
         } catch (IOException e) {
             e.printStackTrace();
-            writeLog("ERROR", e.toString());
+            writeLog("ERROR", e.getMessage());
         }
         return result;
     }
@@ -512,7 +632,7 @@ public class MainActivity extends AppCompatActivity {
 
     public String DbCall(String dataUrl) {
 
-        String contentAsString = "";
+        String contentAsString;
 
         URL url;
         HttpURLConnection connection = null;
@@ -546,8 +666,7 @@ public class MainActivity extends AppCompatActivity {
         if (contentAsString.length() <= 2) { //[]
             contentAsString = "204"; // No content
         }
-        Log.d("Server response", contentAsString);
-        //writeLog("Server response", contentAsString);
+        Log.i("Server response", contentAsString);
 
         return contentAsString;
     }
@@ -559,7 +678,7 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 0; i <= records.size() - 1; i++) {
             Record record = new Record();
             arr = records.get(i).toString().split(";");
-            //get each row to be synchronized
+            // Get each row to be synchronized
             record.setRecord_id(Integer.parseInt(arr[0]));
             record.setPerson_fullname(arr[1]);
             record.setPerson_run(arr[2]);
@@ -608,7 +727,7 @@ public class MainActivity extends AppCompatActivity {
             jsonObject.accumulate("fullname", record.getPerson_fullname());
             jsonObject.accumulate("profile", record.getPerson_profile());
 
-            if (record.getPerson_profile().equals("V")){
+            if (record.getPerson_profile().equals("V")) {
                 jsonObject.accumulate("is_permitted", true);
             } else {
                 if (record.getPerson_is_permitted() == 1)
@@ -635,11 +754,13 @@ public class MainActivity extends AppCompatActivity {
             jsonObject.accumulate("place", record.getPerson_place());
             jsonObject.accumulate("company_code", record.getPerson_company_code());
             jsonObject.accumulate("card", record.getPerson_card());
+            jsonObject.accumulate("type", "PDA");
+            jsonObject.accumulate("PDA", 3);
 
             // 4. convert JSONObject to JSON to String
             if (jsonObject.length() <= 13) { // 13 element on json
                 json = jsonObject.toString();
-                Log.d("json to POST", json);
+                Log.i("json to POST", json);
 
                 // 5. set json to StringEntity
                 StringEntity se = new StringEntity(json);
@@ -664,7 +785,7 @@ public class MainActivity extends AppCompatActivity {
                         if (httpResponse.getStatusLine().getStatusCode() == 200) {
                             // if has sync=0 its becouse its an offline record to be will synchronized.
                             if (record.getRecord_sync() == 0) {
-                                Log.i("going into update", record.toString());
+                                Log.i("---going into update", record.toString());
                                 db.update_record(record.getRecord_id());
                                 runOnUiThread(new Runnable() {
                                     @Override
@@ -692,13 +813,11 @@ public class MainActivity extends AppCompatActivity {
                     });
                 }
             } else {
-                Log.d("Json length", "Missing elements in the json to be posted");
                 writeLog("Json length", "Missing elements in the json to be posted");
             }
 
         } catch (Exception e) {
-            // Insert records to object, then get from DataBaseHelper to save
-            Log.i("---","offline");
+            Log.i("---", "offline");
         }
         // 11. return result
         return result;
@@ -716,11 +835,6 @@ public class MainActivity extends AppCompatActivity {
         protected String doInBackground(Void... params) {
             return POST(newRecord, server + "/api/records/");
         }
-
-        @Override
-        protected void onPostExecute(String s) {
-            clean();
-        }
     }
 
     public void makeToast(String msg) {
@@ -732,7 +846,9 @@ public class MainActivity extends AppCompatActivity {
         String message = getCurrentDateTime() + " [" + LogType + "]" + ": " + content + "\n";
         try {
             File root = new File(Environment.getExternalStorageDirectory(), "LOGS");
-            if (!root.exists()) { root.mkdirs(); }
+            if (!root.exists()) {
+                root.mkdirs();
+            }
             File gpxfile = new File(root, filename);
             FileWriter writer = new FileWriter(gpxfile, true);
             writer.append(message);
@@ -744,57 +860,56 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    public void uploadLog( String ftpServer, String user, String password,
-                        String fileName, File source ) throws
-            IOException
-    {
-        if (ftpServer != null && fileName != null && source != null)
-        {
-            StringBuffer sb = new StringBuffer( "ftp://" );
+    public void uploadLog(String ftpServer, String user, String password,
+                          String fileName, File source) throws
+            IOException {
+        if (ftpServer != null && fileName != null && source != null) {
+            StringBuffer sb = new StringBuffer("ftp://");
             // check for authentication else assume its anonymous access.
-            if (user != null && password != null)
-            {
-                sb.append( user );
-                sb.append( ':' );
-                sb.append( password );
-                sb.append( '@' );
+            if (user != null && password != null) {
+                sb.append(user);
+                sb.append(':');
+                sb.append(password);
+                sb.append('@');
             }
-            sb.append( ftpServer );
-            sb.append( '/' );
-            sb.append( fileName );
+            sb.append(ftpServer);
+            sb.append('/');
+            sb.append(fileName);
          /*
           * type ==&gt; a=ASCII mode, i=image (binary) mode, d= file directory
           * listing
           */
-            sb.append( ";type=i" );
+            sb.append(";type=i");
 
             BufferedInputStream bis = null;
             BufferedOutputStream bos = null;
-            try
-            {
-                Log.d("---",sb.toString());
-                URL url = new URL( sb.toString() );
+            try {
+                Log.d("---", sb.toString());
+                URL url = new URL(sb.toString());
                 URLConnection urlc = url.openConnection();
 
-                bos = new BufferedOutputStream( urlc.getOutputStream() );
-                bis = new BufferedInputStream( new FileInputStream( source ) );
+                bos = new BufferedOutputStream(urlc.getOutputStream());
+                bis = new BufferedInputStream(new FileInputStream(source));
 
                 int i;
                 // read byte by byte until end of stream
                 while ((i = bis.read()) != -1)
-                    bos.write( i );
-            }
-            finally
-            {
+                    bos.write(i);
+            } finally {
                 if (bis != null)
-                    try { bis.close(); }
-                    catch (IOException ioe) { ioe.printStackTrace(); }
+                    try {
+                        bis.close();
+                    } catch (IOException ioe) {
+                        ioe.printStackTrace();
+                    }
                 if (bos != null)
-                    try { bos.close(); }
-                    catch (IOException ioe) { ioe.printStackTrace(); }
+                    try {
+                        bos.close();
+                    } catch (IOException ioe) {
+                        ioe.printStackTrace();
+                    }
             }
-        }
-        else
-            Log.d("---", "Input not available." );
+        } else
+            Log.d("---", "Input not available.");
     }
 }

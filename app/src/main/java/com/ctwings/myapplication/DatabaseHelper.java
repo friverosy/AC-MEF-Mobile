@@ -5,6 +5,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteDatabaseLockedException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
@@ -17,6 +18,7 @@ import java.util.List;
 /**
  * Created by nicolasmartin on 03-08-16.
  */
+
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     // Database Version
@@ -28,7 +30,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     String CREATE_PERSON_TABLE = "CREATE TABLE " + TABLE_PERSON + " ( " +
             "person_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
             "person_fullname TEXT, "+"person_run TEXT, " +
-            "person_is_permitted TEXT, " + "person_company TEXT, " +
+            "person_is_permitted TEXT, " + "person_company TEXT DEFAULT '', " +
             "person_place TEXT, " + "person_company_code TEXT, " +
             "person_card INTEGER, " + "person_profile TEXT)";
 
@@ -50,22 +52,30 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL(CREATE_PERSON_TABLE);
 
         db.execSQL(CREATE_RECORD_TABLE);
+
+        db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_SETTING + " (" +
+                "id INTEGER PRIMARY KEY, url TEXT, port INTEGET)");
+
+        db.execSQL("CREATE INDEX people_idx_by_run " +
+                "  ON " + TABLE_PERSON + " (" + PERSON_RUN + ");");
+
+        db.execSQL("CREATE INDEX people_idx_by_card " +
+                "  ON " + TABLE_PERSON + " (" + PERSON_CARD + ");");
+
+        db.execSQL("CREATE INDEX record_idx_by_sync " +
+                " ON " + TABLE_RECORD + " (" + RECORD_SYNC + ");");
+
         //db.execSQL("PRAGMA foreign_keys=ON;");
-
-        String CREATE_SETTING_TABLE = "CREATE TABLE IF NOT EXISTS " + TABLE_SETTING + " (" +
-                "id INTEGER PRIMARY KEY, url TEXT, port INTEGET)";
-
-        db.execSQL(CREATE_SETTING_TABLE);
+        db.execSQL("PRAGMA encoding = 'UTF-8';");
+        //db.rawQuery("PRAGMA journal_mode = MEMORY",null);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-
         // Drop older tables if it existed
         db.execSQL("DROP TABLE IF EXISTS person");
         //create fresh tables
         this.onCreate(db);
-
     }
 
     /**
@@ -108,66 +118,79 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         JSONArray json_db_array;
         SQLiteDatabase db = this.getWritableDatabase();
-
+        db.beginTransaction();
         try {
             json_db_array = new JSONArray(json);
-            db.beginTransaction();
-            try {
 
-                db.execSQL("DROP TABLE IF EXISTS person");
-                db.execSQL(CREATE_PERSON_TABLE);
+            db.delete(TABLE_PERSON, null, null);
 
-                for(int i = 0; i<json_db_array.length();i++){
-                    ContentValues values = new ContentValues();
+            for (int i = 0; i<json_db_array.length();i++) {
+                ContentValues values = new ContentValues();
 
-                    try{ // for employees
-                        Person person = new Person(json_db_array.getJSONObject(i).getString("fullname"),
-                                json_db_array.getJSONObject(i).getString("run"),
-                                json_db_array.getJSONObject(i).getString("is_permitted"),
-                                json_db_array.getJSONObject(i).getString("company"),
-                                json_db_array.getJSONObject(i).getString("place"),
-                                json_db_array.getJSONObject(i).getString("company_code"),
-                                json_db_array.getJSONObject(i).getInt("card"),
-                                json_db_array.getJSONObject(i).getString("profile"));
-                        values.put(PERSON_FULLNAME, person.get_person_fullname());
-                        values.put(PERSON_RUN, person.get_person_run());
-                        values.put(PERSON_IS_PERMITTED, person.get_person_is_permitted());
-                        values.put(PERSON_COMPANY, person.get_person_company());
-                        values.put(PERSON_PLACE, person.get_person_place());
-                        values.put(PERSON_COMPANY_CODE, person.get_person_company_code());
-                        values.put(PERSON_CARD, person.get_person_card());
-                        values.put(PERSON_PROFILE, person.get_person_profile());
-                    }catch (Exception e){ // for contractors (without card)
-                        Person person = new Person(json_db_array.getJSONObject(i).getString("fullname"),
-                                json_db_array.getJSONObject(i).getString("id"),
-                                json_db_array.getJSONObject(i).getString("is_permitted"),
-                                json_db_array.getJSONObject(i).getString("company"),
-                                json_db_array.getJSONObject(i).getString("place"),
-                                json_db_array.getJSONObject(i).getString("company_code"),0,
-                                json_db_array.getJSONObject(i).getString("profile"));
-                        values.put(PERSON_FULLNAME, person.get_person_fullname());
-                        values.put(PERSON_RUN, person.get_person_run());
-                        values.put(PERSON_IS_PERMITTED, person.get_person_is_permitted());
-                        values.put(PERSON_COMPANY, person.get_person_company());
-                        values.put(PERSON_PLACE, person.get_person_place());
-                        values.put(PERSON_COMPANY_CODE, person.get_person_company_code());
-                        values.put(PERSON_PROFILE, person.get_person_profile());
+                try { // for employees
+                    values.put(PERSON_RUN, json_db_array.getJSONObject(i).getString("run"));
+                    values.put(PERSON_PROFILE, json_db_array.getJSONObject(i).getString("profile"));
+                    values.put(PERSON_IS_PERMITTED, json_db_array.getJSONObject(i).getString("is_permitted"));
+
+                    switch (json_db_array.getJSONObject(i).getString("profile")) {
+                        case "E":
+                            // Employee
+                            values.put(PERSON_FULLNAME, json_db_array.getJSONObject(i).getString("fullname"));
+                            values.put(PERSON_COMPANY, json_db_array.getJSONObject(i).getString("company"));
+                            values.put(PERSON_COMPANY_CODE, json_db_array.getJSONObject(i).getString("company_code"));
+                            values.put(PERSON_PLACE, json_db_array.getJSONObject(i).getString("place"));
+                            values.put(PERSON_CARD, json_db_array.getJSONObject(i).getString("card"));
+                            break;
+                        case "C":
+                            // Contactor
+                            values.put(PERSON_FULLNAME, json_db_array.getJSONObject(i).getString("fullname"));
+                            values.put(PERSON_COMPANY, json_db_array.getJSONObject(i).getString("company"));
+                            values.put(PERSON_COMPANY_CODE, json_db_array.getJSONObject(i).getString("company_code"));
+                            break;
+                        case "V":
+                            // Visit
+                            if (!json_db_array.getJSONObject(i).getString("fullname").isEmpty())
+                                values.put(PERSON_FULLNAME, json_db_array.getJSONObject(i).getString("fullname"));
+                            if (!json_db_array.getJSONObject(i).getString("company").isEmpty())
+                                values.put(PERSON_COMPANY, json_db_array.getJSONObject(i).getString("company"));
+                            break;
+                        default:
+                            break;
                     }
 
-                    db.insert(TABLE_PERSON, // table
-                            null, //nullColumnHack
-                            values); // key/value -> keys = column names/ values = column values
+
+                } catch (Exception e){ // for contractors (without card)
+                    Person person = new Person(json_db_array.getJSONObject(i).getString("fullname"),
+                            json_db_array.getJSONObject(i).getString("id"),
+                            json_db_array.getJSONObject(i).getString("is_permitted"),
+                            json_db_array.getJSONObject(i).getString("company"),
+                            json_db_array.getJSONObject(i).getString("place"),
+                            json_db_array.getJSONObject(i).getString("company_code"),0,
+                            json_db_array.getJSONObject(i).getString("profile"));
+                    values.put(PERSON_FULLNAME, person.get_person_fullname());
+                    values.put(PERSON_RUN, person.get_person_run());
+                    values.put(PERSON_IS_PERMITTED, person.get_person_is_permitted());
+                    values.put(PERSON_COMPANY, person.get_person_company());
+                    values.put(PERSON_PLACE, person.get_person_place());
+                    values.put(PERSON_COMPANY_CODE, person.get_person_company_code());
+                    values.put(PERSON_PROFILE, person.get_person_profile());
                 }
-                db.setTransactionSuccessful();
-            } catch(IllegalStateException ise){
-                ise.printStackTrace();
-            } catch(Exception e) {
-                e.printStackTrace();
-            } finally {
-                db.endTransaction();
+
+                db.insert(TABLE_PERSON, // table
+                        null, //nullColumnHack
+                        values); // key/value -> keys = column names/ values = column values
             }
+            db.setTransactionSuccessful();
         } catch (JSONException e) {
-            //e.printStackTrace();
+            e.printStackTrace();
+        } catch(IllegalStateException ise){
+            ise.printStackTrace();
+        } catch (SQLiteDatabaseLockedException qdle) {
+            qdle.printStackTrace();
+        } catch(Exception e) {
+            e.printStackTrace();
+        } finally {
+            db.endTransaction();
         }
 
         db.close();
@@ -178,9 +201,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getReadableDatabase();
         String out="";
 
-        try{
-            //Remove 0 at beginner
-            id.replace("%", "");
+        try {
+            //db.beginTransaction();
+            id.replace("%", ""); // Remove 0 at beginner
             id = String.valueOf(Integer.parseInt(id));
 
             // 2. build query
@@ -188,7 +211,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     db.query(TABLE_PERSON, // a. table
                             PERSON_COLUMNS, // b. column names
                             " person_run = ? OR person_card = ?", // c. selections
-                            new String[] { String.valueOf(id), String.valueOf(id) }, // d. selections args
+                            new String[]{String.valueOf(id), String.valueOf(id)}, // d. selections args
                             null, // e. group by
                             null, // f. having
                             null, // g. order by
@@ -197,7 +220,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             if (cursor != null) {
                 if (!(cursor.moveToFirst()) || cursor.getCount() == 0) {
                     //cursor is empty
-                    out = id+";;;;;0;0;;";
+                    out = id + ";;;;;0;0;V;";
                 } else {
                     // 3. if we got results get the first one
                     cursor.moveToFirst();
@@ -210,8 +233,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 }
             }
             cursor.close();
-        }catch (Exception e){
+            //db.setTransactionSuccessful();
+        } catch (IllegalStateException e) {
             e.printStackTrace();
+        } catch (SQLiteDatabaseLockedException sdle) {
+            sdle.printStackTrace();
+        } catch (NumberFormatException nfe){
+            nfe.printStackTrace();
+        }
+        finally {
+            //db.endTransaction();
         }
 
         db.close();
@@ -220,19 +251,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return out;
     }
 
-    public int person_count(){
-
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery("SELECT " + PERSON_ID + " FROM person;", null);
-        return cursor.getCount();
-    }
-
     //Records
     public void add_record(Record record){
 
         // 1. get reference to writable DB
         SQLiteDatabase db = this.getWritableDatabase();
-
         // 2. create ContentValues to add key "column"/value
         ContentValues values = new ContentValues();
         values.put(PERSON_FULLNAME, record.getPerson_fullname());
@@ -252,9 +275,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(PERSON_CARD, record.getPerson_card());
 
         // 3. insert
-        try{
+        try {
             db.insert(TABLE_RECORD, null, values);
-        }catch (SQLException e) {
+        } catch (SQLException e) {
             Log.e("DataBase Error", "Error to insert record: "+values);
             e.printStackTrace();
         }
@@ -267,44 +290,48 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         // 1. get reference to readable DB
         SQLiteDatabase db = this.getReadableDatabase();
-
-        // 2. build query
-        Cursor cursor = //db.rawQuery("SELECT * FROM " + TABLE_RECORD, null);
-                db.query(TABLE_RECORD, // a. table
-                        RECORD_COLUMNS, // b. column names
-                        RECORD_SYNC+"=0", // c. selections
-                        null, // d. selections args
-                        null, // e. group by
-                        null, // f. having
-                        null, // g. order by
-                        null); // h. limit
-
-        // 3. get all
-        cursor.moveToFirst();
         List<String> records = new ArrayList<>();
+        try {
+            // 2. build query
+            Cursor cursor = //db.rawQuery("SELECT * FROM " + TABLE_RECORD, null);
+                    db.query(TABLE_RECORD, // a. table
+                            RECORD_COLUMNS, // b. column names
+                            RECORD_SYNC + "=0", // c. selections
+                            null, // d. selections args
+                            null, // e. group by
+                            null, // f. having
+                            null, // g. order by
+                            null); // h. limit
 
-        while (cursor.isAfterLast() == false) {
-            records.add(
-                    cursor.getInt(0)+";"+ //ID
-                            cursor.getString(1)+";"+ //FULLNAME
-                            cursor.getString(2)+";"+ //RUN
-                            cursor.getInt(3)+";"+ //IS_INPUT
-                            cursor.getInt(4)+";"+ //BUS
-                            cursor.getInt(5)+";"+ //IS_PERMITTED
-                            cursor.getString(6)+";"+ //COMPANY
-                            cursor.getString(7)+";"+ //PLACE
-                            cursor.getString(8)+";"+ //COMPANY_CODE
-                            cursor.getString(9)+";"+ //INPUT
-                            cursor.getString(10)+";"+ //OUTPUT
-                            cursor.getInt(11)+";"+ //SYNC
-                            cursor.getString(12)+";"+ //PROFILE
-                            cursor.getInt(13) //CARD
-                    //getInt to boolean type 0 (false), 1 (true)
-            );
-            cursor.moveToNext();
+            // 3. get all
+            cursor.moveToFirst();
+
+            while (cursor.isAfterLast() == false) {
+                records.add(
+                        cursor.getInt(0) + ";" + //ID
+                                cursor.getString(1) + ";" + //FULLNAME
+                                cursor.getString(2) + ";" + //RUN
+                                cursor.getInt(3) + ";" + //IS_INPUT
+                                cursor.getInt(4) + ";" + //BUS
+                                cursor.getInt(5) + ";" + //IS_PERMITTED
+                                cursor.getString(6) + ";" + //COMPANY
+                                cursor.getString(7) + ";" + //PLACE
+                                cursor.getString(8) + ";" + //COMPANY_CODE
+                                cursor.getString(9) + ";" + //INPUT
+                                cursor.getString(10) + ";" + //OUTPUT
+                                cursor.getInt(11) + ";" + //SYNC
+                                cursor.getString(12) + ";" + //PROFILE
+                                cursor.getInt(13) //CARD
+                        //getInt to boolean type 0 (false), 1 (true)
+                );
+                cursor.moveToNext();
+            }
+
+            cursor.close();
+        } catch (SQLException e) {
+                Log.e("DataBase Error", e.getMessage().toString());
+                e.printStackTrace();
         }
-
-        cursor.close();
         db.close();
 
         // 5. return
@@ -313,26 +340,67 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public int record_desync_count(){
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery("SELECT " + RECORD_ID + " FROM RECORD WHERE record_sync=0;", null);
+        Cursor cursor = db.rawQuery("SELECT " + RECORD_ID + " FROM " + TABLE_RECORD +
+                " WHERE " + RECORD_SYNC + "=0;", null);
         return cursor.getCount();
     }
 
-    public void update_record(int id) {
-        Log.d("<<<<<<", "updating "+ id);
+    public int people_count(){
         SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put(RECORD_SYNC, 1);
+        Cursor cursor = db.rawQuery("SELECT " + PERSON_ID + " FROM " + TABLE_PERSON, null);
+        return cursor.getCount();
+    }
 
-        // 3. updating row
-        int i = db.update(TABLE_RECORD, //table
-                values, // column/value
-                RECORD_ID+"="+id, // where
-                null);
+    public int employees_count(){
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery("SELECT " + PERSON_ID + " FROM " + TABLE_PERSON +
+                " WHERE " + PERSON_PROFILE + "= 'E';", null);
+        return cursor.getCount();
+    }
 
-        // 4. close
-        db.close();
-        if(i>0) Log.d("Local Record updated", String.valueOf(id));
-        else Log.e("Error updating record", String.valueOf(id));
+    public int contractors_count(){
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery("SELECT " + PERSON_ID + " FROM " + TABLE_PERSON + " " +
+                "WHERE " + PERSON_PROFILE + "= 'C';", null);
+        return cursor.getCount();
+    }
+
+    public int visits_count(){
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery("SELECT " + PERSON_ID + " FROM " + TABLE_PERSON + " " +
+                "WHERE " + PERSON_PROFILE + "= 'V';", null);
+        return cursor.getCount();
+    }
+
+    public void clean_people(){
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.delete(TABLE_PERSON, null, null);
+    }
+
+    public void clean_records(){
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.delete(TABLE_RECORD, null, null);
+    }
+
+    public void update_record(int id) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        try {
+            ContentValues values = new ContentValues();
+            values.put(RECORD_SYNC, 1);
+
+            // 3. updating row
+            int i = db.update(TABLE_RECORD, //table
+                    values, // column/value
+                    RECORD_ID + "=" + id, // where
+                    null);
+
+            // 4. close
+            db.close();
+            if (i > 0) Log.i("Local Record updated", String.valueOf(id));
+            else Log.e("Error updating record", String.valueOf(id));
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
 }
