@@ -126,8 +126,8 @@ public class MainActivity extends AppCompatActivity {
         loading.setVisibility(View.GONE);
 
         writeLog("DEBUG", "Application has started Correctly");
-        //server = "http://controlid.multiexportfoods.com:3000"; // use getSetting();
-        server = "http://192.168.2.77:3000";
+        server = "http://controlid.multiexportfoods.com:3000"; // use getSetting();
+        //server = "http://192.168.2.77:3000";
 
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         editTextRun = (EditText) findViewById(R.id.editText_run);
@@ -209,7 +209,7 @@ public class MainActivity extends AppCompatActivity {
                 //soundpool.play(soundid, 1, 1, 0, 0, 1);
 
                 mVibrator.vibrate(100);
-                reset();
+                cleanEditText();
 
                 byte[] barcode = intent.getByteArrayExtra("barocode");
                 int barocodelen = intent.getIntExtra("length", 0);
@@ -262,8 +262,12 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 writeLog("Cooked Barcode", barcodeStr);
-                if (flagSetUp == 0)
-                    getPeople(barcodeStr);
+                if (barcodeStr.equals(editTextRun.getText()))
+                    makeToast("No puede registrar tan pronto a la misma persona");
+                else {
+                    if (flagSetUp == 0)
+                        getPeople(barcodeStr);
+                }
             } catch (NullPointerException e) {
                 writeLog("ERROR", e.getMessage());
             } catch (Exception e) {
@@ -362,7 +366,8 @@ public class MainActivity extends AppCompatActivity {
                         //File root = new File(Environment.getExternalStorageDirectory()+"LOGS"+"/AccessControl.log");
                         //uploadLog("192.168.1.100","cristtopher","test","AccessControl.log",root);
                         new LoadDbTask().execute();
-                        Thread.sleep(60000); // 4 Min. 240000
+                        Thread.sleep(600000); // 4 Min. 240000; 600000 10 min
+                        //Thread.sleep(60000);
                         if (db.record_desync_count() > 0)
                             OfflineRecordsSynchronizer();
                     } catch (Exception e) {
@@ -376,15 +381,20 @@ public class MainActivity extends AppCompatActivity {
 
     public void reset() {
         initScan();
-        editTextRun.setText("");
-        editTextFullName.setText("");
-        editTextCompany.setText("");
+        cleanEditText();
         barcodeStr = "";
         name = null;
         imageview.setImageDrawable(null);
         IntentFilter filter = new IntentFilter();
         filter.addAction(SCAN_ACTION);
         registerReceiver(mScanReceiver, filter);
+    }
+
+    public void cleanEditText(){
+        editTextRun.setText("");
+        editTextFullName.setText("");
+        editTextCompany.setText("");
+        textViewProfile.setText("");
     }
 
     public String getCurrentDateTime() {
@@ -745,10 +755,10 @@ public class MainActivity extends AppCompatActivity {
                 jsonObject.accumulate("output_datetime", record.getRecord_output_datetime());
             }
 
-            if (record.getRecord_bus() == 1)
+            /*if (record.getRecord_bus() == 1)
                 jsonObject.accumulate("bus", true);
             else
-                jsonObject.accumulate("bus", false);
+                jsonObject.accumulate("bus", false);*/
 
             jsonObject.accumulate("company", record.getPerson_company());
             if (!record.getPerson_profile().equals("V")) {
