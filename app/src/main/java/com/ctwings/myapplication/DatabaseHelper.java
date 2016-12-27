@@ -126,29 +126,25 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
             for (int i = 0; i<json_db_array.length();i++) {
                 ContentValues values = new ContentValues();
-
-                try { // for employees
+                try {
                     values.put(PERSON_RUN, json_db_array.getJSONObject(i).getString("run"));
                     values.put(PERSON_PROFILE, json_db_array.getJSONObject(i).getString("profile"));
                     values.put(PERSON_IS_PERMITTED, json_db_array.getJSONObject(i).getString("is_permitted"));
 
                     switch (json_db_array.getJSONObject(i).getString("profile")) {
-                        case "E":
-                            // Employee
+                        case "E": // Employee
                             values.put(PERSON_FULLNAME, json_db_array.getJSONObject(i).getString("fullname"));
                             values.put(PERSON_COMPANY, json_db_array.getJSONObject(i).getString("company"));
                             values.put(PERSON_COMPANY_CODE, json_db_array.getJSONObject(i).getString("company_code"));
                             values.put(PERSON_PLACE, json_db_array.getJSONObject(i).getString("place"));
                             values.put(PERSON_CARD, json_db_array.getJSONObject(i).getString("card"));
                             break;
-                        case "C":
-                            // Contactor
+                        case "C": // Contactor
                             values.put(PERSON_FULLNAME, json_db_array.getJSONObject(i).getString("fullname"));
                             values.put(PERSON_COMPANY, json_db_array.getJSONObject(i).getString("company"));
                             values.put(PERSON_COMPANY_CODE, json_db_array.getJSONObject(i).getString("company_code"));
                             break;
-                        case "V":
-                            // Visit
+                        case "V": // Visit
                             if (!json_db_array.getJSONObject(i).getString("fullname").isEmpty())
                                 values.put(PERSON_FULLNAME, json_db_array.getJSONObject(i).getString("fullname"));
                             if (!json_db_array.getJSONObject(i).getString("company").isEmpty())
@@ -157,28 +153,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         default:
                             break;
                     }
-
-
-                } catch (Exception e){ // for contractors (without card)
-                    Person person = new Person(json_db_array.getJSONObject(i).getString("fullname"),
-                            json_db_array.getJSONObject(i).getString("id"),
-                            json_db_array.getJSONObject(i).getString("is_permitted"),
-                            json_db_array.getJSONObject(i).getString("company"),
-                            json_db_array.getJSONObject(i).getString("place"),
-                            json_db_array.getJSONObject(i).getString("company_code"),0,
-                            json_db_array.getJSONObject(i).getString("profile"));
-                    values.put(PERSON_FULLNAME, person.get_person_fullname());
-                    values.put(PERSON_RUN, person.get_person_run());
-                    values.put(PERSON_IS_PERMITTED, person.get_person_is_permitted());
-                    values.put(PERSON_COMPANY, person.get_person_company());
-                    values.put(PERSON_PLACE, person.get_person_place());
-                    values.put(PERSON_COMPANY_CODE, person.get_person_company_code());
-                    values.put(PERSON_PROFILE, person.get_person_profile());
+                    db.insert(TABLE_PERSON, // table
+                            null, //nullColumnHack
+                            values); // key/value -> keys = column names/ values = column values
+                } catch (Exception e){
+                    e.printStackTrace();
                 }
-
-                db.insert(TABLE_PERSON, // table
-                        null, //nullColumnHack
-                        values); // key/value -> keys = column names/ values = column values
             }
             db.setTransactionSuccessful();
         } catch (JSONException e) {
