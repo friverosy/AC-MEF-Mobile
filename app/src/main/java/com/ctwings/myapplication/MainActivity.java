@@ -63,14 +63,21 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
+    //private final int delay = 600000; // 4 Min. 240000; 600000 10 min
+    private static int delay = 60000;
+    //private final String server = "http://controlid.multiexportfoods.com:3000";
+    //private static String server = "http://192.168.2.77:3000";
+    private static String server = "http://192.168.0.5:3000";
+    private static String version = "e087ae3";
+
     private ImageView imageview;
     private EditText editTextRun;
     private EditText editTextFullName;
+    private TextView textViewVersion;
     private String name = "";
     private EditText editTextCompany;
     private TextView textViewProfile;
     private ProgressWheel loading;
-    private static String server;
     private boolean is_input;
     private TextView lastUpdated;
 
@@ -80,19 +87,13 @@ public class MainActivity extends AppCompatActivity {
     private SoundPool soundpool = null;
     private int soundid;
     private String barcodeStr;
+    private String barcodeCache;
     private boolean isScaning = false;
-
     private Switch mySwitch;
-
     MediaPlayer mp3Dennied;
     MediaPlayer mp3Permitted;
     MediaPlayer mp3Error;
     DatabaseHelper db = new DatabaseHelper(this);
-    /**
-     * ATTENTION: This was auto-generated to implement the App Indexing API.
-     * See https://g.co/AppIndexing/AndroidStudio for more information.
-     */
-    private GoogleApiClient client;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -126,8 +127,6 @@ public class MainActivity extends AppCompatActivity {
         loading.setVisibility(View.GONE);
 
         writeLog("DEBUG", "Application has started Correctly");
-        server = "http://controlid.multiexportfoods.com:3000"; // use getSetting();
-        //server = "http://192.168.2.77:3000";
 
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         editTextRun = (EditText) findViewById(R.id.editText_run);
@@ -142,6 +141,8 @@ public class MainActivity extends AppCompatActivity {
         mySwitch = (Switch) findViewById(R.id.mySwitch);
         mySwitch.setChecked(true);
         lastUpdated = (TextView) findViewById(R.id.textView_lastUpdate);
+        textViewVersion = (TextView) findViewById(R.id.textView_version);
+        textViewVersion.setText("Versión: " + version);
 
         // set by default
         is_input = true;
@@ -163,9 +164,7 @@ public class MainActivity extends AppCompatActivity {
                 getPeople(editTextRun.getText().toString());
             }
         });
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-        client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
+
     }
 
     @Override
@@ -225,7 +224,7 @@ public class MainActivity extends AppCompatActivity {
                         flagSetUp = 1;
                         SetUp(barcodeStr);
                     } else {
-                        // get just run
+                        // get only rut
                         barcodeStr = barcodeStr.substring(
                                 barcodeStr.indexOf("RUN=") + 4,
                                 barcodeStr.indexOf("&type"));
@@ -258,21 +257,22 @@ public class MainActivity extends AppCompatActivity {
                     } catch (Exception e) {
                         name = (array[2].substring(0, array[2].indexOf("CHL")));
                     }
-                    name.replace("�", ""); // Dont work :(
+                    //name.replace("�", ""); // Dont work :(
                 }
 
                 writeLog("Cooked Barcode", barcodeStr);
-                if (barcodeStr.equals(editTextRun.getText()))
-                    makeToast("No puede registrar tan pronto a la misma persona");
-                else {
-                    if (flagSetUp == 0)
-                        getPeople(barcodeStr);
-                }
+
+                getPeople(barcodeStr);
+
+                barcodeCache = barcodeStr; // Used to avoid 2 records in a row.
             } catch (NullPointerException e) {
                 writeLog("ERROR", e.getMessage());
             } catch (Exception e) {
                 e.printStackTrace();
             }
+
+            if (db.record_desync_count() > 0)
+                OfflineRecordsSynchronizer();
         }
     };
 
@@ -324,7 +324,6 @@ public class MainActivity extends AppCompatActivity {
         // TODO Auto-generated method stub
         mScanManager = new ScanManager();
         mScanManager.openScanner();
-
         mScanManager.switchOutputMode(0);
         soundpool = new SoundPool(1, AudioManager.STREAM_NOTIFICATION, 100); // MODE_RINGTONE
     }
@@ -366,10 +365,9 @@ public class MainActivity extends AppCompatActivity {
                         //File root = new File(Environment.getExternalStorageDirectory()+"LOGS"+"/AccessControl.log");
                         //uploadLog("192.168.1.100","cristtopher","test","AccessControl.log",root);
                         new LoadDbTask().execute();
-                        Thread.sleep(600000); // 4 Min. 240000; 600000 10 min
-                        //Thread.sleep(60000);
-                        if (db.record_desync_count() > 0)
-                            OfflineRecordsSynchronizer();
+                        Thread.sleep(delay);
+                        //if (db.record_desync_count() > 0)
+                        //    OfflineRecordsSynchronizer();
                     } catch (Exception e) {
                         writeLog("ERROR", e.getMessage());
                     }
@@ -406,13 +404,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void getPeople(String rut) {
+        Log.i("getPeople(String rut)", rut);
         String finalJson = db.get_one_person(rut);
         editTextCompany.setVisibility(View.GONE);
         String[] arr = finalJson.split(";");
         try {
             // set editText here before any exceptions.
             editTextRun.setText(arr[0]);
-
             //build object with that values, then send to registerTarsk()
             Record record = new Record();
             record.setPerson_run(arr[0]);
@@ -474,7 +472,6 @@ public class MainActivity extends AppCompatActivity {
                     break;
             }
 
-
             record.setPerson_profile(arr[7]);
             record.setPerson_company(arr[3]);
             record.setPerson_place(arr[4]);
@@ -502,93 +499,39 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    protected void onStart() {
-        // TODO Auto-generated method stub
-        super.onStart();// ATTENTION: This was auto-generated to implement the App Indexing API.
-// See https://g.co/AppIndexing/AndroidStudio for more information.
-        client.connect();
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-        AppIndex.AppIndexApi.start(client, getIndexApiAction());
-    }
-
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        // TODO Auto-generated method stub
-        return super.onKeyDown(keyCode, event);
-    }
-
-    /**
-     * ATTENTION: This was auto-generated to implement the App Indexing API.
-     * See https://g.co/AppIndexing/AndroidStudio for more information.
-     */
-    public Action getIndexApiAction() {
-        Thing object = new Thing.Builder()
-                .setName("Main Page") // TODO: Define a title for the content shown.
-                // TODO: Make sure this auto-generated URL is correct.
-                .setUrl(Uri.parse("http://[ENTER-YOUR-URL-HERE]"))
-                .build();
-        return new Action.Builder(Action.TYPE_VIEW)
-                .setObject(object)
-                .setActionStatus(Action.STATUS_TYPE_COMPLETED)
-                .build();
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-        AppIndex.AppIndexApi.end(client, getIndexApiAction());
-        client.disconnect();
-    }
-
     public class LoadDbTask extends AsyncTask<String, String, String> {
 
-        protected String doInBackground(String... params) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    loading.setSpinSpeed(3);
-                    loading.setVisibility(View.VISIBLE);
-                }
-            });
+        protected void onPreExecute() {
+            loading.setProgress(0);
+            loading.setSpinSpeed(3);
+            loading.setVisibility(View.VISIBLE);
             if (isScaning) {
                 mScanManager.stopDecode();
             }
-            String json = DbCall(server + "/api/people");
-            if (json != "408" && json != "204") {
-                try {
-                    db.add_people(json);
-                } catch (IllegalStateException ise) {
-                    ise.printStackTrace();
-                    return "";
-                }
-            }
-            return "Done";
+        }
+
+        protected String doInBackground(String... params) {
+            return DbCall(server + "/api/people");
         }
 
         protected void onProgressUpdate(String... progress) {
             return;
         }
 
-        protected void onPostExecute(String progress) {
-            if (progress.equals("Done")) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        loading.setVisibility(View.GONE);
-                    }
-                });
+        protected void onPostExecute(String json) {
+            if (json != "408" && json != "204") {
+                try {
+                    db.add_people(json);
+                } catch (IllegalStateException ise) {
+                    ise.printStackTrace();
+                }
             }
+            loading.setVisibility(View.GONE);
         }
     }
 
     public class getLastUpdateTask extends AsyncTask<String, Void, String> {
         private String Updated, postReturn = "";
-
         public getLastUpdateTask(String s) {
             Updated = s;
         }
@@ -643,7 +586,6 @@ public class MainActivity extends AppCompatActivity {
     public String DbCall(String dataUrl) {
 
         String contentAsString;
-
         URL url;
         HttpURLConnection connection = null;
 
@@ -740,10 +682,8 @@ public class MainActivity extends AppCompatActivity {
             if (record.getPerson_profile().equals("V")) {
                 jsonObject.accumulate("is_permitted", true);
             } else {
-                if (record.getPerson_is_permitted() == 1)
-                    jsonObject.accumulate("is_permitted", true);
-                else
-                    jsonObject.accumulate("is_permitted", false);
+                if (record.getPerson_is_permitted() == 1) jsonObject.accumulate("is_permitted", true);
+                else jsonObject.accumulate("is_permitted", false);
             }
 
             if (record.getRecord_is_input() == 1) {
@@ -754,11 +694,6 @@ public class MainActivity extends AppCompatActivity {
                 jsonObject.accumulate("is_input", false);
                 jsonObject.accumulate("output_datetime", record.getRecord_output_datetime());
             }
-
-            /*if (record.getRecord_bus() == 1)
-                jsonObject.accumulate("bus", true);
-            else
-                jsonObject.accumulate("bus", false);*/
 
             jsonObject.accumulate("company", record.getPerson_company());
             if (!record.getPerson_profile().equals("V")) {
@@ -795,7 +730,7 @@ public class MainActivity extends AppCompatActivity {
                     if (inputStream != null) {
                         result = convertInputStreamToString(inputStream);
                         if (httpResponse.getStatusLine().getStatusCode() == 200) {
-                            // if has sync=0 its becouse its an offline record to be will synchronized.
+                            // if has sync = 0 its becouse its an offline record to be will synchronized.
                             if (record.getRecord_sync() == 0) {
                                 db.update_record(record.getRecord_id());
                                 runOnUiThread(new Runnable() {
@@ -814,7 +749,6 @@ public class MainActivity extends AppCompatActivity {
                         result = "204"; //no content
                 } else {
                     mp3Error.start();
-                    //Toast.makeText(MainActivity.this, "Configure datos del servidor primero", Toast.LENGTH_LONG).show();
                     runOnUiThread(new Runnable() {
 
                         @Override
@@ -831,7 +765,7 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
             Log.i("---", "offline");
         }
-        // 11. return result
+
         return result;
     }
 

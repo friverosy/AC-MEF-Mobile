@@ -7,6 +7,7 @@ import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDatabaseLockedException;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.database.sqlite.SQLiteStatement;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -67,7 +68,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         //db.execSQL("PRAGMA foreign_keys=ON;");
         db.execSQL("PRAGMA encoding = 'UTF-8';");
-        //db.rawQuery("PRAGMA journal_mode = MEMORY",null);
+        //db.rawQuery("PRAGMA journal_mode = OFF",null);
+        //PRAGMA synchronous=OFF
+        //sqlite> VACUUM;
     }
 
     @Override
@@ -115,21 +118,24 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     //Person
     public void add_people(String json){
+        Log.i("---", "start");
 
         JSONArray json_db_array;
         SQLiteDatabase db = this.getWritableDatabase();
+
         db.beginTransaction();
         try {
             json_db_array = new JSONArray(json);
 
             db.delete(TABLE_PERSON, null, null);
 
+            String sql = "";
+
             for (int i = 0; i<json_db_array.length();i++) {
                 ContentValues values = new ContentValues();
                 try {
                     values.put(PERSON_RUN, json_db_array.getJSONObject(i).getString("run"));
                     values.put(PERSON_PROFILE, json_db_array.getJSONObject(i).getString("profile"));
-                    values.put(PERSON_IS_PERMITTED, json_db_array.getJSONObject(i).getString("is_permitted"));
 
                     switch (json_db_array.getJSONObject(i).getString("profile")) {
                         case "E": // Employee
@@ -138,11 +144,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                             values.put(PERSON_COMPANY_CODE, json_db_array.getJSONObject(i).getString("company_code"));
                             values.put(PERSON_PLACE, json_db_array.getJSONObject(i).getString("place"));
                             values.put(PERSON_CARD, json_db_array.getJSONObject(i).getString("card"));
+                            values.put(PERSON_IS_PERMITTED, json_db_array.getJSONObject(i).getString("is_permitted"));
                             break;
                         case "C": // Contactor
                             values.put(PERSON_FULLNAME, json_db_array.getJSONObject(i).getString("fullname"));
                             values.put(PERSON_COMPANY, json_db_array.getJSONObject(i).getString("company"));
                             values.put(PERSON_COMPANY_CODE, json_db_array.getJSONObject(i).getString("company_code"));
+                            values.put(PERSON_IS_PERMITTED, json_db_array.getJSONObject(i).getString("is_permitted"));
                             break;
                         case "V": // Visit
                             if (!json_db_array.getJSONObject(i).getString("fullname").isEmpty())
@@ -160,7 +168,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     e.printStackTrace();
                 }
             }
-            db.setTransactionSuccessful();
         } catch (JSONException e) {
             e.printStackTrace();
         } catch(IllegalStateException ise){
@@ -170,13 +177,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         } catch(Exception e) {
             e.printStackTrace();
         } finally {
-            db.endTransaction();
+            db.setTransactionSuccessful();
         }
-
+        db.endTransaction();
         db.close();
+        Log.i("---", "end");
     }
 
     public String get_one_person(String id){
+        Log.i("get_one_person(id)", id);
         // 1. get reference to readable DB
         SQLiteDatabase db = this.getReadableDatabase();
         String out="";
@@ -233,7 +242,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     //Records
     public void add_record(Record record){
-
+        Log.i("add_record(record)", record.toString());
         // 1. get reference to writable DB
         SQLiteDatabase db = this.getWritableDatabase();
         // 2. create ContentValues to add key "column"/value
@@ -363,6 +372,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     public void update_record(int id) {
+        Log.i("update_record(int id)", String.valueOf(id));
         SQLiteDatabase db = this.getWritableDatabase();
         try {
             ContentValues values = new ContentValues();
