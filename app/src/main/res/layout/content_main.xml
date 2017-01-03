@@ -27,7 +27,6 @@
         android:layout_height="wrap_content"
         android:id="@+id/editText_fullname"
         android:textSize="20dp"
-        android:text=""
         android:textAlignment="center" />
 
     <EditText
@@ -43,13 +42,8 @@
         android:id="@+id/editText_company"
         android:textSize="20dp"
         android:textAlignment="center"
-        android:textStyle="normal|bold" />
-
-    <ImageView
-        android:layout_width="match_parent"
-        android:layout_height="fill_parent"
-        android:id="@+id/imageView"
-        android:layout_gravity="center_horizontal" />
+        android:textStyle="normal|bold"
+        android:typeface="normal" />
 
     <TextView
         android:layout_width="match_parent"
@@ -58,5 +52,12 @@
         android:textSize="18dp"
         android:textAlignment="center"
         android:textStyle="normal|bold" />
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="fill_parent"
+        android:id="@+id/imageView"
+        android:layout_gravity="center_horizontal" />
+
 
 </LinearLayout>
