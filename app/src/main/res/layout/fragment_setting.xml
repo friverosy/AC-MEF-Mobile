@@ -10,43 +10,17 @@
     tools:showIn="@layout/activity_setting"
     android:orientation="vertical">
 
-
-    <TextView
-        android:text="Server"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/textView6" />
-
-    <EditText
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:inputType="textPersonName"
-        android:ems="10"
-        android:id="@+id/editText_url" />
-
-    <TextView
-        android:text="Port"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/textView8" />
-
-    <EditText
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:inputType="number"
-        android:ems="10"
-        android:id="@+id/editText_port" />
-
     <TextView
         android:text="PDA ID"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/textView9" />
+        android:id="@+id/textView9"
+        android:textAlignment="center"
+        android:textStyle="normal|bold" />
 
-    <EditText
+    <NumberPicker
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:inputType="number"
-        android:ems="10"
-        android:id="@+id/editText_pda" />
+        android:id="@+id/numberPicker" />
+
 </LinearLayout>

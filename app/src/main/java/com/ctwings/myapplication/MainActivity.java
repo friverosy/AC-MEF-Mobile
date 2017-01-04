@@ -39,6 +39,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.conn.HttpHostConnectException;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONObject;
@@ -63,12 +64,13 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    //private final int delay = 600000; // 4 Min. 240000; 600000 10 min
-    private static int delay = 60000;
+    private final int delay = 600000; // 4 Min. 240000; 600000 10 min
+    //private static int delay = 60000;
     //private final String server = "http://controlid.multiexportfoods.com:3000";
-    //private static String server = "http://192.168.2.77:3000";
-    private static String server = "http://192.168.0.5:3000";
-    private static String version = "e087ae3";
+    //private static String server = "http://192.168.2.77:3000"; // Sealand
+    private static String server = "http://192.168.1.126:3000"; // Axxezo
+    //private static String server = "http://192.168.0.5:3000"; // House
+    private static String version = "4b486b2";
 
     private ImageView imageview;
     private EditText editTextRun;
@@ -263,14 +265,12 @@ public class MainActivity extends AppCompatActivity {
                 writeLog("Cooked Barcode", barcodeStr);
 
                 getPeople(barcodeStr);
-
                 barcodeCache = barcodeStr; // Used to avoid 2 records in a row.
             } catch (NullPointerException e) {
                 writeLog("ERROR", e.getMessage());
             } catch (Exception e) {
                 e.printStackTrace();
             }
-
             if (db.record_desync_count() > 0)
                 OfflineRecordsSynchronizer();
         }
@@ -366,8 +366,8 @@ public class MainActivity extends AppCompatActivity {
                         //uploadLog("192.168.1.100","cristtopher","test","AccessControl.log",root);
                         new LoadDbTask().execute();
                         Thread.sleep(delay);
-                        //if (db.record_desync_count() > 0)
-                        //    OfflineRecordsSynchronizer();
+                        /*if (db.record_desync_count() > 0)
+                            OfflineRecordsSynchronizer();*/
                     } catch (Exception e) {
                         writeLog("ERROR", e.getMessage());
                     }
@@ -379,7 +379,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void reset() {
         initScan();
-        cleanEditText();
+        //cleanEditText();
         barcodeStr = "";
         name = null;
         imageview.setImageDrawable(null);
@@ -404,7 +404,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void getPeople(String rut) {
-        Log.i("getPeople(String rut)", rut);
+        //Log.i("getPeople(String rut)", rut);
         String finalJson = db.get_one_person(rut);
         editTextCompany.setVisibility(View.GONE);
         String[] arr = finalJson.split(";");
@@ -502,7 +502,6 @@ public class MainActivity extends AppCompatActivity {
     public class LoadDbTask extends AsyncTask<String, String, String> {
 
         protected void onPreExecute() {
-            loading.setProgress(0);
             loading.setSpinSpeed(3);
             loading.setVisibility(View.VISIBLE);
             if (isScaning) {
@@ -519,6 +518,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         protected void onPostExecute(String json) {
+             // When response its 200, json save data no code.
             if (json != "408" && json != "204") {
                 try {
                     db.add_people(json);
@@ -618,7 +618,7 @@ public class MainActivity extends AppCompatActivity {
         if (contentAsString.length() <= 2) { //[]
             contentAsString = "204"; // No content
         }
-        Log.i("Server response", contentAsString);
+        //Log.i("Server response", contentAsString);
 
         return contentAsString;
     }
@@ -682,7 +682,8 @@ public class MainActivity extends AppCompatActivity {
             if (record.getPerson_profile().equals("V")) {
                 jsonObject.accumulate("is_permitted", true);
             } else {
-                if (record.getPerson_is_permitted() == 1) jsonObject.accumulate("is_permitted", true);
+                if (record.getPerson_is_permitted() == 1)
+                    jsonObject.accumulate("is_permitted", true);
                 else jsonObject.accumulate("is_permitted", false);
             }
 
@@ -708,7 +709,7 @@ public class MainActivity extends AppCompatActivity {
             // 4. convert JSONObject to JSON to String
             if (jsonObject.length() <= 13) { // 13 element on json
                 json = jsonObject.toString();
-                Log.i("json to POST", json);
+                //Log.i("json to POST", json);
 
                 // 5. set json to StringEntity
                 StringEntity se = new StringEntity(json);
@@ -760,10 +761,11 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 writeLog("Json length", "Missing elements in the json to be posted");
             }
-
+        } catch (HttpHostConnectException hhc) {
+            Log.i("---", "offline");
+            writeLog("Conexion refused", "Cant connect to server");
         } catch (Exception e) {
             e.printStackTrace();
-            Log.i("---", "offline");
         }
 
         return result;
@@ -830,7 +832,7 @@ public class MainActivity extends AppCompatActivity {
             BufferedInputStream bis = null;
             BufferedOutputStream bos = null;
             try {
-                Log.d("---", sb.toString());
+                //Log.d("---", sb.toString());
                 URL url = new URL(sb.toString());
                 URLConnection urlc = url.openConnection();
 

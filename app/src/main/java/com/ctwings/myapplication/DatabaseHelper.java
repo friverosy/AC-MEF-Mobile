@@ -3,6 +3,7 @@ package com.ctwings.myapplication;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.DatabaseUtils;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDatabaseLockedException;
@@ -185,7 +186,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     public String get_one_person(String id){
-        Log.i("get_one_person(id)", id);
+        //Log.i("get_one_person(id)", id);
         // 1. get reference to readable DB
         SQLiteDatabase db = this.getReadableDatabase();
         String out="";
@@ -242,7 +243,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     //Records
     public void add_record(Record record){
-        Log.i("add_record(record)", record.toString());
+        //Log.i("add_record(record)", record.toString());
         // 1. get reference to writable DB
         SQLiteDatabase db = this.getWritableDatabase();
         // 2. create ContentValues to add key "column"/value
@@ -372,7 +373,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     public void update_record(int id) {
-        Log.i("update_record(int id)", String.valueOf(id));
+        //Log.i("update_record(int id)", String.valueOf(id));
         SQLiteDatabase db = this.getWritableDatabase();
         try {
             ContentValues values = new ContentValues();
@@ -386,8 +387,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
             // 4. close
             db.close();
-            if (i > 0) Log.i("Local Record updated", String.valueOf(id));
-            else Log.e("Error updating record", String.valueOf(id));
+            if (i == 0) Log.e("Error updating record", String.valueOf(id));
         } catch (SQLException e) {
             e.printStackTrace();
         }
