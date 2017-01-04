@@ -66,11 +66,11 @@ public class MainActivity extends AppCompatActivity {
 
     private final int delay = 600000; // 4 Min. 240000; 600000 10 min
     //private static int delay = 60000;
-    //private final String server = "http://controlid.multiexportfoods.com:3000";
+    private final String server = "http://controlid.multiexportfoods.com:3000";
     //private static String server = "http://192.168.2.77:3000"; // Sealand
-    private static String server = "http://192.168.1.126:3000"; // Axxezo
+    //private static String server = "http://192.168.1.126:3000"; // Axxezo
     //private static String server = "http://192.168.0.5:3000"; // House
-    private static String version = "4b486b2";
+    private static String version = "dceff52";
 
     private ImageView imageview;
     private EditText editTextRun;

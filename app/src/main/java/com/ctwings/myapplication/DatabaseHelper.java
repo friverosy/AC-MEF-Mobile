@@ -48,6 +48,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
+
     @Override
     public void onCreate(SQLiteDatabase db) {
 
@@ -72,6 +73,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         //db.rawQuery("PRAGMA journal_mode = OFF",null);
         //PRAGMA synchronous=OFF
         //sqlite> VACUUM;
+
+        //seed
+        db.execSQL("INSERT INTO "+TABLE_SETTING+" (id_pda) VALUES (0);");
     }
 
     @Override
@@ -446,6 +450,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public void set_config_id_pda(int id) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
+        Log.i("puting", String.valueOf(id));
         cv.put("id_pda", id);
         db.update(TABLE_SETTING, cv, null, null);
     }

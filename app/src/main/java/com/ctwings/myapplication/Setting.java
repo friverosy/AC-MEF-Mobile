@@ -28,6 +28,7 @@ public class Setting extends AppCompatActivity {
         np.setMinValue(0);
         np.setMaxValue(10);
         np.setWrapSelectorWheel(false);
+        np.setValue(1);
 
         Load();
 
@@ -36,6 +37,7 @@ public class Setting extends AppCompatActivity {
             @Override
             public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
                 // TODO Auto-generated method stub
+                Log.i("set", String.valueOf(newVal));
                 Save(newVal);
             }
         });
@@ -67,6 +69,7 @@ public class Setting extends AppCompatActivity {
     }
 
     public void Save(int value){
+        Log.i("value", String.valueOf(value));
         db.set_config_id_pda(value);
     }
 }
