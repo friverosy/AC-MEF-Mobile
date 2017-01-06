@@ -65,11 +65,11 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private final int delay = 600000; // 4 Min. 240000; 600000 10 min
-    //private static int delay = 60000;
     private final String server = "http://controlid.multiexportfoods.com:3000";
     //private static String server = "http://192.168.2.77:3000"; // Sealand
     //private static String server = "http://192.168.1.126:3000"; // Axxezo
     //private static String server = "http://192.168.0.5:3000"; // House
+    //private static String server = "http://10.0.0.69:3000";
     private static String version = "dceff52";
 
     private ImageView imageview;
@@ -129,6 +129,7 @@ public class MainActivity extends AppCompatActivity {
         loading.setVisibility(View.GONE);
 
         writeLog("DEBUG", "Application has started Correctly");
+        UpdateDb();
 
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         editTextRun = (EditText) findViewById(R.id.editText_run);
@@ -264,15 +265,16 @@ public class MainActivity extends AppCompatActivity {
 
                 writeLog("Cooked Barcode", barcodeStr);
 
-                getPeople(barcodeStr);
+                if (flagSetUp == 0)
+                    getPeople(barcodeStr);
                 barcodeCache = barcodeStr; // Used to avoid 2 records in a row.
             } catch (NullPointerException e) {
                 writeLog("ERROR", e.getMessage());
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            if (db.record_desync_count() > 0)
-                OfflineRecordsSynchronizer();
+            //if (db.record_desync_count() > 0)
+            //    OfflineRecordsSynchronizer();
         }
     };
 
@@ -350,7 +352,7 @@ public class MainActivity extends AppCompatActivity {
         // TODO Auto-generated method stub
         super.onResume();
         initScan();
-        UpdateDb();
+        //UpdateDb();
         IntentFilter filter = new IntentFilter();
         filter.addAction(SCAN_ACTION);
         registerReceiver(mScanReceiver, filter);
@@ -366,8 +368,8 @@ public class MainActivity extends AppCompatActivity {
                         //uploadLog("192.168.1.100","cristtopher","test","AccessControl.log",root);
                         new LoadDbTask().execute();
                         Thread.sleep(delay);
-                        /*if (db.record_desync_count() > 0)
-                            OfflineRecordsSynchronizer();*/
+                        if (db.record_desync_count() > 0)
+                            OfflineRecordsSynchronizer();
                     } catch (Exception e) {
                         writeLog("ERROR", e.getMessage());
                     }
