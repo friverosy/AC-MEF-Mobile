@@ -170,6 +170,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                             null, //nullColumnHack
                             values); // key/value -> keys = column names/ values = column values
                 } catch (Exception e){
+                    Log.e("json", json_db_array.getJSONObject(i).toString());
                     e.printStackTrace();
                 }
             }

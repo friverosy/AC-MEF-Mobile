@@ -65,12 +65,13 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private final int delay = 600000; // 4 Min. 240000; 600000 10 min
-    private final String server = "http://controlid.multiexportfoods.com:3000";
+    //private final String server = "http://controlid.multiexportfoods.com:3000";
+    //private final String server = "http://controlid-test.multiexportfoods.com:3000";
     //private static String server = "http://192.168.2.77:3000"; // Sealand
-    //private static String server = "http://192.168.1.126:3000"; // Axxezo
+    private static String server = "http://192.168.1.126:3000"; // Axxezo
     //private static String server = "http://192.168.0.5:3000"; // House
     //private static String server = "http://10.0.0.69:3000";
-    private static String version = "dceff52";
+    private static String version = "5e2ab26";
 
     private ImageView imageview;
     private EditText editTextRun;
@@ -273,8 +274,8 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            //if (db.record_desync_count() > 0)
-            //    OfflineRecordsSynchronizer();
+            if (db.record_desync_count() > 0)
+                OfflineRecordsSynchronizer();
         }
     };
 
@@ -368,8 +369,8 @@ public class MainActivity extends AppCompatActivity {
                         //uploadLog("192.168.1.100","cristtopher","test","AccessControl.log",root);
                         new LoadDbTask().execute();
                         Thread.sleep(delay);
-                        if (db.record_desync_count() > 0)
-                            OfflineRecordsSynchronizer();
+                        //if (db.record_desync_count() > 0)
+                        //    OfflineRecordsSynchronizer();
                     } catch (Exception e) {
                         writeLog("ERROR", e.getMessage());
                     }
@@ -383,8 +384,6 @@ public class MainActivity extends AppCompatActivity {
         initScan();
         //cleanEditText();
         barcodeStr = "";
-        name = null;
-        imageview.setImageDrawable(null);
         IntentFilter filter = new IntentFilter();
         filter.addAction(SCAN_ACTION);
         registerReceiver(mScanReceiver, filter);
@@ -395,6 +394,8 @@ public class MainActivity extends AppCompatActivity {
         editTextFullName.setText("");
         editTextCompany.setText("");
         textViewProfile.setText("");
+        imageview.setImageDrawable(null);
+        name = null;
     }
 
     public String getCurrentDateTime() {
@@ -442,7 +443,7 @@ public class MainActivity extends AppCompatActivity {
                     editTextFullName.setText(arr[1]);
                     record.setPerson_fullname(arr[1]);
                     textViewProfile.setText("Subcontratista");
-                    editTextCompany.setText(record.getPerson_company());
+                    editTextCompany.setText(arr[3]);
                     editTextCompany.setVisibility(View.VISIBLE);
                     break;
                 case "V":
