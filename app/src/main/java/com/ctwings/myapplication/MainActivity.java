@@ -47,13 +47,16 @@ import org.json.JSONObject;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.net.HttpURLConnection;
+import java.net.Socket;
 import java.net.URL;
 import java.net.URLConnection;
 import java.text.DateFormat;
@@ -68,10 +71,10 @@ public class MainActivity extends AppCompatActivity {
     //private final String server = "http://controlid.multiexportfoods.com:3000";
     //private final String server = "http://controlid-test.multiexportfoods.com:3000";
     //private static String server = "http://192.168.2.77:3000"; // Sealand
-    private static String server = "http://192.168.1.126:3000"; // Axxezo
-    //private static String server = "http://192.168.0.5:3000"; // House
+    private static String server = "http://192.168.43.231:3000"; // Axxezo
+    //private static String server = "http://192.168.0.7:3000"; // House
     //private static String server = "http://10.0.0.69:3000";
-    private static String version = "5e2ab26";
+    private static String version = "f2fadba";
 
     private ImageView imageview;
     private EditText editTextRun;
@@ -274,8 +277,8 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            if (db.record_desync_count() > 0)
-                OfflineRecordsSynchronizer();
+            //if (db.record_desync_count() > 0)
+            //    OfflineRecordsSynchronizer();
         }
     };
 
@@ -317,6 +320,29 @@ public class MainActivity extends AppCompatActivity {
                 // Drop record table
                 db.clean_records();
                 makeToast("Tabla records vaciada.");
+                break;
+            case "PING":
+                Socket t = null;
+                try {
+                    t = new Socket(server, 3000);
+                    DataInputStream dis = new DataInputStream(t.getInputStream());
+                    PrintStream ps = new PrintStream(t.getOutputStream());
+                    ps.println("Hello");
+                    String str = null;
+
+                    str = dis.readUTF();
+
+                    if (str.equals("Hello"))
+                        System.out.println("Alive!");
+                    else
+                        System.out.println("Dead");
+
+                    t.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                break;
             default:
                 makeToast("Código de configuración incorrecto!");
                 break;
@@ -369,8 +395,8 @@ public class MainActivity extends AppCompatActivity {
                         //uploadLog("192.168.1.100","cristtopher","test","AccessControl.log",root);
                         new LoadDbTask().execute();
                         Thread.sleep(delay);
-                        //if (db.record_desync_count() > 0)
-                        //    OfflineRecordsSynchronizer();
+                        if (db.record_desync_count() > 0)
+                            OfflineRecordsSynchronizer();
                     } catch (Exception e) {
                         writeLog("ERROR", e.getMessage());
                     }
@@ -513,7 +539,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         protected String doInBackground(String... params) {
-            return DbCall(server + "/api/people");
+            return DbCall(server + "/api/people?filter[where][is_permitted]=true");
         }
 
         protected void onProgressUpdate(String... progress) {
@@ -712,7 +738,7 @@ public class MainActivity extends AppCompatActivity {
             // 4. convert JSONObject to JSON to String
             if (jsonObject.length() <= 13) { // 13 element on json
                 json = jsonObject.toString();
-                //Log.i("json to POST", json);
+                Log.i("json to POST", json);
 
                 // 5. set json to StringEntity
                 StringEntity se = new StringEntity(json);
