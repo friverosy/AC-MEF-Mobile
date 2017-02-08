@@ -27,11 +27,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final int DATABASE_VERSION = 2;
     // Database Name
     private static final String DATABASE_NAME = "mbd";
+    //get context for use
+    private Context context;
 
     // SQL statement to create User table
     String CREATE_PERSON_TABLE = "CREATE TABLE " + TABLE_PERSON + " ( " +
             "person_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            "person_fullname TEXT, "+"person_run TEXT, " +
+            "person_fullname TEXT, " + "person_run TEXT, " +
             "person_is_permitted TEXT, " + "person_company TEXT DEFAULT '', " +
             "person_place TEXT, " + "person_company_code TEXT, " +
             "person_card INTEGER, " + "person_profile TEXT)";
@@ -43,10 +45,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             "person_is_permitted INTEGER, " + "person_company TEXT, " +
             "person_place TEXT, " + "person_company_code TEXT," +
             "record_input_datetime TEXT, " + "record_output_datetime TEXT, " +
-            "record_sync INTEGER,"+ "person_profile TEXT, "+"person_card INTEGER)";
+            "record_sync INTEGER," + "person_profile TEXT, " + "person_card INTEGER)";
 
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
+        this.context = context;
     }
 
     @Override
@@ -75,7 +78,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         //sqlite> VACUUM;
 
         //seed
-        db.execSQL("INSERT INTO "+TABLE_SETTING+" (id_pda) VALUES (0);");
+        db.execSQL("INSERT INTO " + TABLE_SETTING + " (id_pda) VALUES (0);");
     }
 
     @Override
@@ -122,7 +125,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
 
     //Person
-    public void add_people(String json){
+    public void add_people(String json) {
+        log_app log = new log_app();
         Log.i("---", "start");
 
         JSONArray json_db_array;
@@ -136,7 +140,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
             String sql = "";
 
-            for (int i = 0; i<json_db_array.length();i++) {
+            for (int i = 0; i < json_db_array.length(); i++) {
                 ContentValues values = new ContentValues();
                 try {
                     values.put(PERSON_RUN, json_db_array.getJSONObject(i).getString("run"));
@@ -169,19 +173,19 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     db.insert(TABLE_PERSON, // table
                             null, //nullColumnHack
                             values); // key/value -> keys = column names/ values = column values
-                } catch (Exception e){
+                } catch (Exception e) {
                     Log.e("json", json_db_array.getJSONObject(i).toString());
                     e.printStackTrace();
                 }
             }
         } catch (JSONException e) {
-            e.printStackTrace();
-        } catch(IllegalStateException ise){
-            ise.printStackTrace();
-        } catch (SQLiteDatabaseLockedException qdle) {
-            qdle.printStackTrace();
-        } catch(Exception e) {
-            e.printStackTrace();
+            log.writeLog(context, "DBhelper:line 182", "ERROR", e.getMessage());
+        } catch (IllegalStateException e) {
+            log.writeLog(context, "DBhelper:line 184", "ERROR", e.getMessage());
+        } catch (SQLiteDatabaseLockedException e) {
+            log.writeLog(context, "DBhelper:line 186", "ERROR", e.getMessage());
+        } catch (Exception e) {
+            log.writeLog(context, "DBhelper:line 186", "ERROR", e.getMessage());
         } finally {
             db.setTransactionSuccessful();
         }
@@ -190,11 +194,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         Log.i("---", "end");
     }
 
-    public String get_one_person(String id){
+    public String get_one_person(String id) {
         //Log.i("get_one_person(id)", id);
         // 1. get reference to readable DB
+        log_app log = new log_app();
         SQLiteDatabase db = this.getReadableDatabase();
-        String out="";
+        String out = "";
 
         try {
             //db.beginTransaction();
@@ -230,13 +235,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             cursor.close();
             //db.setTransactionSuccessful();
         } catch (IllegalStateException e) {
-            e.printStackTrace();
-        } catch (SQLiteDatabaseLockedException sdle) {
-            sdle.printStackTrace();
-        } catch (NumberFormatException nfe){
-            nfe.printStackTrace();
-        }
-        finally {
+            log.writeLog(context, "DBhelper:line 238", "ERROR", e.getMessage());
+        } catch (SQLiteDatabaseLockedException e) {
+            log.writeLog(context, "DBhelper:line 238", "ERROR", e.getMessage());
+        } catch (NumberFormatException e) {
+            log.writeLog(context, "DBhelper:line 238", "ERROR", e.getMessage());
+        } finally {
             //db.endTransaction();
         }
 
@@ -247,7 +251,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     //Records
-    public void add_record(Record record){
+    public void add_record(Record record) {
+        log_app log = new log_app();
         //Log.i("add_record(record)", record.toString());
         // 1. get reference to writable DB
         SQLiteDatabase db = this.getWritableDatabase();
@@ -261,30 +266,31 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(PERSON_COMPANY, record.getPerson_company());
         values.put(PERSON_PLACE, record.getPerson_place());
         values.put(PERSON_COMPANY_CODE, record.getPerson_company_code());
-        if(record.getRecord_input_datetime() != null)
+        if (record.getRecord_input_datetime() != null)
             values.put(RECORD_INPUT_DATETIME, record.getRecord_input_datetime());
-        if(record.getRecord_output_datetime() != null)
+        if (record.getRecord_output_datetime() != null)
             values.put(RECORD_OUTPUT_DATETIME, record.getRecord_output_datetime());
         values.put(RECORD_SYNC, record.getRecord_sync());
-        values.put(PERSON_PROFILE,record.getPerson_profile());
+        values.put(PERSON_PROFILE, record.getPerson_profile());
         values.put(PERSON_CARD, record.getPerson_card());
 
         // 3. insert
         try {
             db.insert(TABLE_RECORD, null, values);
         } catch (SQLException e) {
-            Log.e("DataBase Error", "Error to insert record: "+values);
-            e.printStackTrace();
+            Log.e("DataBase Error", "Error to insert record: " + values);
+            log.writeLog(context, "DBhelper:line 283", "ERROR", e.getMessage());
         }
 
         // 4. close
         db.close();
     }
 
-    public List get_desynchronized_records(){
+    public List get_desynchronized_records() {
 
         // 1. get reference to readable DB
         SQLiteDatabase db = this.getReadableDatabase();
+        log_app log=new log_app();
         List<String> records = new ArrayList<>();
         try {
             // 2. build query
@@ -324,8 +330,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
             cursor.close();
         } catch (SQLException e) {
-                Log.e("DataBase Error", e.getMessage().toString());
-                e.printStackTrace();
+            Log.e("DataBase Error", e.getMessage().toString());
+            log.writeLog(context, "DBhelper:line 238", "ERROR", e.getMessage());
+            e.printStackTrace();
         }
         db.close();
 
@@ -333,52 +340,53 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return records;
     }
 
-    public int record_desync_count(){
+    public int record_desync_count() {
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = db.rawQuery("SELECT " + RECORD_ID + " FROM " + TABLE_RECORD +
                 " WHERE " + RECORD_SYNC + "=0;", null);
         return cursor.getCount();
     }
 
-    public int people_count(){
+    public int people_count() {
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = db.rawQuery("SELECT " + PERSON_ID + " FROM " + TABLE_PERSON, null);
         return cursor.getCount();
     }
 
-    public int employees_count(){
+    public int employees_count() {
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = db.rawQuery("SELECT " + PERSON_ID + " FROM " + TABLE_PERSON +
                 " WHERE " + PERSON_PROFILE + "= 'E';", null);
         return cursor.getCount();
     }
 
-    public int contractors_count(){
+    public int contractors_count() {
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = db.rawQuery("SELECT " + PERSON_ID + " FROM " + TABLE_PERSON + " " +
                 "WHERE " + PERSON_PROFILE + "= 'C';", null);
         return cursor.getCount();
     }
 
-    public int visits_count(){
+    public int visits_count() {
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = db.rawQuery("SELECT " + PERSON_ID + " FROM " + TABLE_PERSON + " " +
                 "WHERE " + PERSON_PROFILE + "= 'V';", null);
         return cursor.getCount();
     }
 
-    public void clean_people(){
+    public void clean_people() {
         SQLiteDatabase db = this.getWritableDatabase();
         db.delete(TABLE_PERSON, null, null);
     }
 
-    public void clean_records(){
+    public void clean_records() {
         SQLiteDatabase db = this.getWritableDatabase();
         db.delete(TABLE_RECORD, null, null);
     }
 
     public void update_record(int id) {
         //Log.i("update_record(int id)", String.valueOf(id));
+        log_app log=new log_app();
         SQLiteDatabase db = this.getWritableDatabase();
         try {
             ContentValues values = new ContentValues();
@@ -394,7 +402,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             db.close();
             if (i == 0) Log.e("Error updating record", String.valueOf(id));
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.writeLog(context,"DBhelper:line 405","ERROR",e.getMessage());
         }
     }
 

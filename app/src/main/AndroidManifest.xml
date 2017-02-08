@@ -41,6 +41,10 @@
             android:label="@string/title_activity_setting"
             android:theme="@style/AppTheme.NoActionBar">
         </activity>
+        <activity
+            android:name=".log_show"
+            android:theme="@style/AppTheme.NoActionBar">
+        </activity>
     </application>
 
 </manifest>

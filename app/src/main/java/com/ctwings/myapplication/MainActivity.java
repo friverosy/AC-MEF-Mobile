@@ -71,9 +71,10 @@ public class MainActivity extends AppCompatActivity {
     //private final String server = "http://controlid.multiexportfoods.com:3000";
     //private final String server = "http://controlid-test.multiexportfoods.com:3000";
     //private static String server = "http://192.168.2.77:3000"; // Sealand
-    private static String server = "http://192.168.43.231:3000"; // Axxezo
+    // private static String server = "http://192.168.43.231:3000"; // Axxezo
     //private static String server = "http://192.168.0.7:3000"; // House
     //private static String server = "http://10.0.0.69:3000";
+    private static String server = "http://192.168.1.117:3000";
     private static String version = "f2fadba";
 
     private ImageView imageview;
@@ -204,7 +205,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-
+            log_app log = new log_app();
             // TODO Auto-generated method stub
             try {
                 if (mp3Error.isPlaying()) mp3Error.stop();
@@ -241,21 +242,27 @@ public class MainActivity extends AppCompatActivity {
                 } else if (barcodeType == 1 || barcodeStr.startsWith("00")) {
                     //Log.i("Debugger", "CARD");
                 } else if (barcodeType == 17) { // PDF417
-                    barcodeStr = barcodeStr.substring(0, 9);
-                    barcodeStr = barcodeStr.replace(" ", "");
-                    if (barcodeStr.endsWith("K")) {
-                        flag = 1;
+                    // 1.- validate if the rut is > 10 millions
+                    String rutValidator = barcodeStr.substring(0, 8);
+                    rutValidator = rutValidator.replace(" ", "");
+                    rutValidator=rutValidator.endsWith("K")?rutValidator.replace("K","0"):rutValidator;
+                    char dv = barcodeStr.substring(8, 9).charAt(0);
+                    boolean isvalid = ValidarRut(Integer.parseInt(rutValidator), dv);
+                    if (isvalid)
+                        barcodeStr = rutValidator;
+                    else { //try validate rut size below 10.000.000
+                        rutValidator = barcodeStr.substring(0, 7);
+                        rutValidator = rutValidator.replace(" ", "");
+                        rutValidator=rutValidator.endsWith("K")?rutValidator.replace("K","0"):rutValidator;
+                        dv = barcodeStr.substring(7, 8).charAt(0);
+                        isvalid = ValidarRut(Integer.parseInt(rutValidator), dv);
+                        if (isvalid)
+                            barcodeStr = rutValidator;
+                        else
+                            log.writeLog(getApplicationContext(), "Main:line 262", "ERROR", "rut invalido " + barcodeStr);
+
                     }
 
-                    barcodeStr = barcodeStr.replace("k", "");
-                    barcodeStr = barcodeStr.replace("K", "");
-
-                    // Define length of character.
-                    if (Integer.parseInt(barcodeStr) > 400000000 && flag == 0) {
-                        barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 2);
-                    } else if (flag == 0) {
-                        barcodeStr = barcodeStr.substring(0, barcodeStr.length() - 1);
-                    }
 
                     //get name from DNI
                     String[] array = rawCode.split("\\s+");
@@ -274,8 +281,10 @@ public class MainActivity extends AppCompatActivity {
                 barcodeCache = barcodeStr; // Used to avoid 2 records in a row.
             } catch (NullPointerException e) {
                 writeLog("ERROR", e.getMessage());
+                log.writeLog(getApplicationContext(), "Main:line 278", "ERROR", e.getMessage());
             } catch (Exception e) {
                 e.printStackTrace();
+                log.writeLog(getApplicationContext(), "Main:line 281", "ERROR", e.getMessage());
             }
             //if (db.record_desync_count() > 0)
             //    OfflineRecordsSynchronizer();
@@ -316,6 +325,12 @@ public class MainActivity extends AppCompatActivity {
                 // Drop people table
                 db.clean_people();
                 makeToast("Tabla personas vaciada.");
+                break;
+            case "CONFIG-AXX-6rVLydzn651RsZZ3dqWk":
+                // call LOG
+                Intent intent = new Intent(this, log_show.class);
+                startActivity(intent);
+                break;
             case "CONFIG-AXX-A11C9984001C27A12CC09A3C53B39ADF":
                 // Drop record table
                 db.clean_records();
@@ -347,6 +362,15 @@ public class MainActivity extends AppCompatActivity {
                 makeToast("Código de configuración incorrecto!");
                 break;
         }
+    }
+
+    public boolean ValidarRut(int rut, char dv) {
+        dv=dv=='k'?dv='K':dv;
+        int m = 0, s = 1;
+        for (; rut != 0; rut /= 10) {
+            s = (s + rut % 10 * (9 - m++ % 6)) % 11;
+        }
+        return dv == (char) (s != 0 ? s + 47 : 75);
     }
 
     private void initScan() {
@@ -386,6 +410,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void UpdateDb() {
+        final log_app log = new log_app();
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
@@ -399,6 +424,7 @@ public class MainActivity extends AppCompatActivity {
                             OfflineRecordsSynchronizer();
                     } catch (Exception e) {
                         writeLog("ERROR", e.getMessage());
+                        log.writeLog(getApplicationContext(), "Main:line 412", "ERROR", e.getMessage());
                     }
                 }
             }
@@ -415,7 +441,7 @@ public class MainActivity extends AppCompatActivity {
         registerReceiver(mScanReceiver, filter);
     }
 
-    public void cleanEditText(){
+    public void cleanEditText() {
         editTextRun.setText("");
         editTextFullName.setText("");
         editTextCompany.setText("");
@@ -434,6 +460,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void getPeople(String rut) {
         //Log.i("getPeople(String rut)", rut);
+        log_app log = new log_app();
         String finalJson = db.get_one_person(rut);
         editTextCompany.setVisibility(View.GONE);
         String[] arr = finalJson.split(";");
@@ -486,9 +513,10 @@ public class MainActivity extends AppCompatActivity {
                             editTextFullName.setText(name);
                             record.setPerson_fullname(name);
                         }
-                    } catch (NullPointerException npe) {
+                    } catch (NullPointerException e) {
                         editTextFullName.setText("");
                         record.setPerson_fullname("");
+                        log.writeLog(getApplicationContext(), "Main:line 504", "ERROR", e.getMessage());
                     }
 
                     // If have company show it.
@@ -520,11 +548,13 @@ public class MainActivity extends AppCompatActivity {
 
             // Save record on local database
             db.add_record(record);
-        } catch (ArrayIndexOutOfBoundsException aiobe) {
+        } catch (ArrayIndexOutOfBoundsException e) {
             mp3Error.start();
+            log.writeLog(getApplicationContext(), "Main:line 538", "ERROR", e.getMessage());
         } catch (Exception e) {
             e.printStackTrace();
             mp3Error.start();
+            log.writeLog(getApplicationContext(), "Main:line 542", "ERROR", e.getMessage());
         }
     }
 
@@ -547,12 +577,14 @@ public class MainActivity extends AppCompatActivity {
         }
 
         protected void onPostExecute(String json) {
-             // When response its 200, json save data no code.
+            // When response its 200, json save data no code.
+            log_app log = new log_app();
             if (json != "408" && json != "204") {
                 try {
                     db.add_people(json);
-                } catch (IllegalStateException ise) {
-                    ise.printStackTrace();
+                } catch (IllegalStateException e) {
+                    e.printStackTrace();
+                    log.writeLog(getApplicationContext(), "Main:line 572", "ERROR", e.getMessage());
                 }
             }
             loading.setVisibility(View.GONE);
@@ -561,6 +593,7 @@ public class MainActivity extends AppCompatActivity {
 
     public class getLastUpdateTask extends AsyncTask<String, Void, String> {
         private String Updated, postReturn = "";
+
         public getLastUpdateTask(String s) {
             Updated = s;
         }
@@ -577,6 +610,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         protected void onPostExecute(String result) {
+            log_app log = new log_app();
             try {
                 // Parse json
                 String[] splitter = result.split("\"");
@@ -585,11 +619,13 @@ public class MainActivity extends AppCompatActivity {
                 lastUpdated.setText(result);
             } catch (Exception e) {
                 writeLog("ERROR", result);
+                log.writeLog(getApplicationContext(), "Main:line 606", "ERROR", e.getMessage());
             }
         }
     }
 
     public String GET(String url) {
+        log_app log = new log_app();
         String result = "";
         InputStream inputStream;
         HttpClient httpclient = new DefaultHttpClient();
@@ -607,13 +643,14 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
             writeLog("ERROR", e.getMessage());
+            log.writeLog(getApplicationContext(), "Main:line 630", "ERROR", e.getMessage());
         }
         return result;
     }
 
 
     public String DbCall(String dataUrl) {
-
+        log_app log = new log_app();
         String contentAsString;
         URL url;
         HttpURLConnection connection = null;
@@ -639,6 +676,7 @@ public class MainActivity extends AppCompatActivity {
             }
         } catch (Exception e) {
             //e.printStackTrace();
+            log.writeLog(getApplicationContext(), "Main:line 663", "ERROR", e.getMessage());
             contentAsString = "408"; // Request Timeout
         }
         if (connection != null) {
@@ -695,6 +733,7 @@ public class MainActivity extends AppCompatActivity {
         String result = "";
         String json = "";
         JSONObject jsonObject = new JSONObject();
+        log_app log = new log_app();
         try {
 
             // 1. create HttpClient
@@ -789,10 +828,12 @@ public class MainActivity extends AppCompatActivity {
                 }
             } else {
                 writeLog("Json length", "Missing elements in the json to be posted");
+                log.writeLog(getApplicationContext(), "Main:line 815", "ERROR", "Missing elements in the json to be posted");
             }
         } catch (HttpHostConnectException hhc) {
             Log.i("---", "offline");
             writeLog("Conexion refused", "Cant connect to server");
+            log.writeLog(getApplicationContext(), "Main:line 820", "ERROR", "Cant connect to server");
         } catch (Exception e) {
             e.printStackTrace();
         }
