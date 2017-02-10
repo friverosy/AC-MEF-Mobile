@@ -68,14 +68,8 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private final int delay = 600000; // 4 Min. 240000; 600000 10 min
-    //private final String server = "http://controlid.multiexportfoods.com:3000";
-    //private final String server = "http://controlid-test.multiexportfoods.com:3000";
-    //private static String server = "http://192.168.2.77:3000"; // Sealand
-    // private static String server = "http://192.168.43.231:3000"; // Axxezo
-    //private static String server = "http://192.168.0.7:3000"; // House
-    //private static String server = "http://10.0.0.69:3000";
-    private static String server = "http://192.168.1.117:3000";
-    private static String version = "f2fadba";
+    private final String server = "http://controlid-test.multiexportfoods.com:3000";
+    private static String version = "49a738e";
 
     private ImageView imageview;
     private EditText editTextRun;
@@ -125,7 +119,6 @@ public class MainActivity extends AppCompatActivity {
             try {
                 log.createNewFile();
             } catch (IOException e) {
-                writeLog("ERROR", e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -133,7 +126,6 @@ public class MainActivity extends AppCompatActivity {
         loading = (ProgressWheel) findViewById(R.id.loading);
         loading.setVisibility(View.GONE);
 
-        writeLog("DEBUG", "Application has started Correctly");
         UpdateDb();
 
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
@@ -148,7 +140,6 @@ public class MainActivity extends AppCompatActivity {
         editTextCompany.setVisibility(View.GONE);
         mySwitch = (Switch) findViewById(R.id.mySwitch);
         mySwitch.setChecked(true);
-        lastUpdated = (TextView) findViewById(R.id.textView_lastUpdate);
         textViewVersion = (TextView) findViewById(R.id.textView_version);
         textViewVersion.setText("Versión: " + version);
 
@@ -263,7 +254,6 @@ public class MainActivity extends AppCompatActivity {
 
                     }
 
-
                     //get name from DNI
                     String[] array = rawCode.split("\\s+");
                     try {
@@ -271,23 +261,17 @@ public class MainActivity extends AppCompatActivity {
                     } catch (Exception e) {
                         name = (array[2].substring(0, array[2].indexOf("CHL")));
                     }
-                    //name.replace("�", ""); // Dont work :(
                 }
-
-                writeLog("Cooked Barcode", barcodeStr);
 
                 if (flagSetUp == 0)
                     getPeople(barcodeStr);
                 barcodeCache = barcodeStr; // Used to avoid 2 records in a row.
             } catch (NullPointerException e) {
-                writeLog("ERROR", e.getMessage());
                 log.writeLog(getApplicationContext(), "Main:line 278", "ERROR", e.getMessage());
             } catch (Exception e) {
                 e.printStackTrace();
                 log.writeLog(getApplicationContext(), "Main:line 281", "ERROR", e.getMessage());
             }
-            //if (db.record_desync_count() > 0)
-            //    OfflineRecordsSynchronizer();
         }
     };
 
@@ -336,28 +320,6 @@ public class MainActivity extends AppCompatActivity {
                 db.clean_records();
                 makeToast("Tabla records vaciada.");
                 break;
-            case "PING":
-                Socket t = null;
-                try {
-                    t = new Socket(server, 3000);
-                    DataInputStream dis = new DataInputStream(t.getInputStream());
-                    PrintStream ps = new PrintStream(t.getOutputStream());
-                    ps.println("Hello");
-                    String str = null;
-
-                    str = dis.readUTF();
-
-                    if (str.equals("Hello"))
-                        System.out.println("Alive!");
-                    else
-                        System.out.println("Dead");
-
-                    t.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-                break;
             default:
                 makeToast("Código de configuración incorrecto!");
                 break;
@@ -403,7 +365,6 @@ public class MainActivity extends AppCompatActivity {
         // TODO Auto-generated method stub
         super.onResume();
         initScan();
-        //UpdateDb();
         IntentFilter filter = new IntentFilter();
         filter.addAction(SCAN_ACTION);
         registerReceiver(mScanReceiver, filter);
@@ -416,14 +377,11 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
                 while (true) {
                     try {
-                        //File root = new File(Environment.getExternalStorageDirectory()+"LOGS"+"/AccessControl.log");
-                        //uploadLog("192.168.1.100","cristtopher","test","AccessControl.log",root);
                         new LoadDbTask().execute();
                         Thread.sleep(delay);
                         if (db.record_desync_count() > 0)
                             OfflineRecordsSynchronizer();
                     } catch (Exception e) {
-                        writeLog("ERROR", e.getMessage());
                         log.writeLog(getApplicationContext(), "Main:line 412", "ERROR", e.getMessage());
                     }
                 }
@@ -618,7 +576,6 @@ public class MainActivity extends AppCompatActivity {
                 result = result.substring(0, result.length() - 1);
                 lastUpdated.setText(result);
             } catch (Exception e) {
-                writeLog("ERROR", result);
                 log.writeLog(getApplicationContext(), "Main:line 606", "ERROR", e.getMessage());
             }
         }
@@ -642,7 +599,6 @@ public class MainActivity extends AppCompatActivity {
             }
         } catch (IOException e) {
             e.printStackTrace();
-            writeLog("ERROR", e.getMessage());
             log.writeLog(getApplicationContext(), "Main:line 630", "ERROR", e.getMessage());
         }
         return result;
@@ -669,11 +625,8 @@ public class MainActivity extends AppCompatActivity {
             InputStream is = connection.getInputStream();
             if (responsecode != 200) // OK
                 contentAsString = String.valueOf(responsecode);
-            else {
+            else
                 contentAsString = convertInputStreamToString(is);
-                //update datetime in textbox from XML file
-                new getLastUpdateTask(server + "/api/people/getLastUpdate?profile=E").execute().toString();
-            }
         } catch (Exception e) {
             //e.printStackTrace();
             log.writeLog(getApplicationContext(), "Main:line 663", "ERROR", e.getMessage());
@@ -827,12 +780,10 @@ public class MainActivity extends AppCompatActivity {
                     });
                 }
             } else {
-                writeLog("Json length", "Missing elements in the json to be posted");
                 log.writeLog(getApplicationContext(), "Main:line 815", "ERROR", "Missing elements in the json to be posted");
             }
         } catch (HttpHostConnectException hhc) {
-            Log.i("---", "offline");
-            writeLog("Conexion refused", "Cant connect to server");
+            Log.d("---", "offline");
             log.writeLog(getApplicationContext(), "Main:line 820", "ERROR", "Cant connect to server");
         } catch (Exception e) {
             e.printStackTrace();
@@ -857,77 +808,5 @@ public class MainActivity extends AppCompatActivity {
 
     public void makeToast(String msg) {
         Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
-    }
-
-    public void writeLog(String LogType, String content) {
-        String filename = "AccessControl.log";
-        String message = getCurrentDateTime() + " [" + LogType + "]" + ": " + content + "\n";
-        try {
-            File root = new File(Environment.getExternalStorageDirectory(), "LOGS");
-            if (!root.exists()) {
-                root.mkdirs();
-            }
-            File gpxfile = new File(root, filename);
-            FileWriter writer = new FileWriter(gpxfile, true);
-            writer.append(message);
-            writer.flush();
-            writer.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-
-    public void uploadLog(String ftpServer, String user, String password,
-                          String fileName, File source) throws
-            IOException {
-        if (ftpServer != null && fileName != null && source != null) {
-            StringBuffer sb = new StringBuffer("ftp://");
-            // check for authentication else assume its anonymous access.
-            if (user != null && password != null) {
-                sb.append(user);
-                sb.append(':');
-                sb.append(password);
-                sb.append('@');
-            }
-            sb.append(ftpServer);
-            sb.append('/');
-            sb.append(fileName);
-         /*
-          * type ==&gt; a=ASCII mode, i=image (binary) mode, d= file directory
-          * listing
-          */
-            sb.append(";type=i");
-
-            BufferedInputStream bis = null;
-            BufferedOutputStream bos = null;
-            try {
-                //Log.d("---", sb.toString());
-                URL url = new URL(sb.toString());
-                URLConnection urlc = url.openConnection();
-
-                bos = new BufferedOutputStream(urlc.getOutputStream());
-                bis = new BufferedInputStream(new FileInputStream(source));
-
-                int i;
-                // read byte by byte until end of stream
-                while ((i = bis.read()) != -1)
-                    bos.write(i);
-            } finally {
-                if (bis != null)
-                    try {
-                        bis.close();
-                    } catch (IOException ioe) {
-                        ioe.printStackTrace();
-                    }
-                if (bos != null)
-                    try {
-                        bos.close();
-                    } catch (IOException ioe) {
-                        ioe.printStackTrace();
-                    }
-            }
-        } else
-            Log.d("---", "Input not available.");
     }
 }

@@ -1,8 +1,5 @@
 package com.ctwings.myapplication;
 
-/**
- * Created by Cristtopher Quintana on 12-08-16.
- */
 public class Record {
 
     int record_id;

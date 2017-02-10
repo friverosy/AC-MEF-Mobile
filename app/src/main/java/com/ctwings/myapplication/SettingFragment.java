@@ -8,9 +8,6 @@ import android.view.ViewGroup;
 
 import com.ctwings.myapplication.R;
 
-/**
- * A placeholder fragment containing a simple view.
- */
 public class SettingFragment extends Fragment {
 
     public SettingFragment() {

@@ -1,8 +1,5 @@
 package com.ctwings.myapplication;
 
-/**
- * Created by nicolasmartin on 03-08-16.
- */
 public class Person {
     int person_id;
     String person_fullname;

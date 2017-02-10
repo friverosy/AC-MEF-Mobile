@@ -17,10 +17,6 @@ import org.json.JSONException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by nicolasmartin on 03-08-16.
- */
-
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     // Database Version
