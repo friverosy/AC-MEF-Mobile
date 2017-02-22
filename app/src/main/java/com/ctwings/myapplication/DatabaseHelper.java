@@ -22,7 +22,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     // Database Version
     private static final int DATABASE_VERSION = 2;
     // Database Name
-    private static final String DATABASE_NAME = "mbd";
+    private static final String DATABASE_NAME = "MultiexportFoods";
     //get context for use
     private Context context;
 
@@ -171,7 +171,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                             values); // key/value -> keys = column names/ values = column values
                 } catch (Exception e) {
                     Log.e("json", json_db_array.getJSONObject(i).toString());
-                    e.printStackTrace();
+                    Log.e("ERROR",e.getMessage().toString());
                 }
             }
         } catch (JSONException e) {

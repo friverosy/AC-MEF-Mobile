@@ -64,11 +64,14 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ThreadPoolExecutor;
 
 public class MainActivity extends AppCompatActivity {
 
     private final int delay = 600000; // 4 Min. 240000; 600000 10 min
     private final String server = "http://controlid-test.multiexportfoods.com:3000";
+    //private final String server = "http://controlid.multiexportfoods.com:3000";
+    //private final String server = "http://oods.com:3000";
     private static String version = "49a738e";
 
     private ImageView imageview;
@@ -255,12 +258,14 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     //get name from DNI
-                    String[] array = rawCode.split("\\s+");
+                    /*String[] array = rawCode.split("\\s+");
+                    Log.d("-----", rawCode);
                     try {
                         name = (array[1].substring(0, array[1].indexOf("CHL")));
                     } catch (Exception e) {
                         name = (array[2].substring(0, array[2].indexOf("CHL")));
-                    }
+                    }*/
+                    name = "";
                 }
 
                 if (flagSetUp == 0)
@@ -377,7 +382,7 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
                 while (true) {
                     try {
-                        new LoadDbTask().execute();
+                        new LoadDbTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
                         Thread.sleep(delay);
                         if (db.record_desync_count() > 0)
                             OfflineRecordsSynchronizer();
@@ -665,7 +670,7 @@ public class MainActivity extends AppCompatActivity {
             record.setRecord_sync(Integer.parseInt(arr[11]));
             record.setPerson_profile(arr[12]);
             record.setPerson_card(Integer.parseInt(arr[13]));
-            new RegisterTask(record).execute();
+            new RegisterTask(record).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
         }
     }
 
@@ -730,7 +735,7 @@ public class MainActivity extends AppCompatActivity {
             // 4. convert JSONObject to JSON to String
             if (jsonObject.length() <= 13) { // 13 element on json
                 json = jsonObject.toString();
-                Log.i("json to POST", json);
+                //Log.i("json to POST", json);
 
                 // 5. set json to StringEntity
                 StringEntity se = new StringEntity(json);
@@ -783,10 +788,9 @@ public class MainActivity extends AppCompatActivity {
                 log.writeLog(getApplicationContext(), "Main:line 815", "ERROR", "Missing elements in the json to be posted");
             }
         } catch (HttpHostConnectException hhc) {
-            Log.d("---", "offline");
-            log.writeLog(getApplicationContext(), "Main:line 820", "ERROR", "Cant connect to server");
+            log.writeLog(getApplicationContext(), "Main: POST method", "ERROR", hhc.getMessage().toString());
         } catch (Exception e) {
-            e.printStackTrace();
+            log.writeLog(getApplicationContext(), "Main: POST method", "ERROR", e.getMessage().toString());
         }
 
         return result;
