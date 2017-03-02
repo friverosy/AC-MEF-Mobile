@@ -200,7 +200,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         try {
             //db.beginTransaction();
             id.replace("%", ""); // Remove 0 at beginner
-            id = String.valueOf(Integer.parseInt(id));
+            //id = String.valueOf(Integer.parseInt(id));
 
             // 2. build query
             Cursor cursor =
