@@ -41,7 +41,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             "person_is_permitted INTEGER, " + "person_company TEXT, " +
             "person_place TEXT, " + "person_company_code TEXT," +
             "record_input_datetime TEXT, " + "record_output_datetime TEXT, " +
-            "record_sync INTEGER," + "person_profile TEXT, " + "person_card INTEGER)";
+            "record_sync INTEGER," + "person_profile TEXT, " + "person_card INTEGER, "+
+            "UNIQUE (record_input_datetime,record_output_datetime)) ";
 
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -66,12 +67,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         db.execSQL("CREATE INDEX record_idx_by_sync " +
                 " ON " + TABLE_RECORD + " (" + RECORD_SYNC + ");");
-
-        //db.execSQL("PRAGMA foreign_keys=ON;");
-        db.execSQL("PRAGMA encoding = 'UTF-8';");
-        //db.rawQuery("PRAGMA journal_mode = OFF",null);
-        //PRAGMA synchronous=OFF
-        //sqlite> VACUUM;
 
         //seed
         db.execSQL("INSERT INTO " + TABLE_SETTING + " (id_pda) VALUES (0);");
@@ -272,7 +267,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         // 3. insert
         try {
-            db.insert(TABLE_RECORD, null, values);
+            db.insertWithOnConflict(TABLE_RECORD, null, values,SQLiteDatabase.CONFLICT_IGNORE);
         } catch (SQLException e) {
             Log.e("DataBase Error", "Error to insert record: " + values);
             log.writeLog(context, "DBhelper:line 283", "ERROR", e.getMessage());
@@ -282,12 +277,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.close();
     }
 
-    public List get_desynchronized_records() {
+    public List<Record> get_desynchronized_records() {
 
         // 1. get reference to readable DB
         SQLiteDatabase db = this.getReadableDatabase();
         log_app log=new log_app();
-        List<String> records = new ArrayList<>();
+        List<Record> records = new ArrayList<>();
         try {
             // 2. build query
             Cursor cursor = //db.rawQuery("SELECT * FROM " + TABLE_RECORD, null);
@@ -303,24 +298,24 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             // 3. get all
             cursor.moveToFirst();
 
-            while (cursor.isAfterLast() == false) {
-                records.add(
-                        cursor.getInt(0) + ";" + //ID
-                                cursor.getString(1) + ";" + //FULLNAME
-                                cursor.getString(2) + ";" + //RUN
-                                cursor.getInt(3) + ";" + //IS_INPUT
-                                cursor.getInt(4) + ";" + //BUS
-                                cursor.getInt(5) + ";" + //IS_PERMITTED
-                                cursor.getString(6) + ";" + //COMPANY
-                                cursor.getString(7) + ";" + //PLACE
-                                cursor.getString(8) + ";" + //COMPANY_CODE
-                                cursor.getString(9) + ";" + //INPUT
-                                cursor.getString(10) + ";" + //OUTPUT
-                                cursor.getInt(11) + ";" + //SYNC
-                                cursor.getString(12) + ";" + //PROFILE
-                                cursor.getInt(13) //CARD
-                        //getInt to boolean type 0 (false), 1 (true)
-                );
+            while (!cursor.isAfterLast()) {
+                Record record = new Record();
+                record.setRecord_id(cursor.getInt(0));                  // ID
+                record.setPerson_fullname(cursor.getString(1));         // FULLNAME
+                record.setPerson_run(cursor.getString(2));              // RUN
+                record.setRecord_is_input(cursor.getInt(3));            // IS_INPUT
+                record.setRecord_bus(cursor.getInt(4));                 // BUS
+                record.setPerson_is_permitted(cursor.getInt(5));        // IS_PERMITTED
+                record.setPerson_company(cursor.getString(6));          // COMPANY
+                record.setPerson_place(cursor.getString(7));            // PLACE
+                record.setPerson_company_code(cursor.getString(8));     // COMPANY_CODE
+                record.setRecord_input_datetime(cursor.getString(9));   // INPUT_DATETIME
+                record.setRecord_output_datetime(cursor.getString(10)); // INPUT_DATETIME
+                record.setRecord_sync(cursor.getInt(11));               // SYNC
+                record.setPerson_profile(cursor.getString(12));         // PROFILE
+                record.setPerson_card(cursor.getInt(13));               // CARD
+
+                records.add(record);
                 cursor.moveToNext();
             }
 

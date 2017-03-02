@@ -12,6 +12,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.Vibrator;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -64,14 +65,18 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ThreadPoolExecutor;
 
 public class MainActivity extends AppCompatActivity {
 
     private final int delay = 600000; // 4 Min. 240000; 600000 10 min
-    private final String server = "http://controlid-test.multiexportfoods.com:3000";
+    //private final String server = "http://controlid-test.multiexportfoods.com:3000";
     //private final String server = "http://controlid.multiexportfoods.com:3000";
-    //private final String server = "http://oods.com:3000";
+    private final String server = "http://192.168.1.126:3000";
+    private final int delayPeople = 600000; // 4 Min. 240000; 600000 10 min
+    private final int delayRecords = 500000; // 4 Min. 240000; 480000 8 min
     private static String version = "49a738e";
 
     private ImageView imageview;
@@ -84,12 +89,11 @@ public class MainActivity extends AppCompatActivity {
     private ProgressWheel loading;
     private boolean is_input;
     private TextView lastUpdated;
+    private LoadDbTask updatePeopleTask;
 
     private final static String SCAN_ACTION = "urovo.rcv.message";//扫描结束action
     private Vibrator mVibrator;
     private ScanManager mScanManager;
-    private SoundPool soundpool = null;
-    private int soundid;
     private String barcodeStr;
     private String barcodeCache;
     private boolean isScaning = false;
@@ -129,7 +133,8 @@ public class MainActivity extends AppCompatActivity {
         loading = (ProgressWheel) findViewById(R.id.loading);
         loading.setVisibility(View.GONE);
 
-        UpdateDb();
+        UpdateDbPeople();//asyntask  updating people
+        sendRecords(); //send records to api axxezo
 
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         editTextRun = (EditText) findViewById(R.id.editText_run);
@@ -345,7 +350,6 @@ public class MainActivity extends AppCompatActivity {
         mScanManager = new ScanManager();
         mScanManager.openScanner();
         mScanManager.switchOutputMode(0);
-        soundpool = new SoundPool(1, AudioManager.STREAM_NOTIFICATION, 100); // MODE_RINGTONE
     }
 
     @Override
@@ -375,24 +379,51 @@ public class MainActivity extends AppCompatActivity {
         registerReceiver(mScanReceiver, filter);
     }
 
-    public void UpdateDb() {
+    public void UpdateDbPeople() {
+        Timer timer = new Timer();
+        final Handler handler = new Handler();
         final log_app log = new log_app();
-        Runnable runnable = new Runnable() {
+        TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                while (true) {
-                    try {
-                        new LoadDbTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-                        Thread.sleep(delay);
-                        if (db.record_desync_count() > 0)
-                            OfflineRecordsSynchronizer();
-                    } catch (Exception e) {
-                        log.writeLog(getApplicationContext(), "Main:line 412", "ERROR", e.getMessage());
+                handler.post(new Runnable() {
+                    public void run() {
+                        try {
+                            updatePeopleTask = new LoadDbTask();
+                            updatePeopleTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+                        } catch (Exception e) {
+                            log.writeLog(getApplicationContext(), "Main:line 397", "ERROR", e.getMessage());
+                        }
                     }
-                }
+                });
             }
         };
-        new Thread(runnable).start();
+        timer.schedule(task, 0, delayPeople);
+
+    }
+
+    public void sendRecords() {
+        Timer timer = new Timer();
+        final Handler handler = new Handler();
+        final log_app log = new log_app();
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                handler.post(new Runnable() {
+                    public void run() {
+                        try {
+                            if (db.record_desync_count() > 0 && updatePeopleTask.getStatus() != AsyncTask.Status.RUNNING) {
+                                //if task running dont sync  && updatePeopleTask.getStatus() != AsyncTask.Status.RUNNING
+                                OfflineRecordsSynchronizer();
+                            }
+                        } catch (Exception e) {
+                            log.writeLog(getApplicationContext(), "Main:line 419", "ERROR", e.getMessage());
+                        }
+                    }
+                });
+            }
+        };
+        timer.schedule(task, 0, delayRecords);
     }
 
     public void reset() {
@@ -422,7 +453,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void getPeople(String rut) {
-        //Log.i("getPeople(String rut)", rut);
         log_app log = new log_app();
         String finalJson = db.get_one_person(rut);
         editTextCompany.setVisibility(View.GONE);
@@ -526,9 +556,6 @@ public class MainActivity extends AppCompatActivity {
         protected void onPreExecute() {
             loading.setSpinSpeed(3);
             loading.setVisibility(View.VISIBLE);
-            if (isScaning) {
-                mScanManager.stopDecode();
-            }
         }
 
         protected String doInBackground(String... params) {
@@ -630,10 +657,11 @@ public class MainActivity extends AppCompatActivity {
             InputStream is = connection.getInputStream();
             if (responsecode != 200) // OK
                 contentAsString = String.valueOf(responsecode);
-            else
+            else {
                 contentAsString = convertInputStreamToString(is);
+                new getLastUpdateTask(server + "/api/people/getLastUpdate?profile=E").execute().toString();
+            }
         } catch (Exception e) {
-            //e.printStackTrace();
             log.writeLog(getApplicationContext(), "Main:line 663", "ERROR", e.getMessage());
             contentAsString = "408"; // Request Timeout
         }
@@ -643,35 +671,14 @@ public class MainActivity extends AppCompatActivity {
         if (contentAsString.length() <= 2) { //[]
             contentAsString = "204"; // No content
         }
-        //Log.i("Server response", contentAsString);
 
         return contentAsString;
     }
 
     public void OfflineRecordsSynchronizer() {
-        List records = db.get_desynchronized_records();
-
-        String[] arr;
-        for (int i = 0; i <= records.size() - 1; i++) {
-            Record record = new Record();
-            arr = records.get(i).toString().split(";");
-            // Get each row to be synchronized
-            record.setRecord_id(Integer.parseInt(arr[0]));
-            record.setPerson_fullname(arr[1]);
-            record.setPerson_run(arr[2]);
-            record.setRecord_is_input(Integer.parseInt(arr[3]));
-            record.setRecord_bus(Integer.parseInt(arr[4]));
-            record.setPerson_is_permitted(Integer.parseInt(arr[5]));
-            record.setPerson_company(arr[6]);
-            record.setPerson_place(arr[7]);
-            record.setPerson_company_code(arr[8]);
-            record.setRecord_input_datetime(arr[9]);
-            record.setRecord_output_datetime(arr[10]);
-            record.setRecord_sync(Integer.parseInt(arr[11]));
-            record.setPerson_profile(arr[12]);
-            record.setPerson_card(Integer.parseInt(arr[13]));
-            new RegisterTask(record).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-        }
+        List<Record> records = db.get_desynchronized_records();
+        if (records.size() > 0)
+            new RegisterTask(records).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     private static String convertInputStreamToString(InputStream inputStream) throws IOException {
@@ -798,15 +805,20 @@ public class MainActivity extends AppCompatActivity {
 
     public class RegisterTask extends AsyncTask<Void, Void, String> {
 
-        private Record newRecord;
+        private List<Record> newRecord;
 
-        RegisterTask(Record newRecord) {
+        RegisterTask(List<Record> newRecord) {
             this.newRecord = newRecord;
         }
 
         @Override
         protected String doInBackground(Void... params) {
-            return POST(newRecord, server + "/api/records/");
+            String postReturn = "";
+            for (int i = 0; i < newRecord.size(); i++) {
+                Record record = newRecord.get(i);
+                postReturn = POST(record, server + "/api/records/");
+            }
+            return postReturn;
         }
     }
 
