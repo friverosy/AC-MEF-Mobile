@@ -5,21 +5,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.device.ScanManager;
-import android.media.AudioManager;
 import android.media.MediaPlayer;
-import android.media.SoundPool;
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Vibrator;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
-import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -30,10 +24,6 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.appindexing.Action;
-import com.google.android.gms.appindexing.AppIndex;
-import com.google.android.gms.appindexing.Thing;
-import com.google.android.gms.common.api.GoogleApiClient;
 import com.pnikosis.materialishprogress.ProgressWheel;
 
 import org.apache.http.HttpResponse;
@@ -45,21 +35,13 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONObject;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.PrintStream;
 import java.net.HttpURLConnection;
-import java.net.Socket;
 import java.net.URL;
-import java.net.URLConnection;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -67,16 +49,14 @@ import java.util.Date;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.ThreadPoolExecutor;
 
 public class MainActivity extends AppCompatActivity {
 
-    private final int delay = 600000; // 4 Min. 240000; 600000 10 min
     //private final String server = "http://controlid-test.multiexportfoods.com:3000";
     //private final String server = "http://controlid.multiexportfoods.com:3000";
     private final String server = "http://192.168.1.126:3000";
-    private final int delayPeople = 600000; // 4 Min. 240000; 600000 10 min
-    private final int delayRecords = 500000; // 4 Min. 240000; 480000 8 min
+    private final int delayPeople = 12000; // 4 Min. 240000; 600000 10 min
+    private final int delayRecords = 23000; // 4 Min. 240000; 480000 8 min
     private static String version = "49a738e";
 
     private ImageView imageview;
@@ -207,12 +187,12 @@ public class MainActivity extends AppCompatActivity {
             log_app log = new log_app();
             // TODO Auto-generated method stub
             try {
-                if (mp3Error.isPlaying()) mp3Error.stop();
+                /*if (mp3Error.isPlaying()) mp3Error.stop();
                 if (mp3Dennied.isPlaying()) mp3Dennied.stop();
-                if (mp3Permitted.isPlaying()) mp3Permitted.stop();
+                if (mp3Permitted.isPlaying()) mp3Permitted.stop();*/
+                new LoadSound(4).execute();
 
                 isScaning = false;
-                //soundpool.play(soundid, 1, 1, 0, 0, 1);
 
                 mVibrator.vibrate(100);
                 cleanEditText();
@@ -244,7 +224,7 @@ public class MainActivity extends AppCompatActivity {
                     // 1.- validate if the rut is > 10 millions
                     String rutValidator = barcodeStr.substring(0, 8);
                     rutValidator = rutValidator.replace(" ", "");
-                    rutValidator=rutValidator.endsWith("K")?rutValidator.replace("K","0"):rutValidator;
+                    rutValidator = rutValidator.endsWith("K") ? rutValidator.replace("K", "0") : rutValidator;
                     char dv = barcodeStr.substring(8, 9).charAt(0);
                     boolean isvalid = ValidarRut(Integer.parseInt(rutValidator), dv);
                     if (isvalid)
@@ -252,7 +232,7 @@ public class MainActivity extends AppCompatActivity {
                     else { //try validate rut size below 10.000.000
                         rutValidator = barcodeStr.substring(0, 7);
                         rutValidator = rutValidator.replace(" ", "");
-                        rutValidator=rutValidator.endsWith("K")?rutValidator.replace("K","0"):rutValidator;
+                        rutValidator = rutValidator.endsWith("K") ? rutValidator.replace("K", "0") : rutValidator;
                         dv = barcodeStr.substring(7, 8).charAt(0);
                         isvalid = ValidarRut(Integer.parseInt(rutValidator), dv);
                         if (isvalid)
@@ -337,7 +317,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public boolean ValidarRut(int rut, char dv) {
-        dv=dv=='k'?dv='K':dv;
+        dv = dv == 'k' ? dv = 'K' : dv;
         int m = 0, s = 1;
         for (; rut != 0; rut /= 10) {
             s = (s + rut % 10 * (9 - m++ % 6)) % 11;
@@ -465,13 +445,14 @@ public class MainActivity extends AppCompatActivity {
             record.setPerson_run(arr[0]);
 
             if (arr[2].equals("true")) {
-                mp3Permitted.start();
-                //is_permitted = true;
+                //mp3Permitted.start();
+                new LoadSound(2).execute();
                 record.setPerson_is_permitted(1);
                 if (is_input)
                     imageview.setImageResource(R.drawable.permitted);
             } else {
-                mp3Dennied.start();
+                //mp3Dennied.start();
+                new LoadSound(3).execute();
                 // if has card number define as denied and as employee
                 //is_permitted = false;
                 record.setPerson_is_permitted(0);
@@ -542,11 +523,13 @@ public class MainActivity extends AppCompatActivity {
             // Save record on local database
             db.add_record(record);
         } catch (ArrayIndexOutOfBoundsException e) {
-            mp3Error.start();
+            //mp3Error.start();
+            new LoadSound(1).execute();
             log.writeLog(getApplicationContext(), "Main:line 538", "ERROR", e.getMessage());
         } catch (Exception e) {
             e.printStackTrace();
-            mp3Error.start();
+            //mp3Error.start();
+            new LoadSound(1).execute();
             log.writeLog(getApplicationContext(), "Main:line 542", "ERROR", e.getMessage());
         }
     }
@@ -782,7 +765,8 @@ public class MainActivity extends AppCompatActivity {
                     if (result.startsWith("http://"))
                         result = "204"; //no content
                 } else {
-                    mp3Error.start();
+                    //mp3Error.start();
+                    new LoadSound(1).execute();
                     runOnUiThread(new Runnable() {
 
                         @Override
@@ -822,7 +806,53 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private class LoadSound extends AsyncTask<Void, Void, Void> {
+        private int typeSound = -1;
+
+        /*  Asyntask to play sounds in background
+         *  1 Error
+         *  2 Permitted
+         *  3 Denied
+         *  4 stop all
+         */
+        private LoadSound(int typeSound) {
+            this.typeSound = typeSound;
+        }
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            switch (typeSound) {
+                case 1:
+                    if (mp3Error.isPlaying()) mp3Error.pause();
+                    mp3Error.seekTo(0);
+                    mp3Error.start();
+                    break;
+                case 2:
+                    if (mp3Permitted.isPlaying()) mp3Permitted.pause();
+                    mp3Permitted.seekTo(0);
+                    mp3Permitted.start();
+                    break;
+                case 3:
+                    if (mp3Dennied.isPlaying()) mp3Dennied.pause();
+                    mp3Dennied.seekTo(0);
+                    mp3Dennied.start();
+                    break;
+                case 4:
+                    if (mp3Error.isPlaying()) mp3Error.pause();
+                    mp3Error.seekTo(0);
+                    if (mp3Dennied.isPlaying()) mp3Dennied.pause();
+                    mp3Dennied.seekTo(0);
+                    if (mp3Permitted.isPlaying()) mp3Permitted.pause();
+                    mp3Permitted.seekTo(0);
+                    break;
+            }
+            return null;
+        }
+    }
+
+
     public void makeToast(String msg) {
         Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
     }
+
 }
