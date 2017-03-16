@@ -19,12 +19,23 @@ import java.util.List;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
+    //Instance of Helper to keep one conection all time
+    private static DatabaseHelper sInstance;
+
     // Database Version
     private static final int DATABASE_VERSION = 2;
     // Database Name
     private static final String DATABASE_NAME = "MultiexportFoods";
     //get context for use
     private Context context;
+
+    public static synchronized DatabaseHelper getInstance(Context context) {
+        //one single instance of DB
+        if (sInstance == null) {
+            sInstance = new DatabaseHelper(context.getApplicationContext());
+        }
+        return sInstance;
+    }
 
     // SQL statement to create User table
     String CREATE_PERSON_TABLE = "CREATE TABLE " + TABLE_PERSON + " ( " +
@@ -41,7 +52,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             "person_is_permitted INTEGER, " + "person_company TEXT, " +
             "person_place TEXT, " + "person_company_code TEXT," +
             "record_input_datetime TEXT, " + "record_output_datetime TEXT, " +
-            "record_sync INTEGER," + "person_profile TEXT, " + "person_card INTEGER, "+
+            "record_sync INTEGER," + "person_profile TEXT, " + "person_card INTEGER, " +
             "UNIQUE (record_input_datetime,record_output_datetime)) ";
 
     public DatabaseHelper(Context context) {
@@ -121,7 +132,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         Log.i("---", "start");
 
         JSONArray json_db_array;
-        SQLiteDatabase db = this.getWritableDatabase();
+        SQLiteDatabase db = getWritableDatabase();
 
         db.beginTransaction();
         try {
@@ -164,11 +175,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     db.insert(TABLE_PERSON, // table
                             null, //nullColumnHack
                             values); // key/value -> keys = column names/ values = column values
+
                 } catch (Exception e) {
                     Log.e("json", json_db_array.getJSONObject(i).toString());
-                    Log.e("ERROR",e.getMessage().toString());
+                    Log.e("ERROR", e.getMessage().toString());
                 }
             }
+            db.setTransactionSuccessful();
         } catch (JSONException e) {
             log.writeLog(context, "DBhelper:line 182", "ERROR", e.getMessage());
         } catch (IllegalStateException e) {
@@ -178,10 +191,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         } catch (Exception e) {
             log.writeLog(context, "DBhelper:line 186", "ERROR", e.getMessage());
         } finally {
-            db.setTransactionSuccessful();
+            db.endTransaction();
         }
-        db.endTransaction();
-        db.close();
         Log.i("---", "end");
     }
 
@@ -189,16 +200,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         //Log.i("get_one_person(id)", id);
         // 1. get reference to readable DB
         log_app log = new log_app();
-        SQLiteDatabase db = this.getReadableDatabase();
+        SQLiteDatabase db = getWritableDatabase();
         String out = "";
-
+        Cursor cursor = null;
         try {
             //db.beginTransaction();
             id.replace("%", ""); // Remove 0 at beginner
             //id = String.valueOf(Integer.parseInt(id));
 
             // 2. build query
-            Cursor cursor =
+            cursor =
                     db.query(TABLE_PERSON, // a. table
                             PERSON_COLUMNS, // b. column names
                             " person_run = ? OR person_card = ?", // c. selections
@@ -223,8 +234,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                             cursor.getInt(7) + ";" + cursor.getString(8);
                 }
             }
-            cursor.close();
-            //db.setTransactionSuccessful();
+            //cursor.close();
         } catch (IllegalStateException e) {
             log.writeLog(context, "DBhelper:line 238", "ERROR", e.getMessage());
         } catch (SQLiteDatabaseLockedException e) {
@@ -232,11 +242,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         } catch (NumberFormatException e) {
             log.writeLog(context, "DBhelper:line 238", "ERROR", e.getMessage());
         } finally {
-            //db.endTransaction();
+            if (cursor != null)
+                cursor.close();
         }
-
-        db.close();
-
+        // db.close();
         // 5. return
         return out;
     }
@@ -246,46 +255,50 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         log_app log = new log_app();
         //Log.i("add_record(record)", record.toString());
         // 1. get reference to writable DB
-        SQLiteDatabase db = this.getWritableDatabase();
-        // 2. create ContentValues to add key "column"/value
+        SQLiteDatabase db = getWritableDatabase();
+        db.beginTransaction();
         ContentValues values = new ContentValues();
-        values.put(PERSON_FULLNAME, record.getPerson_fullname());
-        values.put(PERSON_RUN, record.getPerson_run());
-        values.put(RECORD_IS_INPUT, record.getRecord_is_input());
-        values.put(RECORD_BUS, record.getRecord_bus());
-        values.put(PERSON_IS_PERMITTED, record.getPerson_is_permitted());
-        values.put(PERSON_COMPANY, record.getPerson_company());
-        values.put(PERSON_PLACE, record.getPerson_place());
-        values.put(PERSON_COMPANY_CODE, record.getPerson_company_code());
-        if (record.getRecord_input_datetime() != null)
-            values.put(RECORD_INPUT_DATETIME, record.getRecord_input_datetime());
-        if (record.getRecord_output_datetime() != null)
-            values.put(RECORD_OUTPUT_DATETIME, record.getRecord_output_datetime());
-        values.put(RECORD_SYNC, record.getRecord_sync());
-        values.put(PERSON_PROFILE, record.getPerson_profile());
-        values.put(PERSON_CARD, record.getPerson_card());
-
         // 3. insert
         try {
-            db.insertWithOnConflict(TABLE_RECORD, null, values,SQLiteDatabase.CONFLICT_IGNORE);
+            // 2. create ContentValues to add key "column"/value
+            values.put(PERSON_FULLNAME, record.getPerson_fullname());
+            values.put(PERSON_RUN, record.getPerson_run());
+            values.put(RECORD_IS_INPUT, record.getRecord_is_input());
+            values.put(RECORD_BUS, record.getRecord_bus());
+            values.put(PERSON_IS_PERMITTED, record.getPerson_is_permitted());
+            values.put(PERSON_COMPANY, record.getPerson_company());
+            values.put(PERSON_PLACE, record.getPerson_place());
+            values.put(PERSON_COMPANY_CODE, record.getPerson_company_code());
+            if (record.getRecord_input_datetime() != null)
+                values.put(RECORD_INPUT_DATETIME, record.getRecord_input_datetime());
+            if (record.getRecord_output_datetime() != null)
+                values.put(RECORD_OUTPUT_DATETIME, record.getRecord_output_datetime());
+            values.put(RECORD_SYNC, record.getRecord_sync());
+            values.put(PERSON_PROFILE, record.getPerson_profile());
+            values.put(PERSON_CARD, record.getPerson_card());
+            db.insertWithOnConflict(TABLE_RECORD, null, values, SQLiteDatabase.CONFLICT_IGNORE);
+            db.setTransactionSuccessful();
         } catch (SQLException e) {
             Log.e("DataBase Error", "Error to insert record: " + values);
             log.writeLog(context, "DBhelper:line 283", "ERROR", e.getMessage());
+        } finally {
+            db.endTransaction();
         }
 
         // 4. close
-        db.close();
+        //db.close();
     }
 
     public List<Record> get_desynchronized_records() {
 
         // 1. get reference to readable DB
-        SQLiteDatabase db = this.getReadableDatabase();
-        log_app log=new log_app();
+        SQLiteDatabase db = this.getWritableDatabase();
+        log_app log = new log_app();
         List<Record> records = new ArrayList<>();
+        Cursor cursor = null;
         try {
             // 2. build query
-            Cursor cursor = //db.rawQuery("SELECT * FROM " + TABLE_RECORD, null);
+            cursor = //db.rawQuery("SELECT * FROM " + TABLE_RECORD, null);
                     db.query(TABLE_RECORD, // a. table
                             RECORD_COLUMNS, // b. column names
                             RECORD_SYNC + "=0", // c. selections
@@ -318,14 +331,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 records.add(record);
                 cursor.moveToNext();
             }
-
-            cursor.close();
         } catch (SQLException e) {
             Log.e("DataBase Error", e.getMessage().toString());
             log.writeLog(context, "DBhelper:line 238", "ERROR", e.getMessage());
             e.printStackTrace();
+        } finally {
+            if (cursor != null)
+                cursor.close();
         }
-        db.close();
+        //db.close();
 
         // 5. return
         return records;
@@ -377,8 +391,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public void update_record(int id) {
         //Log.i("update_record(int id)", String.valueOf(id));
-        log_app log=new log_app();
+        log_app log = new log_app();
         SQLiteDatabase db = this.getWritableDatabase();
+        db.beginTransaction();
         try {
             ContentValues values = new ContentValues();
             values.put(RECORD_SYNC, 1);
@@ -390,10 +405,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     null);
 
             // 4. close
-            db.close();
+            //db.close();
             if (i == 0) Log.e("Error updating record", String.valueOf(id));
+            db.setTransactionSuccessful();
         } catch (SQLException e) {
-            log.writeLog(context,"DBhelper:line 405","ERROR",e.getMessage());
+            log.writeLog(context, "DBhelper:line 405", "ERROR", e.getMessage());
+        } finally {
+            db.endTransaction();
         }
     }
 

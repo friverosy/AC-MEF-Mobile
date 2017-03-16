@@ -52,13 +52,12 @@ import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
 
-    //private final String server = "http://controlid-test.multiexportfoods.com:3000";
+    private final String server = "http://controlid-test.multiexportfoods.com:3000";
     //private final String server = "http://controlid.multiexportfoods.com:3000";
-    private final String server = "http://192.168.1.126:3000";
-    private final int delayPeople = 12000; // 4 Min. 240000; 600000 10 min
-    private final int delayRecords = 23000; // 4 Min. 240000; 480000 8 min
-    private static String version = "49a738e";
-
+    //private final String server = "http://192.168.1.126:3000";
+    private final int delayPeople = 5000; // 4 Min. 240000; 600000 10 min
+    private final int delayRecords = 3000; // 4 Min. 240000; 480000 8 min
+    private static String version = "e65fe2e";
     private ImageView imageview;
     private EditText editTextRun;
     private EditText editTextFullName;
@@ -81,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
     MediaPlayer mp3Dennied;
     MediaPlayer mp3Permitted;
     MediaPlayer mp3Error;
-    DatabaseHelper db = new DatabaseHelper(this);
+   // DatabaseHelper db = new DatabaseHelper(this);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -266,6 +265,7 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private void SetUp(String barcodeStr) {
+        DatabaseHelper db = DatabaseHelper.getInstance(this);
         switch (barcodeStr) {
             case "CONFIG-AXX-637B55B8AA55C7C7D3810E0CE05B1E80":
                 // Offline record Syncronize
@@ -383,6 +383,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void sendRecords() {
+        final DatabaseHelper db=DatabaseHelper.getInstance(this);
         Timer timer = new Timer();
         final Handler handler = new Handler();
         final log_app log = new log_app();
@@ -392,8 +393,7 @@ public class MainActivity extends AppCompatActivity {
                 handler.post(new Runnable() {
                     public void run() {
                         try {
-                            if (db.record_desync_count() > 0 && updatePeopleTask.getStatus() != AsyncTask.Status.RUNNING) {
-                                //if task running dont sync  && updatePeopleTask.getStatus() != AsyncTask.Status.RUNNING
+                            if (db.record_desync_count() > 0 ) { //&& updatePeopleTask.getStatus() != AsyncTask.Status.RUNNING
                                 OfflineRecordsSynchronizer();
                             }
                         } catch (Exception e) {
@@ -433,6 +433,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void getPeople(String rut) {
+        DatabaseHelper db=DatabaseHelper.getInstance(this);
         log_app log = new log_app();
         String finalJson = db.get_one_person(rut);
         editTextCompany.setVisibility(View.GONE);
@@ -552,6 +553,7 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(String json) {
             // When response its 200, json save data no code.
             log_app log = new log_app();
+            DatabaseHelper db=DatabaseHelper.getInstance(getBaseContext());
             if (json != "408" && json != "204") {
                 try {
                     db.add_people(json);
@@ -659,6 +661,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void OfflineRecordsSynchronizer() {
+        DatabaseHelper db=DatabaseHelper.getInstance(this);
         List<Record> records = db.get_desynchronized_records();
         if (records.size() > 0)
             new RegisterTask(records).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
@@ -676,10 +679,13 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+
+
     public String POST(Record record, String url) {
         InputStream inputStream;
         String result = "";
         String json = "";
+        DatabaseHelper db=DatabaseHelper.getInstance(this);
         JSONObject jsonObject = new JSONObject();
         log_app log = new log_app();
         try {
@@ -687,27 +693,27 @@ public class MainActivity extends AppCompatActivity {
             // 1. create HttpClient
             HttpClient httpclient = new DefaultHttpClient();
 
-            // 2. make POST request to the given URL
-            HttpPost httpPost = new HttpPost(url);
+                // 2. make POST request to the given URL
+                HttpPost httpPost = new HttpPost(url);
 
-            // 3. build jsonObject from jsonList
-            jsonObject.accumulate("run", record.getPerson_run());
-            jsonObject.accumulate("fullname", record.getPerson_fullname());
-            jsonObject.accumulate("profile", record.getPerson_profile());
+                // 3. build jsonObject from jsonList
+                jsonObject.accumulate("run", record.getPerson_run());
+                jsonObject.accumulate("fullname", record.getPerson_fullname());
+                jsonObject.accumulate("profile", record.getPerson_profile());
 
-            if (record.getPerson_profile().equals("V")) {
-                jsonObject.accumulate("is_permitted", true);
-            } else {
-                if (record.getPerson_is_permitted() == 1)
+                if (record.getPerson_profile().equals("V")) {
                     jsonObject.accumulate("is_permitted", true);
-                else jsonObject.accumulate("is_permitted", false);
-            }
+                } else {
+                    if (record.getPerson_is_permitted() == 1)
+                        jsonObject.accumulate("is_permitted", true);
+                    else jsonObject.accumulate("is_permitted", false);
+                }
 
-            if (record.getRecord_is_input() == 1) {
-                jsonObject.accumulate("is_input", true);
-                jsonObject.accumulate("input_datetime", record.getRecord_input_datetime());
+                if (record.getRecord_is_input() == 1) {
+                    jsonObject.accumulate("is_input", true);
+                    jsonObject.accumulate("input_datetime", record.getRecord_input_datetime());
 
-            } else {
+                } else {
                 jsonObject.accumulate("is_input", false);
                 jsonObject.accumulate("output_datetime", record.getRecord_output_datetime());
             }

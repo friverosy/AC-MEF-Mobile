@@ -13,7 +13,7 @@ import android.widget.Toast;
 
 public class Setting extends AppCompatActivity {
     NumberPicker np;
-    DatabaseHelper db = new DatabaseHelper(this);
+    DatabaseHelper db=DatabaseHelper.getInstance(this);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
