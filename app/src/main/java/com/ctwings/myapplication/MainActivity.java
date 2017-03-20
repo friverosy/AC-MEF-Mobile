@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.device.ScanManager;
+import android.graphics.Color;
 import android.media.MediaPlayer;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -14,9 +15,11 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -27,12 +30,14 @@ import android.widget.Toast;
 import com.pnikosis.materialishprogress.ProgressWheel;
 
 import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.conn.HttpHostConnectException;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -40,6 +45,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.DateFormat;
@@ -52,11 +58,11 @@ import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
 
-    private final String server = "http://controlid-test.multiexportfoods.com:3000";
+    //private final String server = "http://controlid-test.multiexportfoods.com:3000";
     //private final String server = "http://controlid.multiexportfoods.com:3000";
-    //private final String server = "http://192.168.1.126:3000";
-    private final int delayPeople = 5000; // 4 Min. 240000; 600000 10 min
-    private final int delayRecords = 3000; // 4 Min. 240000; 480000 8 min
+    private final String server = "http://192.168.1.126:3000";
+    private final int delayPeople = 240000; // 4 Min. 240000; 600000 10 min
+    private final int delayRecords = 200000; // 4 Min. 240000; 480000 8 min
     private static String version = "e65fe2e";
     private ImageView imageview;
     private EditText editTextRun;
@@ -80,7 +86,8 @@ public class MainActivity extends AppCompatActivity {
     MediaPlayer mp3Dennied;
     MediaPlayer mp3Permitted;
     MediaPlayer mp3Error;
-   // DatabaseHelper db = new DatabaseHelper(this);
+
+    // DatabaseHelper db = new DatabaseHelper(this);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -147,10 +154,15 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                getPeople(editTextRun.getText().toString());
+                if (editTextRun.getText().toString().isEmpty()) {
+                    editTextRun.setHint("Ingrese Rut");
+                    editTextRun.setHintTextColor(Color.RED);
+                    editTextRun.requestFocus();
+                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    imm.showSoftInput(editTextRun, InputMethodManager.SHOW_IMPLICIT);
+                } else getPeople(editTextRun.getText().toString());
             }
         });
-
     }
 
     @Override
@@ -369,8 +381,7 @@ public class MainActivity extends AppCompatActivity {
                 handler.post(new Runnable() {
                     public void run() {
                         try {
-                            updatePeopleTask = new LoadDbTask();
-                            updatePeopleTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+                            new checkStatusTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
                         } catch (Exception e) {
                             log.writeLog(getApplicationContext(), "Main:line 397", "ERROR", e.getMessage());
                         }
@@ -379,11 +390,10 @@ public class MainActivity extends AppCompatActivity {
             }
         };
         timer.schedule(task, 0, delayPeople);
-
     }
 
     public void sendRecords() {
-        final DatabaseHelper db=DatabaseHelper.getInstance(this);
+        final DatabaseHelper db = DatabaseHelper.getInstance(this);
         Timer timer = new Timer();
         final Handler handler = new Handler();
         final log_app log = new log_app();
@@ -393,7 +403,7 @@ public class MainActivity extends AppCompatActivity {
                 handler.post(new Runnable() {
                     public void run() {
                         try {
-                            if (db.record_desync_count() > 0 ) { //&& updatePeopleTask.getStatus() != AsyncTask.Status.RUNNING
+                            if (db.record_desync_count() > 0) { //&& updatePeopleTask.getStatus() != AsyncTask.Status.RUNNING
                                 OfflineRecordsSynchronizer();
                             }
                         } catch (Exception e) {
@@ -433,7 +443,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void getPeople(String rut) {
-        DatabaseHelper db=DatabaseHelper.getInstance(this);
+        DatabaseHelper db = DatabaseHelper.getInstance(this);
         log_app log = new log_app();
         String finalJson = db.get_one_person(rut);
         editTextCompany.setVisibility(View.GONE);
@@ -535,6 +545,33 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public class checkStatusTask extends AsyncTask<String, String, String> {
+
+        protected void onPreExecute() {
+            loading.setSpinSpeed(3);
+            loading.setVisibility(View.VISIBLE);
+        }
+
+        protected String doInBackground(String... params) {
+            return GET(server + "/api/states/updatePeople");
+        }
+
+        protected void onPostExecute(String json) {
+            loading.setVisibility(View.GONE);
+            try {
+                JSONObject obj = new JSONObject(json);
+                if (obj.get("update").toString().equals("true")){
+                    updatePeopleTask = new LoadDbTask();
+                    updatePeopleTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+                    new updateStateOnServerTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+        }
+    }
+
     public class LoadDbTask extends AsyncTask<String, String, String> {
 
         protected void onPreExecute() {
@@ -546,14 +583,10 @@ public class MainActivity extends AppCompatActivity {
             return DbCall(server + "/api/people?filter[where][is_permitted]=true");
         }
 
-        protected void onProgressUpdate(String... progress) {
-            return;
-        }
-
         protected void onPostExecute(String json) {
             // When response its 200, json save data no code.
             log_app log = new log_app();
-            DatabaseHelper db=DatabaseHelper.getInstance(getBaseContext());
+            DatabaseHelper db = DatabaseHelper.getInstance(getBaseContext());
             if (json != "408" && json != "204") {
                 try {
                     db.add_people(json);
@@ -562,6 +595,22 @@ public class MainActivity extends AppCompatActivity {
                     log.writeLog(getApplicationContext(), "Main:line 572", "ERROR", e.getMessage());
                 }
             }
+            loading.setVisibility(View.GONE);
+        }
+    }
+
+    public class updateStateOnServerTask extends AsyncTask<String, String, String> {
+
+        protected void onPreExecute() {
+            loading.setSpinSpeed(3);
+            loading.setVisibility(View.VISIBLE);
+        }
+
+        protected String doInBackground(String... params) {
+            return sendState(false);
+        }
+
+        protected void onPostExecute(String result) {
             loading.setVisibility(View.GONE);
         }
     }
@@ -593,12 +642,12 @@ public class MainActivity extends AppCompatActivity {
                 result = result.substring(0, result.length() - 1);
                 lastUpdated.setText(result);
             } catch (Exception e) {
-                log.writeLog(getApplicationContext(), "Main:line 606", "ERROR", e.getMessage());
+                //log.writeLog(getApplicationContext(), "Main:line 606", "ERROR", e.getMessage());
             }
         }
     }
 
-    public String GET(String url) {
+    public String  GET(String url) {
         log_app log = new log_app();
         String result = "";
         InputStream inputStream;
@@ -627,7 +676,6 @@ public class MainActivity extends AppCompatActivity {
         String contentAsString;
         URL url;
         HttpURLConnection connection = null;
-
         try {
             // Create connection
             url = new URL(dataUrl);
@@ -656,12 +704,11 @@ public class MainActivity extends AppCompatActivity {
         if (contentAsString.length() <= 2) { //[]
             contentAsString = "204"; // No content
         }
-
         return contentAsString;
     }
 
     public void OfflineRecordsSynchronizer() {
-        DatabaseHelper db=DatabaseHelper.getInstance(this);
+        DatabaseHelper db = DatabaseHelper.getInstance(this);
         List<Record> records = db.get_desynchronized_records();
         if (records.size() > 0)
             new RegisterTask(records).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
@@ -676,44 +723,68 @@ public class MainActivity extends AppCompatActivity {
 
         inputStream.close();
         return result;
-
     }
 
+    public String sendState (Boolean state){
+        HttpClient client = new DefaultHttpClient();
+        HttpPost post = new HttpPost(server + "/api/states");
+        String result = null;
+        InputStream inputStream;
+        JSONObject jsonObject = new JSONObject();
+        try {
+            jsonObject.accumulate("updatePeople", state);
+            post.setEntity(new StringEntity(jsonObject.toString()));
+            post.setHeader("Accept", "application/json");
+            post.setHeader("Content-type", "application/json");
 
+            HttpResponse httpResponse = client.execute(post);
+            inputStream = httpResponse.getEntity().getContent();
+            if (inputStream != null) result = convertInputStreamToString(inputStream);
+            else result = String.valueOf(httpResponse.getStatusLine().getStatusCode());
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        } catch (ClientProtocolException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
 
     public String POST(Record record, String url) {
         InputStream inputStream;
         String result = "";
         String json = "";
-        DatabaseHelper db=DatabaseHelper.getInstance(this);
+        DatabaseHelper db = DatabaseHelper.getInstance(this);
         JSONObject jsonObject = new JSONObject();
         log_app log = new log_app();
         try {
-
             // 1. create HttpClient
             HttpClient httpclient = new DefaultHttpClient();
 
-                // 2. make POST request to the given URL
-                HttpPost httpPost = new HttpPost(url);
+            // 2. make POST request to the given URL
+            HttpPost httpPost = new HttpPost(url);
 
-                // 3. build jsonObject from jsonList
-                jsonObject.accumulate("run", record.getPerson_run());
-                jsonObject.accumulate("fullname", record.getPerson_fullname());
-                jsonObject.accumulate("profile", record.getPerson_profile());
+            // 3. build jsonObject from jsonList
+            jsonObject.accumulate("run", record.getPerson_run());
+            jsonObject.accumulate("fullname", record.getPerson_fullname());
+            jsonObject.accumulate("profile", record.getPerson_profile());
 
-                if (record.getPerson_profile().equals("V")) {
+            if (record.getPerson_profile().equals("V")) {
+                jsonObject.accumulate("is_permitted", true);
+            } else {
+                if (record.getPerson_is_permitted() == 1)
                     jsonObject.accumulate("is_permitted", true);
-                } else {
-                    if (record.getPerson_is_permitted() == 1)
-                        jsonObject.accumulate("is_permitted", true);
-                    else jsonObject.accumulate("is_permitted", false);
-                }
+                else jsonObject.accumulate("is_permitted", false);
+            }
 
-                if (record.getRecord_is_input() == 1) {
-                    jsonObject.accumulate("is_input", true);
-                    jsonObject.accumulate("input_datetime", record.getRecord_input_datetime());
+            if (record.getRecord_is_input() == 1) {
+                jsonObject.accumulate("is_input", true);
+                jsonObject.accumulate("input_datetime", record.getRecord_input_datetime());
 
-                } else {
+            } else {
                 jsonObject.accumulate("is_input", false);
                 jsonObject.accumulate("output_datetime", record.getRecord_output_datetime());
             }
@@ -731,7 +802,7 @@ public class MainActivity extends AppCompatActivity {
             // 4. convert JSONObject to JSON to String
             if (jsonObject.length() <= 13) { // 13 element on json
                 json = jsonObject.toString();
-                //Log.i("json to POST", json);
+                Log.i("json to POST", json);
 
                 // 5. set json to StringEntity
                 StringEntity se = new StringEntity(json);
@@ -789,10 +860,9 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             log.writeLog(getApplicationContext(), "Main: POST method", "ERROR", e.getMessage().toString());
         }
-
         return result;
     }
-
+    
     public class RegisterTask extends AsyncTask<Void, Void, String> {
 
         private List<Record> newRecord;
@@ -855,7 +925,6 @@ public class MainActivity extends AppCompatActivity {
             return null;
         }
     }
-
 
     public void makeToast(String msg) {
         Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
