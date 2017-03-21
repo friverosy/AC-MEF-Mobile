@@ -8,7 +8,6 @@ import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDatabaseLockedException;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.database.sqlite.SQLiteStatement;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -129,57 +128,52 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     //Person
     public void add_people(String json) {
+        final long startTime = System.currentTimeMillis();
         log_app log = new log_app();
-        Log.i("---", "start");
 
         JSONArray json_db_array;
         SQLiteDatabase db = getWritableDatabase();
 
+        DatabaseUtils.InsertHelper iHelp = new DatabaseUtils.InsertHelper(db, TABLE_PERSON);
         db.beginTransaction();
         try {
             json_db_array = new JSONArray(json);
-
-            db.delete(TABLE_PERSON, null, null);
-
-            String sql = "";
+            db.delete(TABLE_PERSON,null,null);
 
             for (int i = 0; i < json_db_array.length(); i++) {
-                ContentValues values = new ContentValues();
+                iHelp.prepareForInsert();
                 try {
-                    values.put(PERSON_RUN, json_db_array.getJSONObject(i).getString("run"));
-                    values.put(PERSON_PROFILE, json_db_array.getJSONObject(i).getString("profile"));
+                    iHelp.bind(iHelp.getColumnIndex(PERSON_RUN),json_db_array.getJSONObject(i).getString("run"));
+                    iHelp.bind(iHelp.getColumnIndex(PERSON_PROFILE), json_db_array.getJSONObject(i).getString("profile"));
 
                     switch (json_db_array.getJSONObject(i).getString("profile")) {
                         case "E": // Employee
-                            values.put(PERSON_FULLNAME, json_db_array.getJSONObject(i).getString("fullname"));
-                            values.put(PERSON_COMPANY, json_db_array.getJSONObject(i).getString("company"));
-                            values.put(PERSON_COMPANY_CODE, json_db_array.getJSONObject(i).getString("company_code"));
-                            values.put(PERSON_PLACE, json_db_array.getJSONObject(i).getString("place"));
-                            values.put(PERSON_CARD, json_db_array.getJSONObject(i).getString("card"));
-                            values.put(PERSON_IS_PERMITTED, json_db_array.getJSONObject(i).getString("is_permitted"));
+                            iHelp.bind(iHelp.getColumnIndex(PERSON_FULLNAME), json_db_array.getJSONObject(i).getString("fullname"));
+                            iHelp.bind(iHelp.getColumnIndex(PERSON_COMPANY), json_db_array.getJSONObject(i).getString("company"));
+                            iHelp.bind(iHelp.getColumnIndex(PERSON_COMPANY_CODE), json_db_array.getJSONObject(i).getString("company_code"));
+                            iHelp.bind(iHelp.getColumnIndex(PERSON_PLACE), json_db_array.getJSONObject(i).getString("place"));
+                            iHelp.bind(iHelp.getColumnIndex(PERSON_CARD), json_db_array.getJSONObject(i).getString("card"));
+                            iHelp.bind(iHelp.getColumnIndex(PERSON_IS_PERMITTED), json_db_array.getJSONObject(i).getString("is_permitted"));
                             break;
                         case "C": // Contactor
-                            values.put(PERSON_FULLNAME, json_db_array.getJSONObject(i).getString("fullname"));
-                            values.put(PERSON_COMPANY, json_db_array.getJSONObject(i).getString("company"));
-                            values.put(PERSON_COMPANY_CODE, json_db_array.getJSONObject(i).getString("company_code"));
-                            values.put(PERSON_IS_PERMITTED, json_db_array.getJSONObject(i).getString("is_permitted"));
+                            iHelp.bind(iHelp.getColumnIndex(PERSON_FULLNAME), json_db_array.getJSONObject(i).getString("fullname"));
+                            iHelp.bind(iHelp.getColumnIndex(PERSON_COMPANY), json_db_array.getJSONObject(i).getString("company"));
+                            iHelp.bind(iHelp.getColumnIndex(PERSON_COMPANY_CODE), json_db_array.getJSONObject(i).getString("company_code"));
+                            iHelp.bind(iHelp.getColumnIndex(PERSON_IS_PERMITTED), json_db_array.getJSONObject(i).getString("is_permitted"));
                             break;
                         case "V": // Visit
                             if (!json_db_array.getJSONObject(i).getString("fullname").isEmpty())
-                                values.put(PERSON_FULLNAME, json_db_array.getJSONObject(i).getString("fullname"));
+                                iHelp.bind(iHelp.getColumnIndex(PERSON_FULLNAME), json_db_array.getJSONObject(i).getString("fullname"));
                             if (!json_db_array.getJSONObject(i).getString("company").isEmpty())
-                                values.put(PERSON_COMPANY, json_db_array.getJSONObject(i).getString("company"));
+                                iHelp.bind(iHelp.getColumnIndex(PERSON_COMPANY), json_db_array.getJSONObject(i).getString("company"));
                             break;
                         default:
                             break;
                     }
-                    db.insert(TABLE_PERSON, // table
-                            null, //nullColumnHack
-                            values); // key/value -> keys = column names/ values = column values
-
+                    iHelp.execute();
                 } catch (Exception e) {
                     Log.e("json", json_db_array.getJSONObject(i).toString());
-                    Log.e("ERROR", e.getMessage().toString());
+                    Log.e("ERROR", e.getMessage());
                 }
             }
             db.setTransactionSuccessful();
@@ -193,13 +187,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             log.writeLog(context, "DBhelper:line 186", "ERROR", e.getMessage());
         } finally {
             db.endTransaction();
+            Log.i("insert people in", String.valueOf(System.currentTimeMillis() - startTime) + "ms");
         }
-        Log.i("---", "end");
     }
 
     public String get_one_person(String id) {
-        //Log.i("get_one_person(id)", id);
-        // 1. get reference to readable DB
         log_app log = new log_app();
         SQLiteDatabase db = getWritableDatabase();
         String out = "";
@@ -469,7 +461,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public void set_config_id_pda(int id) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
-        Log.i("puting", String.valueOf(id));
         cv.put("id_pda", id);
         db.update(TABLE_SETTING, cv, null, null);
     }
