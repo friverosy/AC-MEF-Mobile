@@ -5,7 +5,10 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -24,12 +27,20 @@ public class log_show extends AppCompatActivity {
     private String logType;
     private TextView showlog;
     private StringBuilder text = new StringBuilder();
+    private Button clearLog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_log_app);
         showlog = (TextView) findViewById(R.id.fill_log);
+        clearLog=(Button) findViewById(R.id.button_clear_log);
+        clearLog.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                clearLog();
+            }
+        });
         if (readLog() != null && !readLog().toString().equals("")) {
             showlog.setText(readLog());
             //showlog.setMovementMethod(new ScrollingMovementMethod());
@@ -38,7 +49,7 @@ public class log_show extends AppCompatActivity {
     }
 
     private StringBuilder readLog() {
-        StringBuilder stringBuilder= null;
+        StringBuilder stringBuilder = null;
         try {
             InputStream inputStream = openFileInput(LOG_NAME);
 
@@ -64,5 +75,19 @@ public class log_show extends AppCompatActivity {
             Log.e("file state", "Can not read file: " + e.toString());
         }
         return stringBuilder;
+    }
+
+    private void clearLog() {
+        File log = new File(getFilesDir() + File.separator + LOG_NAME);
+        try {
+            log.delete();
+            if (!log.exists()) {
+                log.createNewFile();
+                readLog();
+                Toast.makeText(this, "Log Limpio", Toast.LENGTH_SHORT).show();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -14,6 +14,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -27,12 +28,24 @@ import android.widget.Toast;
 import com.pnikosis.materialishprogress.ProgressWheel;
 
 import org.apache.http.HttpResponse;
+import org.apache.http.NoHttpResponseException;
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.HttpRequestRetryHandler;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.conn.HttpHostConnectException;
+import org.apache.http.conn.params.ConnManagerPNames;
+import org.apache.http.conn.params.ConnPerRouteBean;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.CoreConnectionPNames;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
+import org.apache.http.params.HttpProtocolParams;
+import org.apache.http.protocol.HttpContext;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -49,14 +62,23 @@ import java.util.Date;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+
+import okhttp3.Interceptor;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
 
     private final String server = "http://controlid-test.multiexportfoods.com:3000";
     //private final String server = "http://controlid.multiexportfoods.com:3000";
     //private final String server = "http://192.168.1.126:3000";
-    private final int delayPeople = 5000; // 4 Min. 240000; 600000 10 min
-    private final int delayRecords = 3000; // 4 Min. 240000; 480000 8 min
+    private final int delayPeople = 3600000; // 4 Min. 240000; 600000 10 min
+    private final int delayRecords = 60000; // 4 Min. 240000; 480000 8 min
     private static String version = "e65fe2e";
     private ImageView imageview;
     private EditText editTextRun;
@@ -69,6 +91,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean is_input;
     private TextView lastUpdated;
     private LoadDbTask updatePeopleTask;
+    private RegisterTask sendRecord;
 
     private final static String SCAN_ACTION = "urovo.rcv.message";//扫描结束action
     private Vibrator mVibrator;
@@ -80,7 +103,7 @@ public class MainActivity extends AppCompatActivity {
     MediaPlayer mp3Dennied;
     MediaPlayer mp3Permitted;
     MediaPlayer mp3Error;
-   // DatabaseHelper db = new DatabaseHelper(this);
+    // DatabaseHelper db = new DatabaseHelper(this);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -130,6 +153,7 @@ public class MainActivity extends AppCompatActivity {
         textViewVersion = (TextView) findViewById(R.id.textView_version);
         textViewVersion.setText("Versión: " + version);
 
+
         // set by default
         is_input = true;
 
@@ -150,7 +174,6 @@ public class MainActivity extends AppCompatActivity {
                 getPeople(editTextRun.getText().toString());
             }
         });
-
     }
 
     @Override
@@ -383,18 +406,23 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void sendRecords() {
-        final DatabaseHelper db=DatabaseHelper.getInstance(this);
+        final DatabaseHelper db = DatabaseHelper.getInstance(this);
         Timer timer = new Timer();
         final Handler handler = new Handler();
         final log_app log = new log_app();
+        Log.e("estoy", "en send records");
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
                 handler.post(new Runnable() {
                     public void run() {
                         try {
-                            if (db.record_desync_count() > 0 ) { //&& updatePeopleTask.getStatus() != AsyncTask.Status.RUNNING
+                            if (sendRecord == null) { //&& updatePeopleTask.getStatus() != AsyncTask.Status.RUNNING
                                 OfflineRecordsSynchronizer();
+                                Log.e("async", "1º if" + sendRecord.getStatus().toString());
+                            }else if(db.record_desync_count() > 0 && sendRecord.getStatus() != AsyncTask.Status.RUNNING) {
+                                OfflineRecordsSynchronizer();
+                                Log.e("async", "2º ifº" + sendRecord.getStatus().toString());
                             }
                         } catch (Exception e) {
                             log.writeLog(getApplicationContext(), "Main:line 419", "ERROR", e.getMessage());
@@ -433,7 +461,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void getPeople(String rut) {
-        DatabaseHelper db=DatabaseHelper.getInstance(this);
+        DatabaseHelper db = DatabaseHelper.getInstance(this);
         log_app log = new log_app();
         String finalJson = db.get_one_person(rut);
         editTextCompany.setVisibility(View.GONE);
@@ -553,7 +581,7 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(String json) {
             // When response its 200, json save data no code.
             log_app log = new log_app();
-            DatabaseHelper db=DatabaseHelper.getInstance(getBaseContext());
+            DatabaseHelper db = DatabaseHelper.getInstance(getBaseContext());
             if (json != "408" && json != "204") {
                 try {
                     db.add_people(json);
@@ -593,7 +621,7 @@ public class MainActivity extends AppCompatActivity {
                 result = result.substring(0, result.length() - 1);
                 lastUpdated.setText(result);
             } catch (Exception e) {
-                log.writeLog(getApplicationContext(), "Main:line 606", "ERROR", e.getMessage());
+                log.writeLog(getApplicationContext(), "Main:line 606", "ERROR", "get last update task no funciona");
             }
         }
     }
@@ -661,10 +689,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void OfflineRecordsSynchronizer() {
-        DatabaseHelper db=DatabaseHelper.getInstance(this);
+        DatabaseHelper db = DatabaseHelper.getInstance(this);
         List<Record> records = db.get_desynchronized_records();
-        if (records.size() > 0)
-            new RegisterTask(records).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        sendRecord = new RegisterTask(records);
+        sendRecord.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        //new RegisterTask(records).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        //if (records.size() > 0)
+        //    for (int i = 0; i < records.size(); i++) {
+        //        Log.e("posicion" + i, records.get(i).getPerson_fullname() + "," + records.get(i).getRecord_input_datetime());
+        //        Record record = records.get(i);
+        //postReturn = POST(record, server + "/api/records/",client );
+        //POSTAlternative(record, server + "/api/records/", client);
+        //        new RegisterTask(records).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        //        if (i == records.size())
+        //            Log.e("---", "------------------------------------");
+        //    }
     }
 
     private static String convertInputStreamToString(InputStream inputStream) throws IOException {
@@ -680,40 +719,35 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-
-    public String POST(Record record, String url) {
+    public String POST(Record record, String url, OkHttpClient client) {
         InputStream inputStream;
         String result = "";
         String json = "";
-        DatabaseHelper db=DatabaseHelper.getInstance(this);
+        DatabaseHelper db = DatabaseHelper.getInstance(this);
         JSONObject jsonObject = new JSONObject();
         log_app log = new log_app();
+        final MediaType JSON
+                = MediaType.parse("application/json; charset=utf-8");
+
         try {
+            // 3. build jsonObject from jsonList
+            jsonObject.accumulate("run", record.getPerson_run());
+            jsonObject.accumulate("fullname", record.getPerson_fullname());
+            jsonObject.accumulate("profile", record.getPerson_profile());
 
-            // 1. create HttpClient
-            HttpClient httpclient = new DefaultHttpClient();
-
-                // 2. make POST request to the given URL
-                HttpPost httpPost = new HttpPost(url);
-
-                // 3. build jsonObject from jsonList
-                jsonObject.accumulate("run", record.getPerson_run());
-                jsonObject.accumulate("fullname", record.getPerson_fullname());
-                jsonObject.accumulate("profile", record.getPerson_profile());
-
-                if (record.getPerson_profile().equals("V")) {
+            if (record.getPerson_profile().equals("V")) {
+                jsonObject.accumulate("is_permitted", true);
+            } else {
+                if (record.getPerson_is_permitted() == 1)
                     jsonObject.accumulate("is_permitted", true);
-                } else {
-                    if (record.getPerson_is_permitted() == 1)
-                        jsonObject.accumulate("is_permitted", true);
-                    else jsonObject.accumulate("is_permitted", false);
-                }
+                else jsonObject.accumulate("is_permitted", false);
+            }
 
-                if (record.getRecord_is_input() == 1) {
-                    jsonObject.accumulate("is_input", true);
-                    jsonObject.accumulate("input_datetime", record.getRecord_input_datetime());
+            if (record.getRecord_is_input() == 1) {
+                jsonObject.accumulate("is_input", true);
+                jsonObject.accumulate("input_datetime", record.getRecord_input_datetime());
 
-                } else {
+            } else {
                 jsonObject.accumulate("is_input", false);
                 jsonObject.accumulate("output_datetime", record.getRecord_output_datetime());
             }
@@ -731,28 +765,27 @@ public class MainActivity extends AppCompatActivity {
             // 4. convert JSONObject to JSON to String
             if (jsonObject.length() <= 13) { // 13 element on json
                 json = jsonObject.toString();
-                //Log.i("json to POST", json);
 
-                // 5. set json to StringEntity
-                StringEntity se = new StringEntity(json);
+                RequestBody body = RequestBody.create(JSON, json);
 
-                // 6. set httpPost Entity
-                httpPost.setEntity(se);
+                //create object okhttp
+                Request request = new Request.Builder()
+                        .url(url)
+                        .addHeader("Accept", "application/json")
+                        .addHeader("Content-type", "application/json")
+                        .post(body)
+                        .build();
 
-                // 7. Set some headers to inform server about the type of the content
-                httpPost.setHeader("Accept", "application/json");
-                httpPost.setHeader("Content-type", "application/json");
 
                 // 8. Execute POST request to the given URL
-                if (!server.equals("http://:0")) { // || record.getRecord_id() != 0 // not update at first record, only after with sync method.
-                    HttpResponse httpResponse = httpclient.execute(httpPost);
-                    // 9. receive response as inputStream
-                    inputStream = httpResponse.getEntity().getContent();
+                if (!server.equals("http://:0")) {
+                    Response response = client.newCall(request).execute();
+
+                    String tmp = response.body().string();
 
                     // 10. convert inputstream to string
-                    if (inputStream != null) {
-                        result = convertInputStreamToString(inputStream);
-                        if (httpResponse.getStatusLine().getStatusCode() == 200) {
+                    if (tmp != null) {
+                        if (response.isSuccessful()) {
                             // if has sync = 0 its becouse its an offline record to be will synchronized.
                             if (record.getRecord_sync() == 0) {
                                 db.update_record(record.getRecord_id());
@@ -765,7 +798,7 @@ public class MainActivity extends AppCompatActivity {
                             }
                         }
                     } else {
-                        result = String.valueOf(httpResponse.getStatusLine().getStatusCode());
+                        result = String.valueOf(response.code());
                     }
                     //result its the json to sent
                     if (result.startsWith("http://"))
@@ -804,9 +837,19 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected String doInBackground(Void... params) {
             String postReturn = "";
+            final OkHttpClient client = new OkHttpClient();
+            //.connectTimeout(1, TimeUnit.SECONDS)
+            //.writeTimeout(2, TimeUnit.SECONDS)
+            //.readTimeout(2, TimeUnit.SECONDS)
+            //.build();
             for (int i = 0; i < newRecord.size(); i++) {
                 Record record = newRecord.get(i);
-                postReturn = POST(record, server + "/api/records/");
+                Log.e("posicion" + i, newRecord.get(i).getPerson_fullname() + "," + newRecord.get(i).getRecord_input_datetime());
+                //postReturn = POST(record, server + "/api/records/",client );
+                POSTAlternative(record, server + "/api/records/", client);
+                if (i == newRecord.size() - 1)
+                    Log.e("---", "------------------------------------");
+
             }
             return postReturn;
         }
@@ -859,6 +902,131 @@ public class MainActivity extends AppCompatActivity {
 
     public void makeToast(String msg) {
         Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
+    }
+
+    public String POSTAlternative(Record record, String url, OkHttpClient client) {
+        InputStream inputStream;
+        String result = "";
+        String json = "";
+        DatabaseHelper db = DatabaseHelper.getInstance(this);
+        JSONObject jsonObject = new JSONObject();
+        log_app log = new log_app();
+        final MediaType JSON
+                = MediaType.parse("application/json; charset=utf-8");
+
+        try {
+            // 3. build jsonObject from jsonList
+            jsonObject.accumulate("run", record.getPerson_run());
+            jsonObject.accumulate("fullname", record.getPerson_fullname());
+            jsonObject.accumulate("profile", record.getPerson_profile());
+
+            if (record.getPerson_profile().equals("V")) {
+                jsonObject.accumulate("is_permitted", true);
+            } else {
+                if (record.getPerson_is_permitted() == 1)
+                    jsonObject.accumulate("is_permitted", true);
+                else jsonObject.accumulate("is_permitted", false);
+            }
+
+            if (record.getRecord_is_input() == 1) {
+                jsonObject.accumulate("is_input", true);
+                jsonObject.accumulate("input_datetime", record.getRecord_input_datetime());
+
+            } else {
+                jsonObject.accumulate("is_input", false);
+                jsonObject.accumulate("output_datetime", record.getRecord_output_datetime());
+            }
+
+            jsonObject.accumulate("company", record.getPerson_company());
+            if (!record.getPerson_profile().equals("V")) {
+                jsonObject.accumulate("place", record.getPerson_place());
+                jsonObject.accumulate("company_code", record.getPerson_company_code());
+                jsonObject.accumulate("card", record.getPerson_card());
+            }
+
+            jsonObject.accumulate("type", "PDA");
+            jsonObject.accumulate("PDA", db.get_config_id_pda());
+
+            // 4. convert JSONObject to JSON to String
+            if (jsonObject.length() <= 13) { // 13 element on json
+                json = jsonObject.toString();
+
+                RequestBody body = RequestBody.create(JSON, json);
+
+                //create object okhttp
+                Request request = new Request.Builder()
+                        .url(url)
+                        .addHeader("Accept", "application/json")
+                        .addHeader("Content-type", "application/json")
+                        .post(body)
+                        .build();
+                // 8. Execute POST request to the given URL
+                if (!server.equals("http://:0")) {
+
+                    Response response = client.newCall(request).execute();
+
+                    String tmp = response.body().string();
+
+                    // 10. convert inputstream to string
+                    if (tmp != null) {
+                        if (response.isSuccessful()) {
+                            // if has sync = 0 its becouse its an offline record to be will synchronized.
+                            if (record.getRecord_sync() == 0) {
+                                db.update_record(record.getRecord_id());
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        loading.setVisibility(View.GONE);
+                                    }
+                                });
+                            }
+                        }
+                    } else {
+                        result = String.valueOf(response.code());
+                    }
+                    //result its the json to sent
+                    if (result.startsWith("http://"))
+                        result = "204"; //no content
+                } else {
+                    //mp3Error.start();
+                    new LoadSound(1).execute();
+                    runOnUiThread(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            makeToast("Configure datos del servidor primero");
+                        }
+                    });
+                }
+            } else {
+                log.writeLog(getApplicationContext(), "Main:line 815", "ERROR", "Missing elements in the json to be posted");
+            }
+        } catch (HttpHostConnectException hhc) {
+            log.writeLog(getApplicationContext(), "Main: POST method", "ERROR", hhc.getMessage().toString());
+        } catch (Exception e) {
+            log.writeLog(getApplicationContext(), "Main: POST method", "ERROR", e.getMessage().toString());
+        }
+
+        return result;
+    }
+
+    class LoggingInterceptor implements Interceptor {
+        @Override
+        public Response intercept(Interceptor.Chain chain) throws IOException {
+            Request request = chain.request();
+
+            long t1 = System.nanoTime();
+            Log.e("Log", String.format("Sending request %s on %s%n%s" +
+                    request.url() + chain.connection() + request.headers()));
+
+            Response response = chain.proceed(request);
+
+            long t2 = System.nanoTime();
+            Log.e("Log", String.format("Received response for %s in %.1fms%n%s",
+                    response.request().url(), (t2 - t1) / 1e6d, response.headers()));
+
+            return response;
+        }
     }
 
 }

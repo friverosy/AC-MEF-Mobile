@@ -60,9 +60,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         this.context = context;
     }
 
+
     @Override
     public void onCreate(SQLiteDatabase db) {
-
         db.execSQL(CREATE_PERSON_TABLE);
 
         db.execSQL(CREATE_RECORD_TABLE);
@@ -78,6 +78,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         db.execSQL("CREATE INDEX record_idx_by_sync " +
                 " ON " + TABLE_RECORD + " (" + RECORD_SYNC + ");");
+
 
         //seed
         db.execSQL("INSERT INTO " + TABLE_SETTING + " (id_pda) VALUES (0);");
