@@ -209,9 +209,6 @@ public class MainActivity extends AppCompatActivity {
             log_app log = new log_app();
             // TODO Auto-generated method stub
             try {
-                /*if (mp3Error.isPlaying()) mp3Error.stop();
-                if (mp3Dennied.isPlaying()) mp3Dennied.stop();
-                if (mp3Permitted.isPlaying()) mp3Permitted.stop();*/
                 new LoadSound(4).execute();
 
                 isScaning = false;
@@ -491,17 +488,13 @@ public class MainActivity extends AppCompatActivity {
             Record record = new Record();
             record.setPerson_run(arr[0]);
 
-            if (arr[2].equals("true")) {
-                //mp3Permitted.start();
+            if (arr[2].equals("true") && !arr[7].equals("V")) {
                 new LoadSound(2).execute();
                 record.setPerson_is_permitted(1);
                 if (is_input)
                     imageview.setImageResource(R.drawable.permitted);
             } else {
-                //mp3Dennied.start();
                 new LoadSound(3).execute();
-                // if has card number define as denied and as employee
-                //is_permitted = false;
                 record.setPerson_is_permitted(0);
                 if (is_input)
                     imageview.setImageResource(R.drawable.dennied);
@@ -801,33 +794,24 @@ public class MainActivity extends AppCompatActivity {
             jsonObject.accumulate("run", record.getPerson_run());
             jsonObject.accumulate("fullname", record.getPerson_fullname());
             jsonObject.accumulate("profile", record.getPerson_profile());
-
-            if (record.getPerson_profile().equals("V")) {
-                jsonObject.accumulate("is_permitted", true);
-            } else {
-                if (record.getPerson_is_permitted() == 1)
-                    jsonObject.accumulate("is_permitted", true);
-                else jsonObject.accumulate("is_permitted", false);
-            }
+            jsonObject.accumulate("type", "PDA");
+            jsonObject.accumulate("PDA", db.get_config_id_pda());
+            jsonObject.accumulate("company", record.getPerson_company());
+            jsonObject.accumulate("is_permitted", record.getPerson_is_permitted());
 
             if (record.getRecord_is_input() == 1) {
                 jsonObject.accumulate("is_input", true);
                 jsonObject.accumulate("input_datetime", record.getRecord_input_datetime());
-
             } else {
                 jsonObject.accumulate("is_input", false);
                 jsonObject.accumulate("output_datetime", record.getRecord_output_datetime());
             }
 
-            jsonObject.accumulate("company", record.getPerson_company());
             if (!record.getPerson_profile().equals("V")) {
                 jsonObject.accumulate("place", record.getPerson_place());
                 jsonObject.accumulate("company_code", record.getPerson_company_code());
                 jsonObject.accumulate("card", record.getPerson_card());
             }
-
-            jsonObject.accumulate("type", "PDA");
-            jsonObject.accumulate("PDA", db.get_config_id_pda());
 
             // 4. convert JSONObject to JSON to String
             if (jsonObject.length() <= 13) { // 13 element on json
