@@ -31,15 +31,11 @@ import android.widget.Toast;
 import com.pnikosis.materialishprogress.ProgressWheel;
 
 import org.apache.http.HttpResponse;
-import org.apache.http.NoHttpResponseException;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.HttpRequestRetryHandler;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.conn.HttpHostConnectException;
-import org.apache.http.conn.params.ConnManagerPNames;
-import org.apache.http.conn.params.ConnPerRouteBean;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONException;
@@ -61,7 +57,6 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
@@ -76,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
     private final String server = "http://axxezo-test.brazilsouth.cloudapp.azure.com:3000";
     //private final String server = "http://controlid.multiexportfoods.com:3000";
     //private final String server = "http://192.168.1.126:3000";
-    private final int delayPeople = 40000; // 4 Min. 240000; 600000 10 min
+    private final int delayPeople =3600000 ; // 4 Min. 240000; 600000 10 min
     private final int delayRecords =240000; // 4 Min. 240000; 480000 8 min
     private static String version = "e65fe2e";
     private ImageView imageview;
@@ -122,6 +117,7 @@ public class MainActivity extends AppCompatActivity {
                 mVibrator.vibrate(100);
             }
         });
+
         //create the log file
         File log = new File(this.getFilesDir() + File.separator + "AccessControl.log");
         if (!log.isFile()) {
@@ -131,12 +127,15 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
         }
+
         //call the loading library in xml file
         loading = (ProgressWheel) findViewById(R.id.loading);
         loading.setVisibility(View.GONE);
 
-        UpdateDbPeople();//asyntask  updating people
-        sendRecords(); //send records to api axxezo
+        // Start Asynctask loop to check every delayPeople time, if need update people.
+        UpdateDbPeople();
+        // Asynctask to start sending records to each delayRecords time to API.
+        sendRecords();
         //testRecords(200);
 
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
@@ -157,7 +156,6 @@ public class MainActivity extends AppCompatActivity {
         //set default first call in oncreate
         updatePeopleTask = new LoadDbTask();
         updatePeopleTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-
         // set by default
         is_input = true;
 
@@ -220,9 +218,6 @@ public class MainActivity extends AppCompatActivity {
             log_app log = new log_app();
             // TODO Auto-generated method stub
             try {
-                /*if (mp3Error.isPlaying()) mp3Error.stop();
-                if (mp3Dennied.isPlaying()) mp3Dennied.stop();
-                if (mp3Permitted.isPlaying()) mp3Permitted.stop();*/
                 new LoadSound(4).execute();
 
                 isScaning = false;
@@ -282,6 +277,8 @@ public class MainActivity extends AppCompatActivity {
                         name = (array[1].substring(0, array[1].indexOf("CHL")));
                     } catch (Exception e) {
                         name = (array[2].substring(0, array[2].indexOf("CHL")));
+                    } catch (Exception e) {
+                        name = "";
                     }*/
                     name = "";
                 }
@@ -335,7 +332,7 @@ public class MainActivity extends AppCompatActivity {
                 makeToast("Tabla personas vaciada.");
                 break;
             case "CONFIG-AXX-6rVLydzn651RsZZ3dqWk":
-                // call LOG
+                // Call LOG
                 Intent intent = new Intent(this, log_show.class);
                 startActivity(intent);
                 break;
@@ -393,62 +390,8 @@ public class MainActivity extends AppCompatActivity {
         registerReceiver(mScanReceiver, filter);
     }
 
-    public void UpdateDbPeople() {
-        Timer timer = new Timer();
-        final Handler handler = new Handler();
-        final log_app log = new log_app();
-        TimerTask task = new TimerTask() {
-            @Override
-            public void run() {
-                handler.post(new Runnable() {
-                    public void run() {
-                        try {
-                            checkStatus=new checkStatusTask();
-                            checkStatus.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-                            //updatePeopleTask = new LoadDbTask();
-                            //updatePeopleTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-                        } catch (Exception e) {
-                            log.writeLog(getApplicationContext(), "Main:line 397", "ERROR", e.getMessage());
-                        }
-                    }
-                });
-            }
-        };
-        timer.schedule(task, 0, delayPeople);
-    }
-
-    public void sendRecords() {
-        final DatabaseHelper db = DatabaseHelper.getInstance(this);
-        Timer timer = new Timer();
-        final Handler handler = new Handler();
-        final log_app log = new log_app();
-        Log.e("estoy", "en send records");
-        TimerTask task = new TimerTask() {
-            @Override
-            public void run() {
-                handler.post(new Runnable() {
-                    public void run() {
-                        try {
-                            if (sendRecord == null) { //&& updatePeopleTask.getStatus() != AsyncTask.Status.RUNNING
-                                OfflineRecordsSynchronizer();
-                                Log.e("async", "1º if" + sendRecord.getStatus().toString());
-                            } else if (db.record_desync_count() > 0 && sendRecord.getStatus() != AsyncTask.Status.RUNNING) {
-                                OfflineRecordsSynchronizer();
-                                Log.e("async", "2º ifº" + sendRecord.getStatus().toString());
-                            }
-                        } catch (Exception e) {
-                            log.writeLog(getApplicationContext(), "Main:line 419", "ERROR", e.getMessage());
-                        }
-                    }
-                });
-            }
-        };
-        timer.schedule(task, 0, delayRecords);
-    }
-
     public void reset() {
         initScan();
-        //cleanEditText();
         barcodeStr = "";
         IntentFilter filter = new IntentFilter();
         filter.addAction(SCAN_ACTION);
@@ -472,30 +415,96 @@ public class MainActivity extends AppCompatActivity {
         return localTime;
     }
 
+    public void UpdateDbPeople() {
+        Timer timer = new Timer();
+        final Handler handler = new Handler();
+        final log_app log = new log_app();
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                handler.post(new Runnable() {
+                    public void run() {
+                        try {
+                            // AsyncTask do GET to obtain boolean status from api.
+                            // TRUE: Need update People.
+                            // FALSE: Dont need update People.
+                            checkStatus=new checkStatusTask();
+                            checkStatus.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+                        } catch (Exception e) {
+                            log.writeLog(getApplicationContext(), "Main:line 397", "ERROR", e.getMessage());
+                        }
+                    }
+                });
+            }
+        };
+        timer.schedule(task, 0, delayPeople);
+    }
+
+    public void sendRecords() {
+        final DatabaseHelper db = DatabaseHelper.getInstance(this);
+        Timer timer = new Timer();
+        final Handler handler = new Handler();
+        final log_app log = new log_app();
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                handler.post(new Runnable() {
+                    public void run() {
+                        try {
+                            // First call, sendRecord will be null, so instantiate it.
+                            if (sendRecord == null) { //&& updatePeopleTask.getStatus() != AsyncTask.Status.RUNNING
+                                OfflineRecordsSynchronizer();
+                            } else if (db.record_desync_count() > 0 && sendRecord.getStatus() != AsyncTask.Status.RUNNING){
+                                // If it is already instantiated
+                                OfflineRecordsSynchronizer();
+                            }
+                        } catch (Exception e) {
+                            log.writeLog(getApplicationContext(), "Main:line 419", "ERROR", e.getMessage());
+                        }
+                    }
+                });
+            }
+        };
+        timer.schedule(task, 0, delayRecords);
+    }
+
     public void getPeople(String rut) {
         DatabaseHelper db = DatabaseHelper.getInstance(this);
         log_app log = new log_app();
-        String finalJson = db.get_one_person(rut);
+
+        String personJson = db.get_one_person(rut);
+
+        // For all profiles don't show company text,
+        // but if is a employee after will be set visibility as VISIBLE.
         editTextCompany.setVisibility(View.GONE);
-        String[] arr = finalJson.split(";");
+
+        // Build array from the returned string, contains the data of 1 person Separated by ";".
+        String[] arr = personJson.split(";");
+
+        // Index
+        // 0 = run
+        // 1 = fullname
+        // 2 = is_permitted
+        // 3 = company
+        // 4 = place
+        // 5 = company_code
+        // 6 = card
+        // 7 = profile
+
         try {
-            // set editText here before any exceptions.
+            // Set editText here before any exceptions.
             editTextRun.setText(arr[0]);
-            //build object with that values, then send to registerTarsk()
+            // Build object with that values, then send to registerTarsk()
             Record record = new Record();
             record.setPerson_run(arr[0]);
 
-            if (arr[2].equals("true")) {
-                //mp3Permitted.start();
+            if (arr[2].equals("true") && !arr[7].equals("V")) {
                 new LoadSound(2).execute();
                 record.setPerson_is_permitted(1);
                 if (is_input)
                     imageview.setImageResource(R.drawable.permitted);
             } else {
-                //mp3Dennied.start();
                 new LoadSound(3).execute();
-                // if has card number define as denied and as employee
-                //is_permitted = false;
                 record.setPerson_is_permitted(0);
                 if (is_input)
                     imageview.setImageResource(R.drawable.dennied);
@@ -564,13 +573,10 @@ public class MainActivity extends AppCompatActivity {
             // Save record on local database
             db.add_record(record);
         } catch (ArrayIndexOutOfBoundsException e) {
-            //mp3Error.start();
-            new LoadSound(1).execute();
+            new LoadSound(1).execute(); // Error sound.
             log.writeLog(getApplicationContext(), "Main:line 538", "ERROR", e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
-            //mp3Error.start();
-            new LoadSound(1).execute();
+            new LoadSound(1).execute(); // Error sound.
             log.writeLog(getApplicationContext(), "Main:line 542", "ERROR", e.getMessage());
         }
     }
@@ -593,6 +599,7 @@ public class MainActivity extends AppCompatActivity {
                 if (obj.get("update").toString().equals("true")) {
                     updatePeopleTask = new LoadDbTask();
                     updatePeopleTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+                    // Change state to FALSE.
                     new updateStateOnServerTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
                 }
             } catch (JSONException e) {
@@ -614,14 +621,13 @@ public class MainActivity extends AppCompatActivity {
         }
 
         protected void onPostExecute(String json) {
-            // When response its 200, json save data no code.
             log_app log = new log_app();
             DatabaseHelper db = DatabaseHelper.getInstance(getBaseContext());
+            // if get response is 200 return data, else return error http code.
             if (json != "408" && json != "204") {
                 try {
                     db.add_people(json);
                 } catch (IllegalStateException e) {
-                    e.printStackTrace();
                     log.writeLog(getApplicationContext(), "Main:line 572", "ERROR", e.getMessage());
                 }
             }
@@ -694,12 +700,10 @@ public class MainActivity extends AppCompatActivity {
                 result = String.valueOf(httpResponse.getStatusLine().getStatusCode());
             }
         } catch (IOException e) {
-            e.printStackTrace();
             log.writeLog(getApplicationContext(), "Main:line 630", "ERROR", e.getMessage());
         }
         return result;
     }
-
 
     public String DbCall(String dataUrl) {
         log_app log = new log_app();
@@ -800,33 +804,24 @@ public class MainActivity extends AppCompatActivity {
             jsonObject.accumulate("run", record.getPerson_run());
             jsonObject.accumulate("fullname", record.getPerson_fullname());
             jsonObject.accumulate("profile", record.getPerson_profile());
-
-            if (record.getPerson_profile().equals("V")) {
-                jsonObject.accumulate("is_permitted", true);
-            } else {
-                if (record.getPerson_is_permitted() == 1)
-                    jsonObject.accumulate("is_permitted", true);
-                else jsonObject.accumulate("is_permitted", false);
-            }
+            jsonObject.accumulate("type", "PDA");
+            jsonObject.accumulate("PDA", db.get_config_id_pda());
+            jsonObject.accumulate("company", record.getPerson_company());
+            jsonObject.accumulate("is_permitted", record.getPerson_is_permitted());
 
             if (record.getRecord_is_input() == 1) {
                 jsonObject.accumulate("is_input", true);
                 jsonObject.accumulate("input_datetime", record.getRecord_input_datetime());
-
             } else {
                 jsonObject.accumulate("is_input", false);
                 jsonObject.accumulate("output_datetime", record.getRecord_output_datetime());
             }
 
-            jsonObject.accumulate("company", record.getPerson_company());
             if (!record.getPerson_profile().equals("V")) {
                 jsonObject.accumulate("place", record.getPerson_place());
                 jsonObject.accumulate("company_code", record.getPerson_company_code());
                 jsonObject.accumulate("card", record.getPerson_card());
             }
-
-            jsonObject.accumulate("type", "PDA");
-            jsonObject.accumulate("PDA", db.get_config_id_pda());
 
             // 4. convert JSONObject to JSON to String
             if (jsonObject.length() <= 13) { // 13 element on json
@@ -912,12 +907,7 @@ public class MainActivity extends AppCompatActivity {
                     .build();
             for (int i = 0; i < newRecord.size(); i++) {
                 Record record = newRecord.get(i);
-                Log.e("posicion" + i, newRecord.get(i).getPerson_fullname() + "," + newRecord.get(i).getRecord_input_datetime());
-                //postReturn = POST(record, server + "/api/records/",client );
                 POSTAlternative(record, server + "/api/records/", client);
-                if (i == newRecord.size() - 1)
-                    Log.e("---", "------------------------------------");
-
             }
             return postReturn;
         }

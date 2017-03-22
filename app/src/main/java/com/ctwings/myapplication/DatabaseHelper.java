@@ -199,11 +199,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         try {
             //db.beginTransaction();
             id.replace("%", ""); // Remove 0 at beginner
-            //id = String.valueOf(Integer.parseInt(id));
 
             // 2. build query
-            cursor =
-                    db.query(TABLE_PERSON, // a. table
+            cursor = db.query(TABLE_PERSON, // a. table
                             PERSON_COLUMNS, // b. column names
                             " person_run = ? OR person_card = ?", // c. selections
                             new String[]{String.valueOf(id), String.valueOf(id)}, // d. selections args
@@ -214,20 +212,33 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
             if (cursor != null) {
                 if (!(cursor.moveToFirst()) || cursor.getCount() == 0) {
-                    //cursor is empty
-                    out = id + ";;;;;0;0;V;";
+                    // if cursor is empty
+                    // true -> is_permitted = true.
+                    // V -> profile = Visit
+                    out = id + ";;true;;;0;0;V;";
                 } else {
-                    // 3. if we got results get the first one
+                    // if we got results get the first one
                     cursor.moveToFirst();
 
-                    // 4. build String
+                    // build String
+
+                    /*
+                    * 2 = RUT
+                    * 1 = Fullname
+                    * 3 = is_permitted
+                    * 4 = company
+                    * 5 = place
+                    * 6 = company_code
+                    * 7 = card
+                    * 8 = profile
+                    * */
                     out = cursor.getString(2) + ";" + cursor.getString(1) + ";" +
                             cursor.getString(3) + ";" + cursor.getString(4) + ";" +
                             cursor.getString(5) + ";" + cursor.getString(6) + ";" +
                             cursor.getInt(7) + ";" + cursor.getString(8);
                 }
             }
-            //cursor.close();
+            cursor.close();
         } catch (IllegalStateException e) {
             log.writeLog(context, "DBhelper:line 238", "ERROR", e.getMessage());
         } catch (SQLiteDatabaseLockedException e) {
@@ -246,7 +257,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     //Records
     public void add_record(Record record) {
         log_app log = new log_app();
-        //Log.i("add_record(record)", record.toString());
         // 1. get reference to writable DB
         SQLiteDatabase db = getWritableDatabase();
         db.beginTransaction();
@@ -277,7 +287,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         } finally {
             db.endTransaction();
         }
-
         // 4. close
         //db.close();
     }
