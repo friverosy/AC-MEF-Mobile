@@ -246,7 +246,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     //Records
     public void add_record(Record record) {
         log_app log = new log_app();
-        //Log.i("add_record(record)", record.toString());
         // 1. get reference to writable DB
         SQLiteDatabase db = getWritableDatabase();
         db.beginTransaction();
@@ -277,7 +276,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         } finally {
             db.endTransaction();
         }
-
         // 4. close
         //db.close();
     }
