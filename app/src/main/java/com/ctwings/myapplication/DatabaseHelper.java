@@ -160,6 +160,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                             iHelp.bind(iHelp.getColumnIndex(PERSON_COMPANY), json_db_array.getJSONObject(i).getString("company"));
                             iHelp.bind(iHelp.getColumnIndex(PERSON_COMPANY_CODE), json_db_array.getJSONObject(i).getString("company_code"));
                             iHelp.bind(iHelp.getColumnIndex(PERSON_IS_PERMITTED), json_db_array.getJSONObject(i).getString("is_permitted"));
+                            iHelp.bind(iHelp.getColumnIndex(PERSON_CARD), json_db_array.getJSONObject(i).getString("card"));
                             break;
                         case "V": // Visit
                             if (!json_db_array.getJSONObject(i).getString("fullname").isEmpty())
