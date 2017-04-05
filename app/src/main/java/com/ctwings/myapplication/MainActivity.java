@@ -65,12 +65,14 @@ import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
 
+    //private final String server = "http://axxezo-test.brazilsouth.cloudapp.azure.com:3001";
     //private final String server = "http://controlid-test.multiexportfoods.com:3000";
-    //private final String server = "http://controlid.multiexportfoods.com:3000";
-    private final String server = "http://192.168.1.126:3000";
-    private final int delayPeople = 3600000; // 4 Min. 240000; 600000 10 min
-    private final int delayRecords = 60000; // 4 Min. 240000; 480000 8 min
-    private static String version = "960ec5d";
+    private final String server = "http://controlid.multiexportfoods.com:3000";
+    //private final String server = "http://192.168.43.69:3000";
+    //private final String server = "http://192.168.1.126:3000";
+    private final int delayPeople = 240000; // 4 Min. 240000;
+    private final int delayRecords = 300000; // 5 Min. 300000;
+    private static String version = "808c289";
     private ImageView imageview;
     private EditText editTextRun;
     private EditText editTextFullName;
@@ -114,7 +116,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         //create the log file
-        File log = new File(this.getFilesDir() + File.separator + "AccessControl.log");
+        File log = new File(this.getFilesDir() + File.separator + "MultiexportFoods.log");
         if (!log.isFile()) {
             try {
                 log.createNewFile();
@@ -126,6 +128,8 @@ public class MainActivity extends AppCompatActivity {
         //call the loading library in xml file
         loading = (ProgressWheel) findViewById(R.id.loading);
         loading.setVisibility(View.GONE);
+
+        //seedOfflineRecords(500);
 
         // Start Asynctask loop to check every delayPeople time, if need update people.
         UpdateDbPeople();
@@ -258,7 +262,6 @@ public class MainActivity extends AppCompatActivity {
                             barcodeStr = rutValidator;
                         else
                             log.writeLog(getApplicationContext(), "Main:line 262", "ERROR", "rut invalido " + barcodeStr);
-
                     }
 
                     //get name from DNI
@@ -579,14 +582,15 @@ public class MainActivity extends AppCompatActivity {
         }
 
         protected String doInBackground(String... params) {
-            return GET(server + "/api/states/updatePeople");
+            DatabaseHelper db = DatabaseHelper.getInstance(getBaseContext());
+            return GET(server + "/api/states/updatePeople?pda="+db.get_config_id_pda());
         }
 
         protected void onPostExecute(String json) {
             loading.setVisibility(View.GONE);
             try {
                 JSONObject obj = new JSONObject(json);
-                if (obj.get("update").toString().equals("true")){
+                if (obj.get("update").toString().equals("true") || obj.get("update").toString().equals("null")){
                     updatePeopleTask = new LoadDbTask();
                     updatePeopleTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
                     // Change state to FALSE.
@@ -751,12 +755,14 @@ public class MainActivity extends AppCompatActivity {
 
     public String sendState (Boolean state){
         HttpClient client = new DefaultHttpClient();
+        DatabaseHelper db = DatabaseHelper.getInstance(this);
         HttpPost post = new HttpPost(server + "/api/states");
         String result = null;
         InputStream inputStream;
         JSONObject jsonObject = new JSONObject();
         try {
             jsonObject.accumulate("updatePeople", state);
+            jsonObject.accumulate("pda", db.get_config_id_pda());
             post.setEntity(new StringEntity(jsonObject.toString()));
             post.setHeader("Accept", "application/json");
             post.setHeader("Content-type", "application/json");
@@ -1071,6 +1077,28 @@ public class MainActivity extends AppCompatActivity {
                     response.request().url(), (t2 - t1) / 1e6d, response.headers()));
 
             return response;
+        }
+    }
+
+    public void seedOfflineRecords(int loop){
+        DatabaseHelper db=DatabaseHelper.getInstance(this);
+        for(int i=0;i<loop;i++) {
+            Record records = new Record();
+            int random=(int)Math.floor(Math.random()*(30000000-10000000)+loop);
+            int random2=(int)Math.floor(Math.random()*(99999-10000)+loop);
+            records.setPerson_card(random2);
+            records.setPerson_run(random+"");
+            records.setRecord_is_input(1);
+            records.setPerson_is_permitted(1);
+            records.setRecord_sync(0);
+            records.setPerson_profile("E");
+            records.setRecord_input_datetime(getCurrentDateTime());
+            db.add_record(records);
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
