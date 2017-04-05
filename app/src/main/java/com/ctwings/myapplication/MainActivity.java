@@ -23,6 +23,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.NumberPicker;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -55,6 +56,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
@@ -96,6 +98,8 @@ public class MainActivity extends AppCompatActivity {
     MediaPlayer mp3Dennied;
     MediaPlayer mp3Permitted;
     MediaPlayer mp3Error;
+    private checkStatusTask checkStatus;
+    private int pdaNumber;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -135,6 +139,7 @@ public class MainActivity extends AppCompatActivity {
         UpdateDbPeople();
         // Asynctask to start sending records to each delayRecords time to API.
         sendRecords();
+        //testRecords(200);
 
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         editTextRun = (EditText) findViewById(R.id.editText_run);
@@ -151,6 +156,9 @@ public class MainActivity extends AppCompatActivity {
         textViewVersion = (TextView) findViewById(R.id.textView_version);
         textViewVersion.setText("Versión: " + version);
 
+        //set default first call in oncreate
+        updatePeopleTask = new LoadDbTask();
+        updatePeopleTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
         // set by default
         is_input = true;
 
@@ -422,7 +430,8 @@ public class MainActivity extends AppCompatActivity {
                             // AsyncTask do GET to obtain boolean status from api.
                             // TRUE: Need update People.
                             // FALSE: Dont need update People.
-                            new checkStatusTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+                            checkStatus=new checkStatusTask();
+                            checkStatus.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
                         } catch (Exception e) {
                             log.writeLog(getApplicationContext(), "Main:line 397", "ERROR", e.getMessage());
                         }
@@ -447,7 +456,7 @@ public class MainActivity extends AppCompatActivity {
                             // First call, sendRecord will be null, so instantiate it.
                             if (sendRecord == null) { //&& updatePeopleTask.getStatus() != AsyncTask.Status.RUNNING
                                 OfflineRecordsSynchronizer();
-                            } else if(db.record_desync_count() > 0 && sendRecord.getStatus() != AsyncTask.Status.RUNNING){
+                            } else if (db.record_desync_count() > 0 && sendRecord.getStatus() != AsyncTask.Status.RUNNING){
                                 // If it is already instantiated
                                 OfflineRecordsSynchronizer();
                             }
@@ -753,7 +762,7 @@ public class MainActivity extends AppCompatActivity {
         return result;
     }
 
-    public String sendState (Boolean state){
+    public String sendState(Boolean state) {
         HttpClient client = new DefaultHttpClient();
         DatabaseHelper db = DatabaseHelper.getInstance(this);
         HttpPost post = new HttpPost(server + "/api/states");
@@ -882,7 +891,7 @@ public class MainActivity extends AppCompatActivity {
         }
         return result;
     }
-    
+
     public class RegisterTask extends AsyncTask<Void, Void, String> {
 
         private List<Record> newRecord;
@@ -893,12 +902,14 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected String doInBackground(Void... params) {
+            DatabaseHelper db=DatabaseHelper.getInstance(getApplicationContext());
             String postReturn = "";
-            final OkHttpClient client = new OkHttpClient();
-            //.connectTimeout(1, TimeUnit.SECONDS)
-            //.writeTimeout(2, TimeUnit.SECONDS)
-            //.readTimeout(2, TimeUnit.SECONDS)
-            //.build();
+            pdaNumber=db.get_config_id_pda();
+            final OkHttpClient client = new OkHttpClient.Builder()
+                    .connectTimeout(1, TimeUnit.SECONDS)
+                    .writeTimeout(0, TimeUnit.SECONDS)
+                    .readTimeout(0, TimeUnit.SECONDS)
+                    .build();
             for (int i = 0; i < newRecord.size(); i++) {
                 Record record = newRecord.get(i);
                 POSTAlternative(record, server + "/api/records/", client);
@@ -996,7 +1007,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             jsonObject.accumulate("type", "PDA");
-            jsonObject.accumulate("PDA", db.get_config_id_pda());
+            jsonObject.accumulate("PDA", pdaNumber);
 
             // 4. convert JSONObject to JSON to String
             if (jsonObject.length() <= 13) { // 13 element on json
@@ -1017,6 +1028,9 @@ public class MainActivity extends AppCompatActivity {
                     Response response = client.newCall(request).execute();
 
                     String tmp = response.body().string();
+                    //Log.e("response", response.code() + "name " + record.getPerson_fullname());
+                    log.writeLog(getApplicationContext(), "Main:line 1037", "DEBUG", "response "+response.code() + " name " + record.getPerson_fullname());
+                    //Log.e("response", response.receivedResponseAtMillis() + "millis " + record.getPerson_fullname());
 
                     // 10. convert inputstream to string
                     if (tmp != null) {
@@ -1032,6 +1046,11 @@ public class MainActivity extends AppCompatActivity {
                                 });
                             }
                         }
+                        else if(response.code()==422){
+                            //return 422 when the record is sync but his state in db isn`t change
+                            db.update_record(record.getRecord_id());
+                        }
+
                     } else {
                         result = String.valueOf(response.code());
                     }
@@ -1053,13 +1072,16 @@ public class MainActivity extends AppCompatActivity {
                 log.writeLog(getApplicationContext(), "Main:line 815", "ERROR", "Missing elements in the json to be posted");
             }
         } catch (HttpHostConnectException hhc) {
-            log.writeLog(getApplicationContext(), "Main: POST method", "ERROR", hhc.getMessage().toString());
+            log.writeLog(getApplicationContext(), "Main: POST method", "ERROR", hhc.getMessage());
         } catch (Exception e) {
-            log.writeLog(getApplicationContext(), "Main: POST method", "ERROR", e.getMessage().toString());
+            log.writeLog(getApplicationContext(), "Main: POST method", "ERROR", e.getMessage());
         }
 
         return result;
     }
+
+
+
 
     class LoggingInterceptor implements Interceptor {
         @Override
