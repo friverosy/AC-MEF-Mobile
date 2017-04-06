@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
     //private final String server = "http://192.168.1.126:3000";
     private final int delayPeople = 240000; // 4 Min. 240000;
     private final int delayRecords = 300000; // 5 Min. 300000;
-    private static String version = "808c289";
+    private static String version = "873b46a";
     private ImageView imageview;
     private EditText editTextRun;
     private EditText editTextFullName;
@@ -342,6 +342,11 @@ public class MainActivity extends AppCompatActivity {
                 // Drop record table
                 db.clean_records();
                 makeToast("Tabla records vaciada.");
+                break;
+            case "CONFIG-AXX-FJS3WVQTCXT2OWHHHS5O":
+                // setting window
+                Intent i = new Intent(this, Setting.class);
+                startActivity(i);
                 break;
             default:
                 makeToast("Código de configuración incorrecto!");
