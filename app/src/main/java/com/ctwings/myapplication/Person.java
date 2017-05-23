@@ -10,14 +10,16 @@ public class Person {
     String person_company_code;
     int person_card;
     String person_profile;
+    String person_truck_patent;
+    String person_rampla_patent;
 
     //Constructors
     public Person(){
 
     }
 
-    public Person(String person_fullname, String person_run, String person_is_permitted, String person_company, String person_place, String person_company_code, Integer person_card, String person_profile){
-
+    public Person(int person_id, String person_fullname, String person_run, String person_is_permitted, String person_company, String person_place, String person_company_code, int person_card, String person_profile, String person_truck_patent, String person_rampla_patent) {
+        this.person_id = person_id;
         this.person_fullname = person_fullname;
         this.person_run = person_run;
         this.person_is_permitted = person_is_permitted;
@@ -26,6 +28,8 @@ public class Person {
         this.person_company_code = person_company_code;
         this.person_card = person_card;
         this.person_profile = person_profile;
+        this.person_truck_patent = person_truck_patent;
+        this.person_rampla_patent = person_rampla_patent;
     }
 
     //Set
@@ -104,13 +108,36 @@ public class Person {
         return this.person_company_code;
     }
 
+    public String get_person_truck_patent() {
+        return person_truck_patent;
+    }
+
+    public void set_person_truck_patent(String person_truck_patent) {
+        this.person_truck_patent = person_truck_patent;
+    }
+
+    public String get_person_rampla_patent() {
+        return person_rampla_patent;
+    }
+
+    public void set_person_rampla_patent(String person_rampla_patent) {
+        this.person_rampla_patent = person_rampla_patent;
+    }
 
     @Override
     public String toString() {
-        return "Person [id=" + person_id + ", fullname=" + person_fullname + ", run=" +
-                person_run + ", is_permitted=" + person_is_permitted +
-                ", company=" + person_company + ", place=" + person_place +
-                ", company_code="+ person_company_code + ", card="+person_card+
-                ", person_profile=" + person_profile + "]";
+        return "Person{" +
+                "person_id=" + person_id +
+                ", person_fullname='" + person_fullname + '\'' +
+                ", person_run='" + person_run + '\'' +
+                ", person_is_permitted='" + person_is_permitted + '\'' +
+                ", person_company='" + person_company + '\'' +
+                ", person_place='" + person_place + '\'' +
+                ", person_company_code='" + person_company_code + '\'' +
+                ", person_card=" + person_card +
+                ", person_profile='" + person_profile + '\'' +
+                ", person_truck_patent='" + person_truck_patent + '\'' +
+                ", person_rampla_patent='" + person_rampla_patent + '\'' +
+                '}';
     }
 }

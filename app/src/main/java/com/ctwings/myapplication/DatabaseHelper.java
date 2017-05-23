@@ -42,7 +42,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             "person_fullname TEXT, " + "person_run TEXT, " +
             "person_is_permitted TEXT, " + "person_company TEXT DEFAULT '', " +
             "person_place TEXT, " + "person_company_code TEXT, " +
-            "person_card INTEGER, " + "person_profile TEXT)";
+            "person_card INTEGER, " + "person_profile TEXT, " +
+            "person_truck_patent TEXT, person_rampla_patent TEXT)";
 
     String CREATE_RECORD_TABLE = "CREATE TABLE IF NOT EXISTS " + TABLE_RECORD + " ( " +
             "record_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -52,6 +53,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             "person_place TEXT, " + "person_company_code TEXT," +
             "record_input_datetime TEXT, " + "record_output_datetime TEXT, " +
             "record_sync INTEGER," + "person_profile TEXT, " + "person_card INTEGER, " +
+            "person_truck_patent TEXT, person_rampla_patent TEXT, " +
             "UNIQUE (record_input_datetime,record_output_datetime)) ";
 
     public DatabaseHelper(Context context) {
@@ -116,14 +118,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String RECORD_OUTPUT_DATETIME = "record_output_datetime";
     private static final String RECORD_SYNC = "record_sync";
     private static final String PERSON_CARD = "person_card";
+    private static final String PERSON_TRUCK_PATENT = "person_truck_patent";
+    private static final String PERSON_RAMPLA_PATENT = "person_rampla_patent";
 
     // Setting Table Columns names
     private static final String SETTING_ID = "id";
     private static final String SETTING_URL = "url";
     private static final String SETTING_PORT = "port";
 
-    private static final String[] PERSON_COLUMNS = {PERSON_ID, PERSON_FULLNAME, PERSON_RUN, PERSON_IS_PERMITTED, PERSON_COMPANY, PERSON_PLACE, PERSON_COMPANY_CODE, PERSON_CARD, PERSON_PROFILE};
-    private static final String[] RECORD_COLUMNS = {RECORD_ID, PERSON_FULLNAME, PERSON_RUN, RECORD_IS_INPUT, RECORD_BUS, PERSON_IS_PERMITTED, PERSON_COMPANY, PERSON_PLACE, PERSON_COMPANY_CODE, RECORD_INPUT_DATETIME, RECORD_OUTPUT_DATETIME, RECORD_SYNC, PERSON_PROFILE, PERSON_CARD};
+    private static final String[] PERSON_COLUMNS = {PERSON_ID, PERSON_FULLNAME, PERSON_RUN, PERSON_IS_PERMITTED, PERSON_COMPANY, PERSON_PLACE, PERSON_COMPANY_CODE, PERSON_CARD, PERSON_PROFILE, PERSON_TRUCK_PATENT, PERSON_RAMPLA_PATENT};
+    private static final String[] RECORD_COLUMNS = {RECORD_ID, PERSON_FULLNAME, PERSON_RUN, RECORD_IS_INPUT, RECORD_BUS, PERSON_IS_PERMITTED, PERSON_COMPANY, PERSON_PLACE, PERSON_COMPANY_CODE, RECORD_INPUT_DATETIME, RECORD_OUTPUT_DATETIME, RECORD_SYNC, PERSON_PROFILE, PERSON_CARD, PERSON_TRUCK_PATENT, PERSON_RAMPLA_PATENT};
 
 
     //Person
@@ -163,6 +167,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                             iHelp.bind(iHelp.getColumnIndex(PERSON_CARD), json_db_array.getJSONObject(i).getString("card"));
                             break;
                         case "V": // Visit
+                            if (!json_db_array.getJSONObject(i).getString("fullname").isEmpty())
+                                iHelp.bind(iHelp.getColumnIndex(PERSON_FULLNAME), json_db_array.getJSONObject(i).getString("fullname"));
+                            if (!json_db_array.getJSONObject(i).getString("company").isEmpty())
+                                iHelp.bind(iHelp.getColumnIndex(PERSON_COMPANY), json_db_array.getJSONObject(i).getString("company"));
+                            break;
+                        case "P": // Visit
+                            iHelp.bind(iHelp.getColumnIndex(PERSON_TRUCK_PATENT), json_db_array.getJSONObject(i).getString("truck_patent"));
+                            iHelp.bind(iHelp.getColumnIndex(PERSON_RAMPLA_PATENT), json_db_array.getJSONObject(i).getString("rampla_patent"));
                             if (!json_db_array.getJSONObject(i).getString("fullname").isEmpty())
                                 iHelp.bind(iHelp.getColumnIndex(PERSON_FULLNAME), json_db_array.getJSONObject(i).getString("fullname"));
                             if (!json_db_array.getJSONObject(i).getString("company").isEmpty())
@@ -232,11 +244,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     * 6 = company_code
                     * 7 = card
                     * 8 = profile
+                    * 9 = truck
+                    * 10 = rampla
                     * */
                     out = cursor.getString(2) + ";" + cursor.getString(1) + ";" +
-                            cursor.getString(3) + ";" + cursor.getString(4) + ";" +
+                            true + ";" + cursor.getString(4) + ";" +
                             cursor.getString(5) + ";" + cursor.getString(6) + ";" +
-                            cursor.getInt(7) + ";" + cursor.getString(8);
+                            cursor.getInt(7) + ";" + cursor.getString(8) + ";" +
+                            cursor.getString(9) + ";" + cursor.getString(10);
                 }
             }
             cursor.close();
@@ -280,6 +295,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             values.put(RECORD_SYNC, record.getRecord_sync());
             values.put(PERSON_PROFILE, record.getPerson_profile());
             values.put(PERSON_CARD, record.getPerson_card());
+            values.put(PERSON_TRUCK_PATENT, record.getPerson_truck_patent());
+            values.put(PERSON_RAMPLA_PATENT, record.getPerson_rampla_patent());
             db.insertWithOnConflict(TABLE_RECORD, null, values, SQLiteDatabase.CONFLICT_IGNORE);
             db.setTransactionSuccessful();
         } catch (SQLException e) {
@@ -330,6 +347,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 record.setRecord_sync(cursor.getInt(11));               // SYNC
                 record.setPerson_profile(cursor.getString(12));         // PROFILE
                 record.setPerson_card(cursor.getInt(13));               // CARD
+                record.setPerson_truck_patent(cursor.getString(14));
+                record.setPerson_rampla_patent(cursor.getString(15));
 
                 records.add(record);
                 cursor.moveToNext();
@@ -365,6 +384,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = db.rawQuery("SELECT " + PERSON_ID + " FROM " + TABLE_PERSON +
                 " WHERE " + PERSON_PROFILE + "= 'E';", null);
+        return cursor.getCount();
+    }
+
+    public int suppliers_count() {
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery("SELECT " + PERSON_ID + " FROM " + TABLE_PERSON +
+                " WHERE " + PERSON_PROFILE + "= 'P';", null);
         return cursor.getCount();
     }
 

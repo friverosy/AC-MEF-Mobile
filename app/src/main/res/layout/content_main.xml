@@ -27,7 +27,7 @@
         android:layout_height="wrap_content"
         android:id="@+id/editText_fullname"
         android:hint="Nombre"
-        android:textSize="20dp"
+        android:textSize="16dp"
         android:textAlignment="center" />
 
     <EditText
@@ -35,14 +35,14 @@
         android:layout_height="wrap_content"
         android:id="@+id/editText_run"
         android:hint="Rut"
-        android:textSize="18dp"
+        android:textSize="16dp"
         android:textAlignment="center" />
 
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/editText_company"
-        android:textSize="20dp"
+        android:textSize="16dp"
         android:textAlignment="center"
         android:textStyle="normal|bold"
         android:typeface="normal" />
@@ -51,13 +51,45 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/textView_profile"
-        android:textSize="18dp"
+        android:textSize="16dp"
         android:textAlignment="center"
         android:textStyle="normal|bold" />
 
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:weightSum="1">
+
+        <TextView
+            android:layout_width="144dp"
+            android:layout_height="wrap_content"
+            android:id="@+id/textView_truck"
+            android:textSize="16dp"
+            android:textAlignment="center"
+            android:textStyle="normal|bold" />
+
+        <TextView
+            android:layout_width="17dp"
+            android:layout_height="wrap_content"
+            android:text="/"
+            android:ems="5"
+            android:id="@+id/textView_separator" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/textView_rampla"
+            android:textSize="16dp"
+            android:textAlignment="center"
+            android:textStyle="normal|bold" />
+
+    </LinearLayout>
+
     <ImageView
         android:layout_width="match_parent"
-        android:layout_height="fill_parent"
+        android:layout_height="wrap_content"
         android:id="@+id/imageView"
         android:layout_gravity="center_horizontal" />
 

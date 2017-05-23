@@ -15,6 +15,8 @@ public class Record {
     String person_company_code;
     String record_input_datetime;
     String record_output_datetime;
+    String person_truck_patent;
+    String person_rampla_patent;
 
     int record_sync;
 
@@ -23,8 +25,7 @@ public class Record {
 
     }
 
-    public Record(Integer record_id, String person_fullname, String person_run, String person_profile, Integer record_is_input, Integer record_bus, Integer person_is_permitted, String person_company, String person_place, String person_company_code, String record_input_datetime, String record_output_datetime, Integer record_sync, Integer person_card){
-
+    public Record(int record_id, String person_fullname, String person_run, String person_profile, int record_is_input, int record_bus, int person_is_permitted, int person_card, String person_company, String person_place, String person_company_code, String record_input_datetime, String record_output_datetime, String person_truck_patent, String person_rampla_patent, int record_sync) {
         this.record_id = record_id;
         this.person_fullname = person_fullname;
         this.person_run = person_run;
@@ -32,13 +33,31 @@ public class Record {
         this.record_is_input = record_is_input;
         this.record_bus = record_bus;
         this.person_is_permitted = person_is_permitted;
+        this.person_card = person_card;
         this.person_company = person_company;
         this.person_place = person_place;
         this.person_company_code = person_company_code;
         this.record_input_datetime = record_input_datetime;
         this.record_output_datetime = record_output_datetime;
+        this.person_truck_patent = person_truck_patent;
+        this.person_rampla_patent = person_rampla_patent;
         this.record_sync = record_sync;
-        this.person_card = person_card;
+    }
+
+    public String getPerson_truck_patent() {
+        return person_truck_patent;
+    }
+
+    public void setPerson_truck_patent(String person_truck_patent) {
+        this.person_truck_patent = person_truck_patent;
+    }
+
+    public String getPerson_rampla_patent() {
+        return person_rampla_patent;
+    }
+
+    public void setPerson_rampla_patent(String person_rampla_patent) {
+        this.person_rampla_patent = person_rampla_patent;
     }
 
     public int getPerson_card() { return person_card; }

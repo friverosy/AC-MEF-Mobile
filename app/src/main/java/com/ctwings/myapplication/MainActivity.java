@@ -69,16 +69,19 @@ public class MainActivity extends AppCompatActivity {
 
     //private final String server = "http://axxezo-test.brazilsouth.cloudapp.azure.com:3001";
     //private final String server = "http://controlid-test.multiexportfoods.com:3000";
-    private final String server = "http://controlid.multiexportfoods.com:3000";
+    //private final String server = "http://controlid.multiexportfoods.com:3000";
     //private final String server = "http://192.168.43.69:3000";
-    //private final String server = "http://192.168.1.126:3000";
+    private final String server = "http://192.168.1.110:3000";
     private final int delayPeople = 240000; // 4 Min. 240000;
-    private final int delayRecords = 300000; // 5 Min. 300000;
+    private final int delayRecords = 3000; // 5 Min. 300000;
     private static String version = "873b46a";
     private ImageView imageview;
     private EditText editTextRun;
     private EditText editTextFullName;
     private TextView textViewVersion;
+    private TextView textViewTruck;
+    private TextView textViewRampla;
+    private TextView textViewSeparator;
     private String name = "";
     private EditText editTextCompany;
     private TextView textViewProfile;
@@ -146,11 +149,17 @@ public class MainActivity extends AppCompatActivity {
         editTextFullName = (EditText) findViewById(R.id.editText_fullname);
         editTextCompany = (EditText) findViewById(R.id.editText_company);
         textViewProfile = (TextView) findViewById(R.id.textView_profile);
+        textViewTruck = (TextView) findViewById(R.id.textView_truck);
+        textViewRampla = (TextView) findViewById(R.id.textView_rampla);
+        textViewSeparator = (TextView) findViewById(R.id.textView_separator);
         imageview = (ImageView) findViewById(R.id.imageView);
         mp3Dennied = MediaPlayer.create(MainActivity.this, R.raw.bad);
         mp3Permitted = MediaPlayer.create(MainActivity.this, R.raw.good);
         mp3Error = MediaPlayer.create(MainActivity.this, R.raw.error);
         editTextCompany.setVisibility(View.GONE);
+        textViewTruck.setVisibility(View.GONE);
+        textViewRampla.setVisibility(View.GONE);
+        textViewSeparator.setVisibility(View.GONE);
         mySwitch = (Switch) findViewById(R.id.mySwitch);
         mySwitch.setChecked(true);
         textViewVersion = (TextView) findViewById(R.id.textView_version);
@@ -519,6 +528,9 @@ public class MainActivity extends AppCompatActivity {
 
             switch (arr[7]) {
                 case "E":
+                    textViewTruck.setVisibility(View.GONE);
+                    textViewRampla.setVisibility(View.GONE);
+                    textViewSeparator.setVisibility(View.GONE);
                     editTextFullName.setText(arr[1]);
                     record.setPerson_fullname(arr[1]);
                     textViewProfile.setText("Empleado");
@@ -526,12 +538,32 @@ public class MainActivity extends AppCompatActivity {
                 case "C":
                     editTextFullName.setText(arr[1]);
                     record.setPerson_fullname(arr[1]);
-                    textViewProfile.setText("Subcontratista");
+                    textViewProfile.setText("Contratista");
                     editTextCompany.setText(arr[3]);
                     editTextCompany.setVisibility(View.VISIBLE);
+                    textViewTruck.setVisibility(View.GONE);
+                    textViewRampla.setVisibility(View.GONE);
+                    textViewSeparator.setVisibility(View.GONE);
+                    break;
+                case "P":
+                    editTextFullName.setText(arr[1]);
+                    record.setPerson_fullname(arr[1]);
+                    textViewProfile.setText("Proveedor");
+                    editTextCompany.setText(arr[3]);
+                    editTextCompany.setVisibility(View.VISIBLE);
+                    textViewTruck.setText(arr[8]);
+                    textViewTruck.setVisibility(View.VISIBLE);
+                    textViewRampla.setText(arr[9]);
+                    textViewRampla.setVisibility(View.VISIBLE);
+                    textViewSeparator.setVisibility(View.VISIBLE);
+                    record.setPerson_truck_patent(arr[8]);
+                    record.setPerson_rampla_patent(arr[9]);
                     break;
                 case "V":
                     textViewProfile.setText("Visita");
+                    textViewTruck.setVisibility(View.GONE);
+                    textViewRampla.setVisibility(View.GONE);
+                    textViewSeparator.setVisibility(View.GONE);
                     // Show denied image, but internally setup record as permitted.
                     record.setPerson_is_permitted(1);
                     // If could get the name of pdf417 show it.
@@ -828,9 +860,14 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (!record.getPerson_profile().equals("V")) {
-                jsonObject.accumulate("place", record.getPerson_place());
                 jsonObject.accumulate("company_code", record.getPerson_company_code());
-                jsonObject.accumulate("card", record.getPerson_card());
+                if (record.getPerson_profile().equals("P")){
+                    jsonObject.accumulate("truck_patent", record.getPerson_truck_patent());
+                    jsonObject.accumulate("rampla_patent", record.getPerson_rampla_patent());
+                } else {
+                    jsonObject.accumulate("place", record.getPerson_place());
+                    jsonObject.accumulate("card", record.getPerson_card());
+                }
             }
 
             // 4. convert JSONObject to JSON to String
@@ -1006,9 +1043,14 @@ public class MainActivity extends AppCompatActivity {
 
             jsonObject.accumulate("company", record.getPerson_company());
             if (!record.getPerson_profile().equals("V")) {
-                jsonObject.accumulate("place", record.getPerson_place());
                 jsonObject.accumulate("company_code", record.getPerson_company_code());
-                jsonObject.accumulate("card", record.getPerson_card());
+                if (record.getPerson_profile().equals("P")){
+                    jsonObject.accumulate("truck_patent", record.getPerson_truck_patent());
+                    jsonObject.accumulate("rampla_patent", record.getPerson_rampla_patent());
+                } else {
+                    jsonObject.accumulate("place", record.getPerson_place());
+                    jsonObject.accumulate("card", record.getPerson_card());
+                }
             }
 
             jsonObject.accumulate("type", "PDA");
@@ -1017,6 +1059,7 @@ public class MainActivity extends AppCompatActivity {
             // 4. convert JSONObject to JSON to String
             if (jsonObject.length() <= 13) { // 13 element on json
                 json = jsonObject.toString();
+                Log.i("json to POST", json);
 
                 RequestBody body = RequestBody.create(JSON, json);
 
