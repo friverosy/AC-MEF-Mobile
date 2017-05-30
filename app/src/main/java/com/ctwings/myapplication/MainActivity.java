@@ -68,12 +68,12 @@ import okhttp3.Response;
 public class MainActivity extends AppCompatActivity {
 
     //private final String server = "http://axxezo-test.brazilsouth.cloudapp.azure.com:3001";
-    //private final String server = "http://controlid-test.multiexportfoods.com:3000";
+    private final String server = "http://controlid-test.multiexportfoods.com:3000";
     //private final String server = "http://controlid.multiexportfoods.com:3000";
     //private final String server = "http://192.168.43.69:3000";
-    private final String server = "http://192.168.1.110:3000";
+    //private final String server = "http://192.168.1.110:3000";
     private final int delayPeople = 240000; // 4 Min. 240000;
-    private final int delayRecords = 3000; // 5 Min. 300000;
+    private final int delayRecords= 180000; // 5 Min. 300000, 3 min 180000;
     private static String version = "873b46a";
     private ImageView imageview;
     private EditText editTextRun;
