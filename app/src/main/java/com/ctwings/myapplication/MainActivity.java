@@ -68,12 +68,12 @@ import okhttp3.Response;
 public class MainActivity extends AppCompatActivity {
 
     //private final String server = "http://axxezo-test.brazilsouth.cloudapp.azure.com:3001";
-    private final String server = "http://controlid-test.multiexportfoods.com:3000";
-    //private final String server = "http://controlid.multiexportfoods.com:3000";
+    //private final String server = "http://controlid-test.multiexportfoods.com:3000";
+    private final String server = "http://controlid.multiexportfoods.com:3000";
     //private final String server = "http://192.168.43.69:3000";
     //private final String server = "http://192.168.1.110:3000";
     private final int delayPeople = 240000; // 4 Min. 240000;
-    private final int delayRecords= 180000; // 5 Min. 300000, 3 min 180000;
+    private final int delayRecords = 180000; // 5 Min. 300000, 3 min 180000;
     private static String version = "873b46a";
     private ImageView imageview;
     private EditText editTextRun;
@@ -191,7 +191,11 @@ public class MainActivity extends AppCompatActivity {
                     editTextRun.requestFocus();
                     InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                     imm.showSoftInput(editTextRun, InputMethodManager.SHOW_IMPLICIT);
-                } else getPeople(editTextRun.getText().toString());
+                } else if (editTextRun.getText().length() > 0 && editTextRun.getText().length() < 15) {
+                    getPeople(editTextRun.getText().toString());
+                } else {
+                    editTextRun.setError("RUT o Pasaporte es demasiado largo, Verifique");
+                }
             }
         });
     }
@@ -444,7 +448,7 @@ public class MainActivity extends AppCompatActivity {
                             // AsyncTask do GET to obtain boolean status from api.
                             // TRUE: Need update People.
                             // FALSE: Dont need update People.
-                            checkStatus=new checkStatusTask();
+                            checkStatus = new checkStatusTask();
                             checkStatus.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
                         } catch (Exception e) {
                             log.writeLog(getApplicationContext(), "Main:line 397", "ERROR", e.getMessage());
@@ -470,7 +474,7 @@ public class MainActivity extends AppCompatActivity {
                             // First call, sendRecord will be null, so instantiate it.
                             if (sendRecord == null) { //&& updatePeopleTask.getStatus() != AsyncTask.Status.RUNNING
                                 OfflineRecordsSynchronizer();
-                            } else if (db.record_desync_count() > 0 && sendRecord.getStatus() != AsyncTask.Status.RUNNING){
+                            } else if (db.record_desync_count() > 0 && sendRecord.getStatus() != AsyncTask.Status.RUNNING) {
                                 // If it is already instantiated
                                 OfflineRecordsSynchronizer();
                             }
@@ -629,14 +633,14 @@ public class MainActivity extends AppCompatActivity {
 
         protected String doInBackground(String... params) {
             DatabaseHelper db = DatabaseHelper.getInstance(getBaseContext());
-            return GET(server + "/api/states/updatePeople?pda="+db.get_config_id_pda());
+            return GET(server + "/api/states/updatePeople?pda=" + db.get_config_id_pda());
         }
 
         protected void onPostExecute(String json) {
             loading.setVisibility(View.GONE);
             try {
                 JSONObject obj = new JSONObject(json);
-                if (obj.get("update").toString().equals("true") || obj.get("update").toString().equals("null")){
+                if (obj.get("update").toString().equals("true") || obj.get("update").toString().equals("null")) {
                     updatePeopleTask = new LoadDbTask();
                     updatePeopleTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
                     // Change state to FALSE.
@@ -861,7 +865,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (!record.getPerson_profile().equals("V")) {
                 jsonObject.accumulate("company_code", record.getPerson_company_code());
-                if (record.getPerson_profile().equals("P")){
+                if (record.getPerson_profile().equals("P")) {
                     jsonObject.accumulate("truck_patent", record.getPerson_truck_patent());
                     jsonObject.accumulate("rampla_patent", record.getPerson_rampla_patent());
                 } else {
@@ -944,9 +948,9 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected String doInBackground(Void... params) {
-            DatabaseHelper db=DatabaseHelper.getInstance(getApplicationContext());
+            DatabaseHelper db = DatabaseHelper.getInstance(getApplicationContext());
             String postReturn = "";
-            pdaNumber=db.get_config_id_pda();
+            pdaNumber = db.get_config_id_pda();
             final OkHttpClient client = new OkHttpClient.Builder()
                     .connectTimeout(1, TimeUnit.SECONDS)
                     .writeTimeout(0, TimeUnit.SECONDS)
@@ -1044,7 +1048,7 @@ public class MainActivity extends AppCompatActivity {
             jsonObject.accumulate("company", record.getPerson_company());
             if (!record.getPerson_profile().equals("V")) {
                 jsonObject.accumulate("company_code", record.getPerson_company_code());
-                if (record.getPerson_profile().equals("P")){
+                if (record.getPerson_profile().equals("P")) {
                     jsonObject.accumulate("truck_patent", record.getPerson_truck_patent());
                     jsonObject.accumulate("rampla_patent", record.getPerson_rampla_patent());
                 } else {
@@ -1077,7 +1081,7 @@ public class MainActivity extends AppCompatActivity {
 
                     String tmp = response.body().string();
                     //Log.e("response", response.code() + "name " + record.getPerson_fullname());
-                    log.writeLog(getApplicationContext(), "Main:line 1037", "DEBUG", "response "+response.code() + " name " + record.getPerson_fullname());
+                    log.writeLog(getApplicationContext(), "Main:line 1037", "DEBUG", "response " + response.code() + " name " + record.getPerson_fullname());
                     //Log.e("response", response.receivedResponseAtMillis() + "millis " + record.getPerson_fullname());
 
                     // 10. convert inputstream to string
@@ -1093,8 +1097,7 @@ public class MainActivity extends AppCompatActivity {
                                     }
                                 });
                             }
-                        }
-                        else if(response.code()==422){
+                        } else if (response.code() == 422) {
                             //return 422 when the record is sync but his state in db isn`t change
                             db.update_record(record.getRecord_id());
                         }
@@ -1129,8 +1132,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-
-
     class LoggingInterceptor implements Interceptor {
         @Override
         public Response intercept(Interceptor.Chain chain) throws IOException {
@@ -1150,14 +1151,14 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void seedOfflineRecords(int loop){
-        DatabaseHelper db=DatabaseHelper.getInstance(this);
-        for(int i=0;i<loop;i++) {
+    public void seedOfflineRecords(int loop) {
+        DatabaseHelper db = DatabaseHelper.getInstance(this);
+        for (int i = 0; i < loop; i++) {
             Record records = new Record();
-            int random=(int)Math.floor(Math.random()*(30000000-10000000)+loop);
-            int random2=(int)Math.floor(Math.random()*(99999-10000)+loop);
+            int random = (int) Math.floor(Math.random() * (30000000 - 10000000) + loop);
+            int random2 = (int) Math.floor(Math.random() * (99999 - 10000) + loop);
             records.setPerson_card(random2);
-            records.setPerson_run(random+"");
+            records.setPerson_run(random + "");
             records.setRecord_is_input(1);
             records.setPerson_is_permitted(1);
             records.setRecord_sync(0);
