@@ -2,6 +2,7 @@ package com.ctwings.myapplication;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.device.ScanManager;
@@ -13,6 +14,7 @@ import android.os.Handler;
 import android.os.Vibrator;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -74,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
     //private final String server = "http://192.168.1.110:3000";
     private final int delayPeople = 240000; // 4 Min. 240000;
     private final int delayRecords = 180000; // 5 Min. 300000, 3 min 180000;
-    private static String version = "873b46a";
+    private static String version = "f6b3048";
     private ImageView imageview;
     private EditText editTextRun;
     private EditText editTextFullName;
@@ -191,11 +193,12 @@ public class MainActivity extends AppCompatActivity {
                     editTextRun.requestFocus();
                     InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                     imm.showSoftInput(editTextRun, InputMethodManager.SHOW_IMPLICIT);
-                } else if (editTextRun.getText().length() > 0 && editTextRun.getText().length() < 15) {
-                    getPeople(editTextRun.getText().toString());
+                } else if (editTextRun.getText().length() > 4 && editTextRun.getText().length() < 15) {
+                    dialogManualRegistration();
                 } else {
-                    editTextRun.setError("RUT o Pasaporte es demasiado largo, Verifique");
+                    editTextRun.setError("RUT o Pasaporte debe poseer como minimo 5 caracteres y maximo 15. Verifique");
                 }
+
             }
         });
     }
@@ -1173,4 +1176,35 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void dialogManualRegistration() {
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
+                this);
+
+        // set title
+        alertDialogBuilder.setTitle("Eliga una Accion");
+        String rut=editTextRun.getText().toString().isEmpty()?"":editTextRun.getText().toString();
+
+        // set dialog message
+        alertDialogBuilder
+                .setMessage("Esta seguro que desea registrar a "+rut+" ?")
+                .setCancelable(false)
+                .setPositiveButton("SI", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        getPeople(editTextRun.getText().toString());
+                        editTextRun.setText("");
+                    }
+                })
+                .setNegativeButton("NO", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        editTextRun.setText("");
+                        dialog.cancel();
+                    }
+                });
+
+        // create alert dialog
+        AlertDialog alertDialog = alertDialogBuilder.create();
+
+        // show it
+        alertDialog.show();
+    }
 }

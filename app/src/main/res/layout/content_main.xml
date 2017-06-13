@@ -36,7 +36,8 @@
         android:id="@+id/editText_run"
         android:hint="Rut"
         android:textSize="16dp"
-        android:textAlignment="center" />
+        android:textAlignment="center"
+        android:inputType="number" />
 
     <EditText
         android:layout_width="match_parent"
