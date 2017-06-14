@@ -265,8 +265,8 @@ public class MainActivity extends AppCompatActivity {
                         // remove dv.
                         barcodeStr = barcodeStr.substring(0, barcodeStr.indexOf("-"));
                     }
-                } else if (barcodeType == 1 || barcodeStr.startsWith("00")) {
-                    //Log.i("Debugger", "CARD");
+                } else if (barcodeType == 1 &&barcodeStr.startsWith("0")) {
+                        barcodeStr=barcodeStr.substring(1,barcodeStr.length());
                 } else if (barcodeType == 17) { // PDF417
                     // 1.- validate if the rut is > 10 millions
                     String rutValidator = barcodeStr.substring(0, 8);
