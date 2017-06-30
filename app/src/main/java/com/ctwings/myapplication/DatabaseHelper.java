@@ -223,7 +223,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                             new String[]{String.valueOf(id), String.valueOf(id)}, // d. selections args
                             null, // e. group by
                             null, // f. having
-                            null, // g. order by
+                            PERSON_PROFILE + " ASC", // g. order by, first E, then V
                             null); // h. limit
 
             if (cursor != null) {
