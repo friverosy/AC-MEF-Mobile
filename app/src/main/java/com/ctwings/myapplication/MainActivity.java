@@ -72,7 +72,7 @@ import okhttp3.Response;
 public class MainActivity extends AppCompatActivity {
 
     //private final String server = "http://axxezo-test.brazilsouth.cloudapp.azure.com:3001";
-    private final String server = "http://controlid-test.multiexportfoods.com:3000";
+    private final String server = "http://controlid.multiexportfoods.com:3000";
     //private final String server = "http://controlid.multiexportfoods.com:3000";
     //private final String server = "http://192.168.43.69:3000";
     //private final String server = "http://192.168.1.110:3000";
@@ -1200,10 +1200,10 @@ public class MainActivity extends AppCompatActivity {
         alertDialog.show();
     }
     public void validateDocumentScanned(String dni){
-        if(dni.length()<6 ||dni.length()>15)
-            dialogValidateDocumentScanned("\nEl código posee menos de cinco caracteres o más de quince\n");
+        if(dni.length() < 6 || dni.length() > 15)
+            dialogValidateDocumentScanned("\nTamaño incorrecto\n");
         else if(!dni.matches("[0-9]+")){
-            dialogValidateDocumentScanned("\nTarjeta con caracteres no validos\n");
+            dialogValidateDocumentScanned("\nCaracteres erroneos\n");
         }
         getPeople(barcodeStr, "PDA");
     }
@@ -1217,7 +1217,7 @@ public class MainActivity extends AppCompatActivity {
 
         // set dialog message
         alertDialogBuilder
-                .setMessage("Hemos detectado el siguiente problema al leer el documento: \n " + reason + " \nPor favor solicite revisión o cambio de tarjeta").setIcon(R.drawable.warning_icon)
+                .setMessage("Error de lectura: \n " + reason + " \nFavor dar aviso").setIcon(R.drawable.warning_icon)
                 .setCancelable(false)
                 .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
