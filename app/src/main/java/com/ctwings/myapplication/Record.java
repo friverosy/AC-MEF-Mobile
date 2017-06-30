@@ -17,7 +17,8 @@ public class Record {
     String record_output_datetime;
     String person_truck_patent;
     String person_rampla_patent;
-
+    String type;
+    int pda_number;
     int record_sync;
 
     //Constructors
@@ -25,7 +26,7 @@ public class Record {
 
     }
 
-    public Record(int record_id, String person_fullname, String person_run, String person_profile, int record_is_input, int record_bus, int person_is_permitted, int person_card, String person_company, String person_place, String person_company_code, String record_input_datetime, String record_output_datetime, String person_truck_patent, String person_rampla_patent, int record_sync) {
+    public Record(int record_id, String person_fullname, String person_run, String person_profile, int record_is_input, int record_bus, int person_is_permitted, int person_card, String person_company, String person_place, String person_company_code, String record_input_datetime, String record_output_datetime, String person_truck_patent, String person_rampla_patent, String type, int pda_number, int record_sync) {
         this.record_id = record_id;
         this.person_fullname = person_fullname;
         this.person_run = person_run;
@@ -41,6 +42,8 @@ public class Record {
         this.record_output_datetime = record_output_datetime;
         this.person_truck_patent = person_truck_patent;
         this.person_rampla_patent = person_rampla_patent;
+        this.type = type;
+        this.pda_number = pda_number;
         this.record_sync = record_sync;
     }
 
@@ -164,6 +167,22 @@ public class Record {
 
     public void setRecord_sync(int record_sync) {
         this.record_sync = record_sync;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public int getPda_number() {
+        return pda_number;
+    }
+
+    public void setPda_number(int pda_number) {
+        this.pda_number = pda_number;
     }
 
     @Override

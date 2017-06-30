@@ -52,6 +52,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.DateFormat;
+import java.text.Normalizer;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -59,6 +60,7 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
@@ -70,8 +72,8 @@ import okhttp3.Response;
 public class MainActivity extends AppCompatActivity {
 
     //private final String server = "http://axxezo-test.brazilsouth.cloudapp.azure.com:3001";
-    //private final String server = "http://controlid-test.multiexportfoods.com:3000";
-    private final String server = "http://controlid.multiexportfoods.com:3000";
+    private final String server = "http://controlid-test.multiexportfoods.com:3000";
+    //private final String server = "http://controlid.multiexportfoods.com:3000";
     //private final String server = "http://192.168.43.69:3000";
     //private final String server = "http://192.168.1.110:3000";
     private final int delayPeople = 240000; // 4 Min. 240000;
@@ -265,8 +267,8 @@ public class MainActivity extends AppCompatActivity {
                         // remove dv.
                         barcodeStr = barcodeStr.substring(0, barcodeStr.indexOf("-"));
                     }
-                } else if (barcodeType == 1 &&barcodeStr.startsWith("0")) {
-                        barcodeStr=barcodeStr.substring(1,barcodeStr.length());
+                } else if (barcodeType == 1 && barcodeStr.startsWith("0")) {
+                    barcodeStr = barcodeStr.substring(1, barcodeStr.length());
                 } else if (barcodeType == 17) { // PDF417
                     // 1.- validate if the rut is > 10 millions
                     String rutValidator = barcodeStr.substring(0, 8);
@@ -287,22 +289,11 @@ public class MainActivity extends AppCompatActivity {
                         else
                             log.writeLog(getApplicationContext(), "Main:line 262", "ERROR", "rut invalido " + barcodeStr);
                     }
-
-                    //get name from DNI
-                    /*String[] array = rawCode.split("\\s+");
-                    Log.d("-----", rawCode);
-                    try {
-                        name = (array[1].substring(0, array[1].indexOf("CHL")));
-                    } catch (Exception e) {
-                        name = (array[2].substring(0, array[2].indexOf("CHL")));
-                    } catch (Exception e) {
-                        name = "";
-                    }*/
                     name = "";
                 }
-
-                if (flagSetUp == 0)
-                    getPeople(barcodeStr);
+                if (flagSetUp == 0) {
+                    validateDocumentScanned(barcodeStr);
+                }
                 barcodeCache = barcodeStr; // Used to avoid 2 records in a row.
             } catch (NullPointerException e) {
                 log.writeLog(getApplicationContext(), "Main:line 278", "ERROR", e.getMessage());
@@ -491,7 +482,7 @@ public class MainActivity extends AppCompatActivity {
         timer.schedule(task, 0, delayRecords);
     }
 
-    public void getPeople(String rut) {
+    public void getPeople(String rut, String type) {
         DatabaseHelper db = DatabaseHelper.getInstance(this);
         log_app log = new log_app();
 
@@ -607,6 +598,8 @@ public class MainActivity extends AppCompatActivity {
             record.setPerson_card(Integer.parseInt(arr[6]));
             record.setRecord_sync(0);
             record.setRecord_bus(0);
+            record.setType(type);
+            record.setPda_number(pdaNumber);
 
             if (is_input) {
                 record.setRecord_is_input(1);
@@ -1060,9 +1053,8 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
-            jsonObject.accumulate("type", "PDA");
-            jsonObject.accumulate("PDA", pdaNumber);
-
+            jsonObject.accumulate("type", record.getType());
+            jsonObject.accumulate("PDA", record.getPda_number());
             // 4. convert JSONObject to JSON to String
             if (jsonObject.length() <= 13) { // 13 element on json
                 json = jsonObject.toString();
@@ -1182,15 +1174,15 @@ public class MainActivity extends AppCompatActivity {
 
         // set title
         alertDialogBuilder.setTitle("Eliga una Accion");
-        String rut=editTextRun.getText().toString().isEmpty()?"":editTextRun.getText().toString();
+        String rut = editTextRun.getText().toString().isEmpty() ? "" : editTextRun.getText().toString();
 
         // set dialog message
         alertDialogBuilder
-                .setMessage("Esta seguro que desea registrar a "+rut+" ?")
+                .setMessage("Esta seguro que desea registrar a " + rut + " ?")
                 .setCancelable(false)
                 .setPositiveButton("SI", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
-                        getPeople(editTextRun.getText().toString());
+                        getPeople(editTextRun.getText().toString(), "PDAMR");
                         editTextRun.setText("");
                     }
                 })
@@ -1204,6 +1196,36 @@ public class MainActivity extends AppCompatActivity {
         // create alert dialog
         AlertDialog alertDialog = alertDialogBuilder.create();
 
+        // show it
+        alertDialog.show();
+    }
+    public void validateDocumentScanned(String dni){
+        if(dni.length()<6 ||dni.length()>15)
+            dialogValidateDocumentScanned("\nEl código posee menos de cinco caracteres o más de quince\n");
+        else if(!dni.matches("[0-9]+")){
+            dialogValidateDocumentScanned("\nTarjeta con caracteres no validos\n");
+        }
+        getPeople(barcodeStr, "PDA");
+    }
+    public void dialogValidateDocumentScanned(String reason) {
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
+                this,android.R.style.Theme_Holo_Light_Dialog);
+
+        // set title
+        alertDialogBuilder.setTitle("Importante");
+        String rut = editTextRun.getText().toString().isEmpty() ? "" : editTextRun.getText().toString();
+
+        // set dialog message
+        alertDialogBuilder
+                .setMessage("Hemos detectado el siguiente problema al leer el documento: \n " + reason + " \nPor favor solicite revisión o cambio de tarjeta").setIcon(R.drawable.warning_icon)
+                .setCancelable(false)
+                .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        dialog.cancel();
+                    }
+                });
+        // create alert dialog
+        AlertDialog alertDialog = alertDialogBuilder.create();
         // show it
         alertDialog.show();
     }
