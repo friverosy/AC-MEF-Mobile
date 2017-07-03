@@ -269,6 +269,9 @@ public class MainActivity extends AppCompatActivity {
                     }
                 } else if (barcodeType == 1 && barcodeStr.startsWith("0")) {
                     barcodeStr = barcodeStr.substring(1, barcodeStr.length());
+                    validateDocumentScanned(barcodeStr);
+                } else if (barcodeType == 1) {
+                    validateDocumentScanned(barcodeStr);
                 } else if (barcodeType == 17) { // PDF417
                     // 1.- validate if the rut is > 10 millions
                     String rutValidator = barcodeStr.substring(0, 8);
@@ -290,11 +293,11 @@ public class MainActivity extends AppCompatActivity {
                             log.writeLog(getApplicationContext(), "Main:line 262", "ERROR", "rut invalido " + barcodeStr);
                     }
                     name = "";
-                }
-                if (flagSetUp == 0) {
-                    validateDocumentScanned(barcodeStr);
+                } else if (barcodeType != 1 && barcodeType != 17 && barcodeType != 28) {
+                    dialogValidateDocumentScanned("\nTarjeta invalida\n");
                 }
                 barcodeCache = barcodeStr; // Used to avoid 2 records in a row.
+                getPeople(barcodeStr, "PDA");
             } catch (NullPointerException e) {
                 log.writeLog(getApplicationContext(), "Main:line 278", "ERROR", e.getMessage());
             } catch (Exception e) {
@@ -1199,14 +1202,16 @@ public class MainActivity extends AppCompatActivity {
         // show it
         alertDialog.show();
     }
+
     public void validateDocumentScanned(String dni){
-        if(dni.length() < 6 || dni.length() > 15)
+        if(dni.length() < 4 || dni.length() > 6)
             dialogValidateDocumentScanned("\nTamaño incorrecto\n");
         else if(!dni.matches("[0-9]+")){
             dialogValidateDocumentScanned("\nCaracteres erroneos\n");
         }
-        getPeople(barcodeStr, "PDA");
+        //getPeople(barcodeStr, "PDA");
     }
+
     public void dialogValidateDocumentScanned(String reason) {
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
                 this,android.R.style.Theme_Holo_Light_Dialog);
