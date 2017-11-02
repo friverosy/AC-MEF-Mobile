@@ -213,18 +213,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         String out = "";
         Cursor cursor = null;
         try {
-            //db.beginTransaction();
-            id.replace("%", ""); // Remove 0 at beginner
-
             // 2. build query
-            cursor = db.query(TABLE_PERSON, // a. table
-                            PERSON_COLUMNS, // b. column names
-                            " person_run = ? OR person_card = ?", // c. selections
-                            new String[]{String.valueOf(id), String.valueOf(id)}, // d. selections args
-                            null, // e. group by
-                            null, // f. having
-                            PERSON_PROFILE + " ASC", // g. order by, first E, then V
-                            null); // h. limit
+            cursor = db.rawQuery("select person_run,person_fullname,person_is_permitted,person_company,person_place,person_company_code,person_card,person_profile,person_truck_patent,person_rampla_patent " +
+                    "from person where person_run= ? or person_card= ? order by case person_profile when 'E' then 0 when 'C' then 1 when 'P' then 2 when 'V' then 3 END limit 1",new String[]{String.valueOf(id), String.valueOf(id)});
 
             if (cursor != null) {
                 if (!(cursor.moveToFirst()) || cursor.getCount() == 0) {
@@ -235,26 +226,26 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 } else {
                     // if we got results get the first one
                     cursor.moveToFirst();
-
+                    //priority order ECPV
                     // build String
 
                     /*
-                    * 2 = RUT
+                    * 0 = RUT
                     * 1 = Fullname
-                    * 3 = is_permitted
-                    * 4 = company
-                    * 5 = place
-                    * 6 = company_code
-                    * 7 = card
-                    * 8 = profile
-                    * 9 = truck
-                    * 10 = rampla
+                    *  = is_permitted
+                    * 3 = company
+                    * 4 = place
+                    * 5 = company_code
+                    * 6 = card
+                    * 7 = profile
+                    * 8 = truck
+                    * 9 = rampla
                     * */
-                    out = cursor.getString(2) + ";" + cursor.getString(1) + ";" +
-                            true + ";" + cursor.getString(4) + ";" +
-                            cursor.getString(5) + ";" + cursor.getString(6) + ";" +
-                            cursor.getInt(7) + ";" + cursor.getString(8) + ";" +
-                            cursor.getString(9) + ";" + cursor.getString(10);
+                    out = cursor.getString(0) + ";" + cursor.getString(1) + ";" +
+                            true + ";" + cursor.getString(3) + ";" +
+                            cursor.getString(4) + ";" + cursor.getString(5) + ";" +
+                            cursor.getInt(6) + ";" + cursor.getString(7) + ";" +
+                            cursor.getString(8) + ";" + cursor.getString(9);
                 }
             }
         } catch (IllegalStateException e) {
